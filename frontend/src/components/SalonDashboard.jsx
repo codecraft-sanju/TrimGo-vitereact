@@ -1,9 +1,9 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Grid, Activity, Users, Ticket, Settings, LogOut, ChevronRight,
   Bell, DollarSign, TrendingUp, Clock, CheckCircle, Scissors,
-  Play, CheckSquare, X
+  Play, CheckSquare, X, Camera, Mail, Phone, MapPin, User
 } from "lucide-react";
 
 /* ---------------------------------
@@ -46,6 +46,110 @@ const AnalyticsChart = () => {
 };
 
 /* ---------------------------------
+   PROFILE MODAL COMPONENT (New)
+---------------------------------- */
+const ProfileModal = ({ isOpen, onClose, salon, profileImage, onImageUpload }) => {
+  const fileInputRef = useRef(null);
+
+  if (!isOpen) return null;
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const imageUrl = URL.createObjectURL(file);
+      onImageUpload(imageUrl);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
+
+      {/* Modal Content */}
+      <div className="relative w-full max-w-md bg-zinc-900 border border-white/10 rounded-3xl p-6 shadow-2xl animate-[scaleIn_0.2s_ease-out]">
+        <button onClick={onClose} className="absolute top-4 right-4 text-zinc-500 hover:text-white transition">
+          <X size={20} />
+        </button>
+
+        <div className="flex flex-col items-center">
+          <h2 className="text-xl font-bold text-white mb-6">Salon Profile</h2>
+
+          {/* Image Upload Section */}
+          <div className="relative group cursor-pointer mb-6" onClick={() => fileInputRef.current.click()}>
+            <div className="w-28 h-28 rounded-full border-4 border-zinc-800 overflow-hidden shadow-xl group-hover:border-emerald-500 transition-colors">
+              {profileImage ? (
+                <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-zinc-800 flex items-center justify-center text-zinc-500">
+                  <User size={40} />
+                </div>
+              )}
+            </div>
+            <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <Camera size={24} className="text-white" />
+            </div>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept="image/*" 
+              onChange={handleFileChange}
+            />
+          </div>
+
+          <h3 className="text-2xl font-black text-white mb-1">{salon?.salonName || "Salon Name"}</h3>
+          <p className="text-emerald-400 text-sm font-medium mb-8">@{salon?.ownerName?.replace(/\s/g, '').toLowerCase() || "username"}</p>
+
+          {/* Details Grid */}
+          <div className="w-full space-y-4">
+            <div className="flex items-center gap-4 p-4 rounded-2xl bg-zinc-950/50 border border-white/5">
+              <div className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center text-zinc-400">
+                <User size={18} />
+              </div>
+              <div>
+                <p className="text-xs text-zinc-500 uppercase font-bold">Owner Name</p>
+                <p className="text-zinc-200 font-medium">{salon?.ownerName || "Not set"}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 p-4 rounded-2xl bg-zinc-950/50 border border-white/5">
+              <div className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center text-zinc-400">
+                <Phone size={18} />
+              </div>
+              <div>
+                <p className="text-xs text-zinc-500 uppercase font-bold">Phone</p>
+                <p className="text-zinc-200 font-medium">{salon?.phone || "+91 00000 00000"}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 p-4 rounded-2xl bg-zinc-950/50 border border-white/5">
+              <div className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center text-zinc-400">
+                <Mail size={18} />
+              </div>
+              <div>
+                <p className="text-xs text-zinc-500 uppercase font-bold">Email</p>
+                <p className="text-zinc-200 font-medium">{salon?.email || "email@example.com"}</p>
+              </div>
+            </div>
+            
+             <div className="flex items-center gap-4 p-4 rounded-2xl bg-zinc-950/50 border border-white/5">
+              <div className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center text-zinc-400">
+                <MapPin size={18} />
+              </div>
+              <div>
+                <p className="text-xs text-zinc-500 uppercase font-bold">Location</p>
+                <p className="text-zinc-200 font-medium">{salon?.address || "Address not set"}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ---------------------------------
    MAIN COMPONENT
 ---------------------------------- */
 
@@ -57,10 +161,24 @@ const SalonDashboard = ({ salon, onLogout }) => {
   const [stats, setStats] = useState({ revenue: 4500, customers: 12, waitTime: 25 });
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  // Profile Modal State
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [profileImage, setProfileImage] = useState(null);
+
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
+
+  // Helper to get initials from Owner Name
+  const getOwnerInitials = (name) => {
+    if (!name) return "TG";
+    const parts = name.split(" ");
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
 
   const handleAccept = (req) => {
     const newCustomer = { 
@@ -111,6 +229,16 @@ const SalonDashboard = ({ salon, onLogout }) => {
 
   return (
     <div className="min-h-screen w-full bg-zinc-950 font-sans text-white overflow-hidden flex selection:bg-emerald-500 selection:text-white">
+      
+      {/* Profile Modal */}
+      <ProfileModal 
+        isOpen={isProfileOpen} 
+        onClose={() => setIsProfileOpen(false)}
+        salon={salon}
+        profileImage={profileImage}
+        onImageUpload={setProfileImage}
+      />
+
       {/* Dynamic Background */}
       <div className="fixed inset-0 z-0">
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900 via-zinc-950 to-black"></div>
@@ -157,7 +285,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
         <header className="h-20 border-b border-white/5 bg-zinc-900/30 backdrop-blur-md flex items-center justify-between px-6 lg:px-8">
            <div className="flex flex-col">
              <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-                {salon?.name || "My Salon"}
+                {salon?.salonName || "My Salon"}
                 <ChevronRight size={16} className="text-zinc-600"/>
                 <span className="text-zinc-400 font-normal text-sm">Dashboard</span>
              </h1>
@@ -180,8 +308,19 @@ const SalonDashboard = ({ salon, onLogout }) => {
                  <Bell size={20} className="text-zinc-400 hover:text-white transition" />
                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-zinc-900"></span>
              </div>
-             <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-zinc-700 to-zinc-600 p-0.5 cursor-pointer hover:scale-105 transition">
-               <div className="w-full h-full rounded-full bg-zinc-900 flex items-center justify-center text-xs font-bold text-white">SC</div>
+
+             {/* PROFILE TRIGGER (Updated) */}
+             <div 
+               onClick={() => setIsProfileOpen(true)}
+               className="w-9 h-9 rounded-full bg-gradient-to-tr from-zinc-700 to-zinc-600 p-0.5 cursor-pointer hover:scale-105 transition overflow-hidden"
+             >
+               {profileImage ? (
+                  <img src={profileImage} alt="Profile" className="w-full h-full rounded-full object-cover" />
+               ) : (
+                  <div className="w-full h-full rounded-full bg-zinc-900 flex items-center justify-center text-xs font-bold text-white">
+                    {getOwnerInitials(salon?.ownerName)}
+                  </div>
+               )}
              </div>
            </div>
         </header>

@@ -2,8 +2,7 @@
 import jwt from "jsonwebtoken";
 import User from "../Models/User.js";
 
-// ❌ DELETED LINE 5: const JWT_SECRET = process.env.JWT_SECRET; 
-// We do not read the secret here because the .env file hasn't loaded yet.
+
 
 export const protect = async (req, res, next) => {
   try {

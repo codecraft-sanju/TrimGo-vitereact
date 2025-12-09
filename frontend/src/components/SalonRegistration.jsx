@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Store, User, Phone, MapPin, ArrowRight, ChevronLeft } from "lucide-react";
+import { Store, User, Phone, MapPin, ArrowRight, ChevronLeft, Mail, Lock, Hash } from "lucide-react";
 
 // ----------------------------------------------------------------------
 // UI HELPER COMPONENTS (Internal)
@@ -119,19 +119,23 @@ const AuthLayout = ({
   </div>
 );
 
-// ----------------------------------------------------------------------
-// MAIN COMPONENT
-// ----------------------------------------------------------------------
-
-const SalonRegistration = ({
+/* ----------------------------------------------------------------------
+   COMPONENT 1: SALON REGISTRATION
+---------------------------------------------------------------------- */
+export const SalonRegistration = ({
   onBack,
   onRegister,
+  onNavigateLogin // New Prop to switch to login
 }) => {
+  // Added fields to match Backend Schema: email, password, zipCode, address
   const [formData, setFormData] = useState({
-    name: "",
-    owner: "",
-    mobile: "",
-    city: "",
+    salonName: "",
+    ownerName: "",
+    email: "",
+    phone: "",
+    address: "",
+    zipCode: "",
+    password: "",
     type: "Unisex",
   });
 
@@ -141,24 +145,8 @@ const SalonRegistration = ({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const newSalon = {
-      id: Date.now(),
-      name: formData.name || "New Salon",
-      area: formData.city.split(",")[1] || "Downtown",
-      city: formData.city.split(",")[0] || "City",
-      distance: "0.5 km",
-      waiting: 0,
-      eta: 0,
-      rating: 5.0,
-      reviews: 0,
-      tag: "New Partner",
-      price: "₹₹",
-      type: formData.type,
-      verified: false,
-      revenue: 0,
-    };
-
-    if (onRegister) onRegister(newSalon);
+    // Pass raw data to App.jsx (App.jsx will handle API call)
+    if (onRegister) onRegister(formData);
   };
 
   return (
@@ -188,81 +176,148 @@ const SalonRegistration = ({
         </>
       }
     >
-      <form
-        className="grid grid-cols-1 md:grid-cols-2 gap-5"
-        onSubmit={handleSubmit}
-      >
+      <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSubmit}>
         <div className="md:col-span-2">
-          <InputGroup
-            icon={Store}
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            type="text"
-            placeholder="Urban Cut Pro"
-            label="Salon Name"
-          />
+          <InputGroup icon={Store} name="salonName" value={formData.salonName} onChange={handleChange} type="text" placeholder="Urban Cut Pro" label="Salon Name" />
         </div>
-        <InputGroup
-          icon={User}
-          name="owner"
-          value={formData.owner}
-          onChange={handleChange}
-          type="text"
-          placeholder="Owner Name"
-          label="Contact Person"
-        />
-        <InputGroup
-          icon={Phone}
-          name="mobile"
-          value={formData.mobile}
-          onChange={handleChange}
-          type="tel"
-          placeholder="+91"
-          label="Mobile"
-        />
+        
+        <InputGroup icon={User} name="ownerName" value={formData.ownerName} onChange={handleChange} type="text" placeholder="Owner Name" label="Contact Person" />
+        <InputGroup icon={Phone} name="phone" value={formData.phone} onChange={handleChange} type="tel" placeholder="9876543210" label="Mobile" />
+        
+        <InputGroup icon={Mail} name="email" value={formData.email} onChange={handleChange} type="email" placeholder="salon@business.com" label="Email Address" />
+        <InputGroup icon={Lock} name="password" value={formData.password} onChange={handleChange} type="password" placeholder="••••••••" label="Password" />
+
         <div className="md:col-span-2">
-          <InputGroup
-            icon={MapPin}
-            name="city"
-            value={formData.city}
-            onChange={handleChange}
-            type="text"
-            placeholder="Jodhpur, Shastri Nagar"
-            label="Location (City, Area)"
-          />
+           <InputGroup icon={MapPin} name="address" value={formData.address} onChange={handleChange} type="text" placeholder="Plot No 4, Shastri Nagar" label="Full Address" />
+        </div>
+        
+        <div className="md:col-span-1">
+             <InputGroup icon={Hash} name="zipCode" value={formData.zipCode} onChange={handleChange} type="text" placeholder="342003" label="Zip Code" />
         </div>
 
-        <div className="md:col-span-2 space-y-1.5">
-          <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1">
-            Salon Type
-          </label>
-          <div className="grid grid-cols-3 gap-3">
-            {["Unisex", "Men Only", "Women Only"].map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => setFormData({ ...formData, type })}
-                className={`py-3 border rounded-xl text-sm font-bold transition focus:ring-2 ring-zinc-900 ring-offset-2 ${
-                  formData.type === type
-                    ? "bg-zinc-900 text-white border-zinc-900"
-                    : "bg-white border-zinc-200 text-zinc-900 hover:bg-zinc-50"
-                }`}
-              >
-                {type}
-              </button>
-            ))}
-          </div>
+        <div className="md:col-span-1 space-y-1.5">
+          <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1">Salon Type</label>
+          <select 
+            name="type"
+            value={formData.type} 
+            onChange={handleChange}
+            className="w-full bg-zinc-5 border border-zinc-200 rounded-xl py-4 px-4 text-zinc-900 font-medium focus:outline-none focus:ring-4 focus:ring-zinc-100 focus:border-zinc-900 transition-all appearance-none"
+          >
+            <option value="Unisex">Unisex</option>
+            <option value="Men Only">Men Only</option>
+            <option value="Women Only">Women Only</option>
+          </select>
         </div>
 
-        <div className="md:col-span-2 pt-4">
+        <div className="md:col-span-2 pt-2">
           <ShimmerButton className="w-full py-4">
             Complete Registration <ArrowRight size={18} />
           </ShimmerButton>
         </div>
       </form>
+
+      <div className="mt-6 text-center">
+        <p className="text-zinc-500 font-medium">
+          Already a partner?{" "}
+          <button onClick={onNavigateLogin} className="text-zinc-900 font-bold hover:underline">
+            Login to Dashboard
+          </button>
+        </p>
+      </div>
     </AuthLayout>
   );
 };
 
+/* ----------------------------------------------------------------------
+   COMPONENT 2: SALON LOGIN (New)
+---------------------------------------------------------------------- */
+export const SalonLogin = ({
+  onBack,
+  onLogin,
+  onNavigateRegister // New Prop to switch to register
+}) => {
+  const [credentials, setCredentials] = useState({
+    identifier: "", // Email or Phone
+    password: "",
+  });
+
+  const handleChange = (e) => {
+    setCredentials({ ...credentials, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (onLogin) onLogin(credentials);
+  };
+
+  return (
+    <AuthLayout
+      title="Salon Partner Login"
+      subtitle="Manage your queue, revenue, and staff."
+      onBack={onBack}
+      illustration={
+         <>
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-black z-0"></div>
+          <div className="relative z-10 h-full flex flex-col justify-center">
+             <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/10 mb-6">
+                <div className="flex justify-between items-center mb-4">
+                    <span className="text-white/60 text-sm font-bold uppercase">Today's Revenue</span>
+                    <span className="text-emerald-400 text-xs font-bold bg-emerald-400/10 px-2 py-1 rounded-full">+12%</span>
+                </div>
+                <div className="text-4xl font-black text-white">₹12,450</div>
+             </div>
+             <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/10">
+                <div className="flex justify-between items-center mb-4">
+                    <span className="text-white/60 text-sm font-bold uppercase">Active Queue</span>
+                    <span className="text-white text-xs font-bold">Live</span>
+                </div>
+                <div className="flex items-center gap-4">
+                     <div className="text-3xl font-black text-white">8</div>
+                     <span className="text-white/60 text-sm">Customers waiting</span>
+                </div>
+             </div>
+          </div>
+        </>
+      }
+    >
+      <form className="space-y-5" onSubmit={handleSubmit}>
+        <InputGroup
+          icon={User}
+          name="identifier"
+          value={credentials.identifier}
+          onChange={handleChange}
+          type="text"
+          placeholder="Email or Mobile Number"
+          label="Login ID"
+        />
+        <InputGroup
+          icon={Lock}
+          name="password"
+          value={credentials.password}
+          onChange={handleChange}
+          type="password"
+          placeholder="••••••••"
+          label="Password"
+        />
+
+        <div className="pt-4">
+          <ShimmerButton className="w-full py-4">
+            Access Dashboard <ArrowRight size={18} />
+          </ShimmerButton>
+        </div>
+      </form>
+
+      <div className="mt-8 text-center">
+        <p className="text-zinc-500 font-medium">
+          New to TrimGo?{" "}
+          <button onClick={onNavigateRegister} className="text-zinc-900 font-bold hover:underline">
+            Register your Salon
+          </button>
+        </p>
+      </div>
+    </AuthLayout>
+  );
+};
+
+// Default export ke liye (agar purana code break na ho)
 export default SalonRegistration;

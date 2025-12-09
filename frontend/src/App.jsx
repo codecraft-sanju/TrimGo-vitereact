@@ -8,7 +8,9 @@ import {
 
 import api from "./utils/api";
 
-import SalonRegistration from "./components/SalonRegistration";
+// UPDATED IMPORTS: Importing both Registration and Login components
+import { SalonRegistration, SalonLogin } from "./components/SalonRegistration";
+
 import UserRegistration from "./components/UserRegistration";
 import UserLogin from "./components/UserLogin"; 
 import { UserProfile } from "./components/UserProfile";
@@ -24,7 +26,7 @@ import { BackgroundAurora, NoiseOverlay } from "./components/SharedUI";
 import AdvancedDashboardSection from "./components/AdvancedDashboardSection"; 
 
 /* ---------------------------------
-   INITIAL DATA
+   INITIAL DATA (Fallback/Demo)
 ---------------------------------- */
 const INITIAL_SALON_DATA = [
   { id: 1, name: "Urban Cut Pro", area: "Shastri Nagar", city: "Jodhpur", distance: "1.2 km", waiting: 3, eta: 15, rating: 4.8, reviews: 321, tag: "Fastest nearby", price: "₹₹", type: "Unisex", verified: true, revenue: 15400 },
@@ -196,7 +198,7 @@ const LandingPage = ({ onNavigateUser, onNavigateSalon, onNavigateAdmin, onNavig
    ROUTE GUARDS (SECURITY) 🔒
 ---------------------------------- */
 
-// 1. ProtectedRoute: Sirf Logged In users ke liye
+// 1. ProtectedRoute: For Logged In Users Only
 const ProtectedRoute = ({ user, children }) => {
   if (!user) {
     return <Navigate to="/user/login" replace />;
@@ -204,10 +206,13 @@ const ProtectedRoute = ({ user, children }) => {
   return children;
 };
 
-// 2. PublicRoute: Sirf Guests ke liye (Agar login hai toh Dashboard bhejo)
-const PublicRoute = ({ user, children }) => {
+// 2. PublicRoute: For Guests (If logged in, redirect to respective dashboard)
+const PublicRoute = ({ user, salon, children }) => {
   if (user) {
     return <Navigate to="/dashboard/user" replace />;
+  }
+  if (salon) {
+    return <Navigate to="/dashboard/salon" replace />;
   }
   return children;
 };
@@ -225,9 +230,10 @@ const AppContent = () => {
   const [users, setUsers] = useState(INITIAL_USERS);
   const [toast, setToast] = useState(null);
   const [activeTicket, setActiveTicket] = useState(null);
-  const [registeredSalon, setRegisteredSalon] = useState(null);
 
+  // AUTH STATES
   const [currentUser, setCurrentUser] = useState(null);
+  const [currentSalon, setCurrentSalon] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
   const showToast = (msg, type = "success") => {
@@ -235,45 +241,86 @@ const AppContent = () => {
     setTimeout(() => setToast(null), 3000);
   };
 
+  // CHECK AUTH ON APP LOAD
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { data } = await api.get("/auth/me");
-        if (data.success) {
-          setCurrentUser(data.user);
+        // 1. Check if User is logged in
+        const userRes = await api.get("/auth/me");
+        if (userRes.data.success) {
+          setCurrentUser(userRes.data.user);
+          setAuthLoading(false);
+          return; // If user found, stop checking
         }
       } catch (err) {
-        // console.log("Not logged in");
-        setCurrentUser(null);
+        // User not found, proceed to check Salon
+      }
+
+      try {
+        // 2. Check if Salon is logged in
+        const salonRes = await api.get("/salon/me");
+        if (salonRes.data.success) {
+          setCurrentSalon(salonRes.data.salon);
+        }
+      } catch (err) {
+        // No one is logged in
       } finally {
         setAuthLoading(false);
       }
     };
+    
     checkAuth();
   }, []);
 
-  const handleAuthSuccess = (userData) => {
+  // --- HANDLERS ---
+
+  const handleUserLoginSuccess = (userData) => {
     setCurrentUser(userData);
     showToast(`Welcome, ${userData.name}!`);
     navigate("/dashboard/user");
   };
 
+  // NEW: Salon Registration API Call
+  const handleRegisterSalon = async (formData) => {
+    try {
+        const { data } = await api.post("/salon/register", formData);
+        if(data.success) {
+            setCurrentSalon(data.salon);
+            showToast("Registration successful! Welcome Partner.");
+            navigate("/dashboard/salon");
+        }
+    } catch (error) {
+        showToast(error.response?.data?.message || "Registration Failed", "error");
+    }
+  };
+
+  // NEW: Salon Login API Call
+  const handleSalonLogin = async (credentials) => {
+    try {
+        const { data } = await api.post("/salon/login", credentials);
+        if(data.success) {
+            setCurrentSalon(data.salon);
+            showToast("Salon Login Successful!");
+            navigate("/dashboard/salon");
+        }
+    } catch (error) {
+        showToast(error.response?.data?.message || "Login Failed", "error");
+    }
+  };
+
   const handleLogout = async () => {
     try {
+      // Hit both endpoints to be safe
       await api.post("/auth/logout");
+      await api.post("/salon/logout");
+      
       setCurrentUser(null);
+      setCurrentSalon(null);
       showToast("Logged out successfully");
       navigate("/");
     } catch (error) {
       showToast("Error logging out", "error");
     }
-  };
-
-  const handleRegisterSalon = (newSalon) => {
-    setSalons(prev => [...prev, newSalon]);
-    setRegisteredSalon(newSalon);
-    showToast("Salon registered successfully!");
-    navigate("/dashboard/salon"); 
   };
 
   const handleJoinQueue = (salon) => {
@@ -310,7 +357,7 @@ const AppContent = () => {
         {/* --- PUBLIC ROUTES (Agar login hai toh seedha Dashboard jayega) --- */}
         
         <Route path="/" element={
-          <PublicRoute user={currentUser}>
+          <PublicRoute user={currentUser} salon={currentSalon}>
             <LandingPage
               onNavigateUser={() => navigate("/register/user")}
               onNavigateSalon={() => navigate("/register/salon")}
@@ -321,21 +368,44 @@ const AppContent = () => {
         } />
 
         <Route path="/user/login" element={
-          <PublicRoute user={currentUser}>
+          <PublicRoute user={currentUser} salon={currentSalon}>
             <UserLogin 
                onBack={() => navigate("/")}
-               onLogin={handleAuthSuccess} 
+               onLogin={handleUserLoginSuccess} 
+               onNavigateSalonLogin={() => navigate("/salon/login")}
             />
           </PublicRoute>
         } />
 
         <Route path="/register/user" element={
-          <PublicRoute user={currentUser}>
+          <PublicRoute user={currentUser} salon={currentSalon}>
             <UserRegistration
               onBack={() => navigate("/")}
-              onRegisterUser={handleAuthSuccess} 
+              onRegisterUser={handleUserLoginSuccess} 
             />
           </PublicRoute>
+        } />
+
+        {/* --- SALON SPECIFIC ROUTES (New) --- */}
+        
+        <Route path="/register/salon" element={
+          <PublicRoute user={currentUser} salon={currentSalon}>
+            <SalonRegistration
+              onBack={() => navigate("/")}
+              onRegister={handleRegisterSalon}
+              onNavigateLogin={() => navigate("/salon/login")} 
+            />
+          </PublicRoute>
+        } />
+
+        <Route path="/salon/login" element={
+           <PublicRoute user={currentUser} salon={currentSalon}>
+            <SalonLogin
+              onBack={() => navigate("/")}
+              onLogin={handleSalonLogin}
+              onNavigateRegister={() => navigate("/register/salon")}
+            />
+           </PublicRoute>
         } />
 
         {/* --- PROTECTED ROUTES (Bina login ke access nahi milega) --- */}
@@ -362,22 +432,19 @@ const AppContent = () => {
           </ProtectedRoute>
         } />
 
-        {/* --- OTHER ROUTES --- */}
-
-        <Route path="/register/salon" element={
-          <SalonRegistration
-            onBack={() => navigate("/")}
-            onRegister={handleRegisterSalon}
-          />
-        } />
-
+        {/* --- SALON DASHBOARD (Protected manually) --- */}
         <Route path="/dashboard/salon" element={
-          <SalonDashboard
-            salon={registeredSalon} 
-            onLogout={() => navigate("/")}
-          />
+          currentSalon ? (
+            <SalonDashboard
+              salon={currentSalon} 
+              onLogout={handleLogout}
+            />
+          ) : (
+            <Navigate to="/salon/login" replace />
+          )
         } />
 
+        {/* --- ADMIN ROUTES --- */}
         <Route path="/admin/login" element={
           <AdminLogin 
             onBack={() => navigate("/")}

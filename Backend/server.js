@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import connectDB from "./Database/db.js";
 import authRoutes from "./Routes/authRoutes.js";
+import salonRoutes from "./Routes/salonRoutes.js";
 
 // Load Env
 dotenv.config();
@@ -30,6 +31,7 @@ app.use(
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/salon", salonRoutes);
 
 // Test Route
 app.get("/", (req, res) => {

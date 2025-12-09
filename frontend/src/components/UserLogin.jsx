@@ -7,6 +7,7 @@ import {
   CheckCircle,
   ChevronLeft,
   LogIn,
+  Store // Icon for salon link
 } from "lucide-react";
 // 1. Import API Helper
 import api from "../utils/api";
@@ -130,7 +131,12 @@ const InputGroup = ({
 /* MAIN COMPONENT                                                             */
 /* -------------------------------------------------------------------------- */
 
-const UserLogin = ({ onBack, onSuccess, onLogin }) => {
+const UserLogin = ({ 
+  onBack, 
+  onSuccess, 
+  onLogin, 
+  onNavigateSalonLogin // <--- NEW PROP ADDED HERE
+}) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -148,14 +154,12 @@ const UserLogin = ({ onBack, onSuccess, onLogin }) => {
     try {
       setLoading(true);
 
-      // 2. Direct API Call using the helper
       const { data } = await api.post("/auth/login", {
-        identifier: email, // Backend expects 'identifier' (email or phone)
+        identifier: email, 
         password: password,
       });
 
       if (data.success) {
-        // 3. Pass the user object up to parent (App.jsx)
         if (onLogin) {
           await onLogin(data.user);
         }
@@ -163,7 +167,6 @@ const UserLogin = ({ onBack, onSuccess, onLogin }) => {
       }
     } catch (err) {
       console.error("Login Error:", err);
-      // 4. Extract error message from backend response
       const msg =
         err.response?.data?.message || "Login failed. Please check credentials.";
       setError(msg);
@@ -212,7 +215,6 @@ const UserLogin = ({ onBack, onSuccess, onLogin }) => {
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
         
-        {/* Error Display */}
         {error && (
           <p className="text-sm font-medium text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2 animate-pulse">
             {error}
@@ -221,7 +223,7 @@ const UserLogin = ({ onBack, onSuccess, onLogin }) => {
 
         <InputGroup
           icon={Mail}
-          type="email" // Can technically be text if you allow phone login here too
+          type="email"
           placeholder="you@example.com"
           label="Email"
           name="email"
@@ -259,6 +261,21 @@ const UserLogin = ({ onBack, onSuccess, onLogin }) => {
           )}
         </ShimmerButton>
       </form>
+
+      {/* --- ADDED: Link to Salon Login --- */}
+      <div className="mt-8 pt-6 border-t border-zinc-100 text-center">
+        <p className="text-zinc-500 font-medium flex items-center justify-center gap-2">
+           <Store size={16} /> Are you a business?{" "}
+          <button 
+            type="button"
+            onClick={onNavigateSalonLogin} 
+            className="text-zinc-900 font-bold hover:underline"
+          >
+            Partner Login
+          </button>
+        </p>
+      </div>
+
     </AuthLayout>
   );
 };
