@@ -9,7 +9,7 @@ const createToken = (userId) => {
 
 const cookieOptions = {
   httpOnly: true,
-  secure: false,   
+  secure: false, 
   sameSite: "lax", 
   maxAge: 7 * 24 * 60 * 60 * 1000, 
 };
@@ -146,4 +146,26 @@ export const logoutUser = (req, res) => {
     success: true,
     message: "Logged out successfully",
   });
+};
+
+/* --------------------------------------- */
+/* GET ALL USERS (New for Admin)           */
+/* --------------------------------------- */
+export const getAllUsers = async (req, res) => {
+  try {
+    // Database se saare users fetch karega, password hatake, naye users pehle
+    const users = await User.find().select("-password").sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: users.length,
+      users,
+    });
+  } catch (err) {
+    console.error("Fetch Users Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
 };

@@ -3,11 +3,11 @@ import React, { useState, useEffect } from "react";
 import {
   ShieldCheck, User, Lock, LayoutDashboard, Store, Users, CreditCard,
   LogOut, Globe2, Bell, DollarSign, Activity, Clock, Download, Zap,
-  CheckCircle, AlertTriangle, Star, Ban, Settings, Search
+  CheckCircle, AlertTriangle, Star, Ban, Settings, Search, Mail, Phone, Calendar
 } from "lucide-react";
+import api from "../utils/api"; 
 
-// --- ADMIN LOGIN COMPONENT ---
-
+// --- ADMIN LOGIN COMPONENT (No Changes) ---
 export const AdminLogin = ({ onBack, onLogin }) => {
   const [creds, setCreds] = useState({ username: "", password: "" });
   
@@ -22,7 +22,6 @@ export const AdminLogin = ({ onBack, onLogin }) => {
 
   return (
     <div className="min-h-screen w-full bg-black flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Matrix/Tech background */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-zinc-800 via-black to-black opacity-80"></div>
       <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay"></div>
       
@@ -71,12 +70,16 @@ export const AdminLogin = ({ onBack, onLogin }) => {
 
 // --- ADMIN DASHBOARD COMPONENT ---
 
-export const AdminDashboard = ({ salons, setSalons, users, onLogout }) => {
+export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
   const [activeTab, setActiveTab] = useState("overview");
-  const [liveUsers, setLiveUsers] = useState(124); // Simulated Live Users
+  const [liveUsers, setLiveUsers] = useState(124);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Real User Data State
+  const [userList, setUserList] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
-  // Simulated Real-time Logic
+  // Simulated Real-time Logic for "Live Users"
   useEffect(() => {
     const interval = setInterval(() => {
       setLiveUsers(prev => prev + (Math.random() > 0.5 ? 1 : -1));
@@ -84,10 +87,33 @@ export const AdminDashboard = ({ salons, setSalons, users, onLogout }) => {
     return () => clearInterval(interval);
   }, []);
 
-  // Stats Calculations
-  const totalRevenue = salons.reduce((acc, curr) => acc + (curr.revenue || 0), 0);
-  const totalWaitTime = salons.reduce((acc, curr) => acc + curr.waiting, 0);
-  const avgWaitTime = salons.length ? Math.round((totalWaitTime * 15) / salons.length) : 0;
+  // Fetch Real Users when tab is "users"
+  useEffect(() => {
+    if (activeTab === "users") {
+      fetchUsers();
+    }
+  }, [activeTab]);
+
+  const fetchUsers = async () => {
+    try {
+      setLoadingUsers(true);
+      const { data } = await api.get("/auth/all");
+      if (data.success) {
+        setUserList(data.users);
+      }
+    } catch (error) {
+      console.error("Failed to fetch users", error);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  // Safe Stats Calculations
+  // Agar salons data load nahi hua toh 0 dikhayega, crash nahi karega
+  const safeSalons = Array.isArray(salons) ? salons : [];
+  const totalRevenue = safeSalons.reduce((acc, curr) => acc + (curr.revenue || 0), 0);
+  const totalWaitTime = safeSalons.reduce((acc, curr) => acc + (curr.waiting || 0), 0);
+  const avgWaitTime = safeSalons.length ? Math.round((totalWaitTime * 15) / safeSalons.length) : 0;
   
   // Handlers
   const toggleVerify = (id) => {
@@ -104,7 +130,7 @@ export const AdminDashboard = ({ salons, setSalons, users, onLogout }) => {
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-indigo-500 selection:text-white flex overflow-hidden">
       
       {/* 1. SIDEBAR NAVIGATION */}
-      <aside className="w-64 border-r border-zinc-800 bg-zinc-900/30 flex flex-col backdrop-blur-xl z-20">
+      <aside className="hidden md:flex w-64 border-r border-zinc-800 bg-zinc-900/30 flex-col backdrop-blur-xl z-20">
         <div className="h-16 flex items-center px-6 border-b border-zinc-800">
           <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-white mr-3 shadow-[0_0_15px_rgba(79,70,229,0.4)]">W</div>
           <span className="font-bold text-lg tracking-tight">Wolars<span className="text-zinc-500">OS</span></span>
@@ -134,20 +160,6 @@ export const AdminDashboard = ({ salons, setSalons, users, onLogout }) => {
         </div>
 
         <div className="mt-auto p-4 border-t border-zinc-800">
-          <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800 mb-4">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-              <span className="text-xs font-bold text-zinc-400">SYSTEM STATUS</span>
-            </div>
-            <div className="flex justify-between text-xs text-zinc-500 mb-1">
-              <span>Database</span>
-              <span className="text-green-400">Healthy</span>
-            </div>
-            <div className="flex justify-between text-xs text-zinc-500">
-              <span>Latency</span>
-              <span className="text-green-400">24ms</span>
-            </div>
-          </div>
           <button onClick={onLogout} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 text-sm font-bold hover:bg-red-500/20 transition">
             <LogOut size={16} /> Exit Founder Mode
           </button>
@@ -161,7 +173,7 @@ export const AdminDashboard = ({ salons, setSalons, users, onLogout }) => {
         {/* Header */}
         <header className="h-16 border-b border-zinc-800 flex items-center justify-between px-8 bg-zinc-900/30 backdrop-blur-md sticky top-0 z-10">
           <h2 className="text-xl font-bold flex items-center gap-2">
-            {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+            {activeTab === 'overview' ? "Command Center" : activeTab === 'users' ? "User Base" : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
             {activeTab === 'overview' && <span className="text-xs font-normal text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded-full border border-zinc-700">Live Updates</span>}
           </h2>
           <div className="flex items-center gap-4">
@@ -177,16 +189,16 @@ export const AdminDashboard = ({ salons, setSalons, users, onLogout }) => {
 
         <div className="flex-1 overflow-y-auto p-8 scrollbar-hide">
           
-          {/* ---------------- OVERVIEW VIEW ---------------- */}
+          {/* ---------------- OVERVIEW VIEW (Graphs & Dummy Data) ---------------- */}
           {activeTab === "overview" && (
             <div className="space-y-8 animate-[slideUp_0.4s_ease-out]">
               
-              {/* Top Stats Row */}
+              {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 {[
                   { label: "Total Revenue", val: `₹${totalRevenue.toLocaleString()}`, change: "+12.5%", icon: DollarSign, color: "text-green-400" },
-                  { label: "Active Salons", val: salons.length, change: "+2 this week", icon: Store, color: "text-purple-400" },
-                  { label: "Live Traffic", val: liveUsers, change: "Current Users", icon: Activity, color: "text-indigo-400", live: true },
+                  { label: "Active Salons", val: safeSalons.length, change: "+2 this week", icon: Store, color: "text-purple-400" },
+                  { label: "Live Users", val: liveUsers, change: "Real-time", icon: Activity, color: "text-indigo-400", live: true },
                   { label: "Avg Wait Time", val: `${avgWaitTime} min`, change: "-2.4% faster", icon: Clock, color: "text-blue-400" },
                 ].map((stat, i) => (
                   <div key={i} className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl relative overflow-hidden group hover:border-zinc-700 transition-all">
@@ -205,12 +217,12 @@ export const AdminDashboard = ({ salons, setSalons, users, onLogout }) => {
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
-                {/* Main Graph (Simulated with CSS) */}
+                {/* Main Graph (Dummy Data Preserved) */}
                 <div className="lg:col-span-2 bg-zinc-900/50 border border-zinc-800 rounded-3xl p-8 relative overflow-hidden">
                   <div className="flex justify-between items-center mb-8">
                     <div>
                       <h3 className="font-bold text-lg text-white">Revenue Growth</h3>
-                      <p className="text-zinc-500 text-xs">Simulated data for demonstration</p>
+                      <p className="text-zinc-500 text-xs">Platform performance overview</p>
                     </div>
                     <button className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 transition"><Download size={18}/></button>
                   </div>
@@ -232,7 +244,7 @@ export const AdminDashboard = ({ salons, setSalons, users, onLogout }) => {
                   </div>
                 </div>
 
-                {/* Live Activity Feed */}
+                {/* Live Activity Feed (Dummy Data Preserved) */}
                 <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-6 flex flex-col">
                   <h3 className="font-bold text-lg text-white mb-6 flex items-center gap-2">
                     <Zap size={18} className="text-yellow-400" /> Live Activity
@@ -261,7 +273,7 @@ export const AdminDashboard = ({ salons, setSalons, users, onLogout }) => {
             </div>
           )}
 
-          {/* ---------------- SALONS VIEW (Advanced CRM) ---------------- */}
+          {/* ---------------- SALONS VIEW (Partners) ---------------- */}
           {activeTab === "salons" && (
             <div className="animate-[slideUp_0.4s_ease-out]">
               <div className="flex justify-between items-center mb-6">
@@ -269,20 +281,15 @@ export const AdminDashboard = ({ salons, setSalons, users, onLogout }) => {
                   <h2 className="text-2xl font-black text-white">Partner Management</h2>
                   <p className="text-zinc-500 text-sm">Manage verification, bans, and payouts.</p>
                 </div>
-                <div className="flex gap-3">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16}/>
-                    <input 
-                      type="text" 
-                      placeholder="Search salons..." 
-                      className="bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:border-indigo-500 outline-none w-64"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
-                  <button className="bg-white text-black px-4 py-2 rounded-xl text-sm font-bold hover:bg-zinc-200 transition flex items-center gap-2">
-                    <Download size={16}/> Export CSV
-                  </button>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16}/>
+                  <input 
+                    type="text" 
+                    placeholder="Search salons..." 
+                    className="bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:border-indigo-500 outline-none w-64"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
                 </div>
               </div>
 
@@ -292,13 +299,12 @@ export const AdminDashboard = ({ salons, setSalons, users, onLogout }) => {
                     <tr>
                       <th className="px-6 py-4">Salon Details</th>
                       <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4">Stats</th>
                       <th className="px-6 py-4">Revenue</th>
                       <th className="px-6 py-4 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-800/50">
-                    {salons.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase())).map(salon => (
+                    {safeSalons.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase())).map(salon => (
                       <tr key={salon.id} className="hover:bg-white/[0.02] transition">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
@@ -322,24 +328,14 @@ export const AdminDashboard = ({ salons, setSalons, users, onLogout }) => {
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col gap-1">
-                            <span className="text-white font-medium flex items-center gap-1"><Star size={12} className="text-yellow-500 fill-yellow-500"/> {salon.rating}</span>
-                            <span className="text-xs text-zinc-600">{salon.reviews} reviews</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="text-white font-mono">₹{salon.revenue?.toLocaleString() ?? 0}</p>
-                        </td>
+                        <td className="px-6 py-4 text-white font-mono">₹{salon.revenue?.toLocaleString() ?? 0}</td>
                         <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button onClick={() => toggleVerify(salon.id)} className={`p-2 rounded-lg border transition ${salon.verified ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500 hover:bg-yellow-500/20' : 'bg-green-500/10 border-green-500/20 text-green-500 hover:bg-green-500/20'}`}>
-                              {salon.verified ? "Revoke" : "Verify"}
-                            </button>
-                            <button onClick={() => deleteSalon(salon.id)} className="p-2 rounded-lg bg-zinc-800 text-zinc-400 hover:bg-red-500/20 hover:text-red-500 hover:border-red-500/20 border border-transparent transition">
-                              <Ban size={16}/>
-                            </button>
-                          </div>
+                          <button onClick={() => toggleVerify(salon.id)} className="text-indigo-400 hover:underline text-xs mr-3">
+                            {salon.verified ? "Revoke" : "Verify"}
+                          </button>
+                          <button onClick={() => deleteSalon(salon.id)} className="text-red-400 hover:underline text-xs">
+                            Ban
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -349,14 +345,91 @@ export const AdminDashboard = ({ salons, setSalons, users, onLogout }) => {
             </div>
           )}
 
-          {/* ---------------- USERS & FINANCIALS PLACEHOLDERS ---------------- */}
-          {(activeTab === "users" || activeTab === "financials") && (
+          {/* ---------------- USERS VIEW (Real Data from Database) ---------------- */}
+          {activeTab === "users" && (
+             <div className="animate-[slideUp_0.4s_ease-out]">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h2 className="text-2xl font-black text-white">User Base</h2>
+                    <p className="text-zinc-500 text-sm">Real-time registered users from database.</p>
+                  </div>
+                  <div className="flex gap-2">
+                     <span className="px-3 py-1 bg-zinc-800 rounded-full text-xs text-zinc-400 border border-zinc-700">
+                        Total Users: {userList.length}
+                     </span>
+                  </div>
+                </div>
+
+                {loadingUsers ? (
+                   <div className="flex justify-center py-20">
+                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+                   </div>
+                ) : (
+                  <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl overflow-hidden">
+                    <table className="w-full text-left text-sm text-zinc-400">
+                      <thead className="bg-zinc-900 text-zinc-500 font-bold uppercase text-[10px] tracking-wider">
+                        <tr>
+                          <th className="px-6 py-4">User</th>
+                          <th className="px-6 py-4">Contact Info</th>
+                          <th className="px-6 py-4">Joined Date</th>
+                          <th className="px-6 py-4 text-right">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-800/50">
+                        {userList.length === 0 ? (
+                           <tr>
+                              <td colSpan="4" className="text-center py-10 text-zinc-600">No users found in database.</td>
+                           </tr>
+                        ) : (
+                          userList.map((user) => (
+                            <tr key={user._id} className="hover:bg-white/[0.02] transition">
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs">
+                                    {user.name ? user.name.charAt(0).toUpperCase() : "U"}
+                                  </div>
+                                  <span className="font-bold text-white">{user.name || "Unknown"}</span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="flex flex-col gap-1">
+                                   <div className="flex items-center gap-2 text-xs">
+                                      <Mail size={12} className="text-zinc-600"/> {user.email}
+                                   </div>
+                                   <div className="flex items-center gap-2 text-xs">
+                                      <Phone size={12} className="text-zinc-600"/> {user.phone}
+                                   </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-xs font-mono text-zinc-500">
+                                <div className="flex items-center gap-2">
+                                   <Calendar size={12}/>
+                                   {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 text-[10px] font-bold border border-green-500/20">
+                                  Active
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+             </div>
+          )}
+
+          {/* ---------------- FINANCIALS PLACEHOLDER ---------------- */}
+          {activeTab === "financials" && (
              <div className="flex flex-col items-center justify-center h-full text-zinc-500 animate-[slideUp_0.4s_ease-out]">
                 <div className="w-24 h-24 bg-zinc-900 rounded-full flex items-center justify-center mb-6 border border-zinc-800">
                    <Settings size={40} className="animate-spin-slow"/>
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-2">Module Under Construction</h3>
-                <p className="max-w-md text-center">You are in Founder Mode. This module is being connected to the Supabase backend for real-time analytics.</p>
+                <h3 className="text-2xl font-bold text-white mb-2">Financial Module</h3>
+                <p className="max-w-md text-center">Revenue analytics and payout integrations coming soon.</p>
              </div>
           )}
 

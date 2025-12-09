@@ -6,17 +6,14 @@ import {
   BarChart3, Zap, ShieldCheck, ArrowRight
 } from "lucide-react";
 
+// --- API & COMPONENTS IMPORTS ---
 import api from "./utils/api";
-
-// UPDATED IMPORTS: Importing both Registration and Login components
 import { SalonRegistration, SalonLogin } from "./components/SalonRegistration";
-
 import UserRegistration from "./components/UserRegistration";
 import UserLogin from "./components/UserLogin"; 
 import { UserProfile } from "./components/UserProfile";
 import { AdminLogin, AdminDashboard } from "./components/AdminDashboard";
 import Testimonials from "./components/Testimonials";
-
 import HeroSection from "./components/HeroSection";
 import Footer from "./components/Footer";
 import Navbar from "./components/Navbar";
@@ -26,7 +23,7 @@ import { BackgroundAurora, NoiseOverlay } from "./components/SharedUI";
 import AdvancedDashboardSection from "./components/AdvancedDashboardSection"; 
 
 /* ---------------------------------
-   INITIAL DATA (Fallback/Demo)
+   INITIAL DATA 
 ---------------------------------- */
 const INITIAL_SALON_DATA = [
   { id: 1, name: "Urban Cut Pro", area: "Shastri Nagar", city: "Jodhpur", distance: "1.2 km", waiting: 3, eta: 15, rating: 4.8, reviews: 321, tag: "Fastest nearby", price: "₹₹", type: "Unisex", verified: true, revenue: 15400 },
@@ -42,7 +39,7 @@ const INITIAL_USERS = [
 ];
 
 /* ---------------------------------
-   HOOKS & UI COMPONENTS
+   HELPER HOOKS
 ---------------------------------- */
 const useOnScreen = (options) => {
   const ref = useRef(null);
@@ -60,6 +57,11 @@ const useOnScreen = (options) => {
   return [ref, isVisible];
 };
 
+/* ---------------------------------
+   UI HELPER COMPONENTS (Missing Fixed Here)
+---------------------------------- */
+
+// 1. Toast Notification
 const Toast = ({ message, type, onClose }) => {
   useEffect(() => {
     const timer = setTimeout(onClose, 3000);
@@ -81,6 +83,7 @@ const Toast = ({ message, type, onClose }) => {
   );
 };
 
+// 2. Live Ticket Widget
 const LiveTicket = ({ ticket, onCancel }) => {
   const [timeLeft, setTimeLeft] = useState(ticket ? ticket.eta : 0);
   useEffect(() => {
@@ -125,6 +128,7 @@ const LiveTicket = ({ ticket, onCancel }) => {
   );
 };
 
+// 3. Infinite Marquee (THIS WAS MISSING)
 const InfiniteMarquee = () => {
   const logos = ["Glamour Zone", "The Barber", "Hair Masters", "Trimmed", "Urban Cut"];
   return (
@@ -142,6 +146,7 @@ const InfiniteMarquee = () => {
   );
 };
 
+// 4. Feature Card (THIS WAS MISSING)
 const FeatureCard = ({ icon: Icon, title, desc, delay, colSpan = "col-span-1" }) => {
   const [ref, isVisible] = useOnScreen({ threshold: 0.1 });
   return (
@@ -167,6 +172,7 @@ const FeatureCard = ({ icon: Icon, title, desc, delay, colSpan = "col-span-1" })
   );
 };
 
+// 5. Landing Page
 const LandingPage = ({ onNavigateUser, onNavigateSalon, onNavigateAdmin, onNavigateLogin }) => {
   return (
     <div className="min-h-screen w-full font-sans selection:bg-zinc-900 selection:text-white overflow-x-hidden bg-zinc-50">
@@ -206,17 +212,30 @@ const ProtectedRoute = ({ user, children }) => {
   return children;
 };
 
-// 2. PublicRoute: For Guests (If logged in, redirect to respective dashboard)
+// 2. PublicRoute: For Guests
 const PublicRoute = ({ user, salon, children }) => {
-  if (user) {
-    return <Navigate to="/dashboard/user" replace />;
-  }
-  if (salon) {
-    return <Navigate to="/dashboard/salon" replace />;
+  if (user) return <Navigate to="/dashboard/user" replace />;
+  if (salon) return <Navigate to="/dashboard/salon" replace />;
+  return children;
+};
+
+// 3. ProtectedAdminRoute: Admin Only
+const ProtectedAdminRoute = ({ children }) => {
+  const isAdminLoggedIn = localStorage.getItem("adminAuth") === "true";
+  if (!isAdminLoggedIn) {
+    return <Navigate to="/admin/login" replace />;
   }
   return children;
 };
 
+// 4. AdminPublicRoute: If Admin logged in, goto Dashboard
+const AdminPublicRoute = ({ children }) => {
+  const isAdminLoggedIn = localStorage.getItem("adminAuth") === "true";
+  if (isAdminLoggedIn) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+  return children;
+};
 
 /* ---------------------------------
    MAIN APP CONTENT
@@ -245,30 +264,24 @@ const AppContent = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // 1. Check if User is logged in
         const userRes = await api.get("/auth/me");
         if (userRes.data.success) {
           setCurrentUser(userRes.data.user);
           setAuthLoading(false);
-          return; // If user found, stop checking
+          return;
         }
-      } catch (err) {
-        // User not found, proceed to check Salon
-      }
+      } catch (err) {}
 
       try {
-        // 2. Check if Salon is logged in
         const salonRes = await api.get("/salon/me");
         if (salonRes.data.success) {
           setCurrentSalon(salonRes.data.salon);
         }
-      } catch (err) {
-        // No one is logged in
-      } finally {
+      } catch (err) {} 
+      finally {
         setAuthLoading(false);
       }
     };
-    
     checkAuth();
   }, []);
 
@@ -280,7 +293,6 @@ const AppContent = () => {
     navigate("/dashboard/user");
   };
 
-  // NEW: Salon Registration API Call
   const handleRegisterSalon = async (formData) => {
     try {
         const { data } = await api.post("/salon/register", formData);
@@ -294,7 +306,6 @@ const AppContent = () => {
     }
   };
 
-  // NEW: Salon Login API Call
   const handleSalonLogin = async (credentials) => {
     try {
         const { data } = await api.post("/salon/login", credentials);
@@ -310,7 +321,6 @@ const AppContent = () => {
 
   const handleLogout = async () => {
     try {
-      // Hit both endpoints to be safe
       await api.post("/auth/logout");
       await api.post("/salon/logout");
       
@@ -321,6 +331,20 @@ const AppContent = () => {
     } catch (error) {
       showToast("Error logging out", "error");
     }
+  };
+
+  // --- ADMIN HANDLERS ---
+
+  const handleAdminLogin = () => {
+    localStorage.setItem("adminAuth", "true");
+    showToast("Welcome Founder!");
+    navigate("/admin/dashboard", { replace: true });
+  };
+
+  const handleAdminLogout = () => {
+    localStorage.removeItem("adminAuth");
+    showToast("Admin Logged Out");
+    navigate("/admin/login", { replace: true });
   };
 
   const handleJoinQueue = (salon) => {
@@ -338,7 +362,6 @@ const AppContent = () => {
 
   const isDashboard = location.pathname.includes('dashboard') || location.pathname.includes('admin');
 
-  // Global Loading Screen (Authentication check)
   if (authLoading) return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-50 font-sans">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-zinc-900"></div>
@@ -354,8 +377,7 @@ const AppContent = () => {
       )}
 
       <Routes>
-        {/* --- PUBLIC ROUTES (Agar login hai toh seedha Dashboard jayega) --- */}
-        
+        {/* --- PUBLIC ROUTES --- */}
         <Route path="/" element={
           <PublicRoute user={currentUser} salon={currentSalon}>
             <LandingPage
@@ -386,8 +408,6 @@ const AppContent = () => {
           </PublicRoute>
         } />
 
-        {/* --- SALON SPECIFIC ROUTES (New) --- */}
-        
         <Route path="/register/salon" element={
           <PublicRoute user={currentUser} salon={currentSalon}>
             <SalonRegistration
@@ -408,8 +428,7 @@ const AppContent = () => {
            </PublicRoute>
         } />
 
-        {/* --- PROTECTED ROUTES (Bina login ke access nahi milega) --- */}
-        
+        {/* --- DASHBOARD ROUTES --- */}
         <Route path="/dashboard/user" element={
           <ProtectedRoute user={currentUser}>
              <UserDashboard
@@ -432,7 +451,6 @@ const AppContent = () => {
           </ProtectedRoute>
         } />
 
-        {/* --- SALON DASHBOARD (Protected manually) --- */}
         <Route path="/dashboard/salon" element={
           currentSalon ? (
             <SalonDashboard
@@ -446,20 +464,25 @@ const AppContent = () => {
 
         {/* --- ADMIN ROUTES --- */}
         <Route path="/admin/login" element={
-          <AdminLogin 
-            onBack={() => navigate("/")}
-            onLogin={() => navigate("/admin/dashboard")}
-          />
+          <AdminPublicRoute>
+            <AdminLogin 
+              onBack={() => navigate("/")}
+              onLogin={handleAdminLogin}
+            />
+          </AdminPublicRoute>
         } />
 
         <Route path="/admin/dashboard" element={
-          <AdminDashboard 
-            salons={salons}
-            setSalons={setSalons} 
-            users={users}
-            onLogout={() => navigate("/")}
-          />
+          <ProtectedAdminRoute>
+            <AdminDashboard 
+              salons={salons}
+              setSalons={setSalons} 
+              users={users}
+              onLogout={handleAdminLogout}
+            />
+          </ProtectedAdminRoute>
         } />
+
       </Routes>
     </>
   );

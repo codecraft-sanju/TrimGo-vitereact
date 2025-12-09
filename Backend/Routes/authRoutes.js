@@ -4,6 +4,7 @@ import {
   registerUser,
   loginUser,
   logoutUser,
+  getAllUsers, // <--- 1. Import Added
 } from "../Controllers/authController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -25,5 +26,8 @@ router.get("/me", protect, (req, res) => {
     user: req.user,
   });
 });
+
+// GET /api/auth/all (Admin Route to fetch all users)
+router.get("/all", getAllUsers); // <--- 2. Route Added
 
 export default router;
