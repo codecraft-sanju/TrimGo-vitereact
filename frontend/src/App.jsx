@@ -129,12 +129,27 @@ const LiveTicket = ({ ticket, onCancel }) => {
 };
 
 // 3. Infinite Marquee (THIS WAS MISSING)
+// 3. Infinite Marquee (Fixed with internal CSS)
 const InfiniteMarquee = () => {
   const logos = ["Glamour Zone", "The Barber", "Hair Masters", "Trimmed", "Urban Cut"];
+  
   return (
     <div className="w-full overflow-hidden bg-white/50 backdrop-blur-sm py-10 border-y border-zinc-200/50 relative">
+      {/* --- Yaha Humne CSS Inject Ki Hai --- */}
+      <style>{`
+        @keyframes scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-scroll {
+          animation: scroll 20s linear infinite;
+        }
+      `}</style>
+
       <div className="absolute left-0 top-0 h-full w-24 bg-gradient-to-r from-zinc-50 to-transparent z-10"></div>
       <div className="absolute right-0 top-0 h-full w-24 bg-gradient-to-l from-zinc-50 to-transparent z-10"></div>
+      
+      {/* Width 200% set kiya taaki seamless loop ho sake */}
       <div className="flex w-[200%] animate-scroll">
         {[...logos, ...logos, ...logos, ...logos].map((logo, i) => (
           <div key={i} className="flex-shrink-0 mx-8 flex items-center gap-2 text-zinc-400 font-bold text-xl uppercase tracking-tighter hover:text-zinc-900 transition-colors cursor-default">
