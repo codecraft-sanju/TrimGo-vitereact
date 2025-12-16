@@ -1,30 +1,24 @@
-"use client";
+// UserDashboard.jsx
 import React, { useState, useMemo } from "react";
 import {
   MapPin,
   Clock,
   Users,
-  ArrowRight,
   Star,
-  Bell,
   Ticket,
   X,
-  Sparkles,
   Filter,
   Search,
   Check,
-  ShoppingBag,
-  Scissors
+  Sparkles
 } from "lucide-react";
 
 // Imports
 import MapSalon from "./MapSalon";
 import { BackgroundAurora, NoiseOverlay, Logo } from "./SharedUI";
+// New Import Here
+import AIConcierge from "./AIConcierge"; 
 
-/* ---------------------------------
-   CONSTANTS: SERVICE MENU DATA
----------------------------------- */
-// In a real app, this would come from the specific Salon object API
 const MOCK_SERVICES = [
   { id: 1, name: "Classic Haircut", price: 200, time: 25, category: "Hair" },
   { id: 2, name: "Beard Trim & Shape", price: 100, time: 15, category: "Face" },
@@ -33,122 +27,6 @@ const MOCK_SERVICES = [
   { id: 5, name: "Head Massage (15 min)", price: 150, time: 15, category: "Relax" },
   { id: 6, name: "Hair Color (Global)", price: 1200, time: 90, category: "Hair" },
 ];
-
-/* ---------------------------------
-   HELPER COMPONENT: AI CONCIERGE
----------------------------------- */
-
-const AIConcierge = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([
-    {
-      role: "ai",
-      text: "Hi! Looking for a haircut? I can find the shortest queue for you.",
-    },
-  ]);
-  const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-
-  const handleSend = () => {
-    if (!input.trim()) return;
-    const userMsg = input;
-    setMessages((prev) => [...prev, { role: "user", text: userMsg }]);
-    setInput("");
-    setIsTyping(true);
-
-    setTimeout(() => {
-      let response = "I can help with that.";
-      if (
-        userMsg.toLowerCase().includes("urgent") ||
-        userMsg.toLowerCase().includes("fast")
-      ) {
-        response =
-          "I found 'Fade & Blade' nearby with only 5 min waiting. Should I book it?";
-      } else if (
-        userMsg.toLowerCase().includes("cheap") ||
-        userMsg.toLowerCase().includes("price")
-      ) {
-        response = "Urban Cut Pro offers the best rates starting at ₹150.";
-      }
-      setMessages((prev) => [...prev, { role: "ai", text: response }]);
-      setIsTyping(false);
-    }, 1500);
-  };
-
-  return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
-      {isOpen && (
-        <div className="mb-4 w-80 h-96 bg-white rounded-3xl shadow-2xl border border-zinc-200 overflow-hidden flex flex-col">
-          <div className="bg-zinc-900 p-4 flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-              <h3 className="text-white font-bold text-sm">TrimGo AI</h3>
-            </div>
-            <button onClick={() => setIsOpen(false)}>
-              <X className="text-zinc-400 hover:text-white" size={16} />
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-zinc-50">
-            {messages.map((m, i) => (
-              <div
-                key={i}
-                className={`flex ${
-                  m.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`max-w-[80%] p-3 rounded-2xl text-xs font-medium ${
-                    m.role === "user"
-                      ? "bg-zinc-900 text-white rounded-tr-none"
-                      : "bg-white border border-zinc-200 text-zinc-600 rounded-tl-none"
-                  }`}
-                >
-                  {m.text}
-                </div>
-              </div>
-            ))}
-            {isTyping && (
-              <div className="text-xs text-zinc-400 ml-2 animate-pulse">
-                AI is typing...
-              </div>
-            )}
-          </div>
-
-          <div className="p-3 bg-white border-t border-zinc-100 flex gap-2">
-            <input
-              className="flex-1 bg-zinc-100 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-zinc-900"
-              placeholder="Type a message..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            />
-            <button
-              onClick={handleSend}
-              className="p-2 bg-zinc-900 text-white rounded-xl hover:bg-zinc-800"
-            >
-              <ArrowRight size={14} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-14 h-14 rounded-full bg-zinc-900 text-white shadow-xl shadow-zinc-900/30 flex items-center justify-center hover:scale-110 transition-transform group"
-      >
-        {isOpen ? (
-          <X size={24} />
-        ) : (
-          <Sparkles
-            size={24}
-            className="group-hover:rotate-12 transition-transform"
-          />
-        )}
-      </button>
-    </div>
-  );
-};
 
 /* ---------------------------------
    HELPER COMPONENT: SERVICE MODAL
@@ -327,8 +205,6 @@ const UserDashboard = ({ user, onLogout, salons, onJoinQueue, onProfileClick }) 
 
   // Handler when user confirms services inside modal
   const handleConfirmBooking = (salon, services, totals) => {
-    // We pass the salon AND the selected service details to the main handler
-    // You can now process 'services' (array) and 'totals' (price/time) in your backend
     onJoinQueue({ 
         ...salon, 
         selectedServices: services,
@@ -585,7 +461,7 @@ const UserDashboard = ({ user, onLogout, salons, onJoinQueue, onProfileClick }) 
           each partner salon’s TrimGo system in real time.
         </p>
 
-        {/* AI CONCIERGE BUTTON */}
+        {/* AI CONCIERGE BUTTON - Now imported */}
         <AIConcierge />
       </main>
     </div>
