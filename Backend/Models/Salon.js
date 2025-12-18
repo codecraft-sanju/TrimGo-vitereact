@@ -10,9 +10,9 @@ const salonSchema = new mongoose.Schema(
       minlength: 2,
     },
     ownerName: {
-        type: String,
-        required: [true, "Owner Name is required"],
-        trim: true,
+      type: String,
+      required: [true, "Owner Name is required"],
+      trim: true,
     },
     email: {
       type: String,
@@ -33,12 +33,12 @@ const salonSchema = new mongoose.Schema(
       match: [/^[0-9]{10}$/, "Please enter a valid phone number"],
     },
     address: {
-        type: String,
-        required: [true, "Address is required"],
+      type: String,
+      required: [true, "Address is required"],
     },
     zipCode: {
-        type: String,
-        required: [true, "Zip Code is required"],
+      type: String,
+      required: [true, "Zip Code is required"],
     },
     password: {
       type: String,
@@ -46,7 +46,62 @@ const salonSchema = new mongoose.Schema(
       minlength: 6,
       select: false,
     },
-    // Baad mein hum yahan services, slots, images add karenge
+    salonType: {
+      type: String,
+      enum: ["Unisex", "Men Only", "Women Only"],
+      required: [true, "Salon type is required"],
+      default: "Unisex",
+    },
+    latitude: {
+      type: Number,
+      required: [true, "Location (Latitude) is required."],
+    },
+    longitude: {
+      type: Number,
+      required: [true, "Location (Longitude) is required."],
+    },
+
+    // --- NEW DYNAMIC FIELDS (Added for Dashboard) ---
+    
+    // 1. Online/Offline Status (Red/Green Dot)
+    isOnline: {
+      type: Boolean,
+      default: true, 
+    },
+
+    // 2. Admin Verification Status
+    verified: {
+      type: Boolean,
+      default: false, 
+    },
+
+    // 3. Ratings (For Sorting)
+    rating: {
+      type: Number,
+      default: 0,
+    },
+    reviewsCount: {
+      type: Number,
+      default: 0,
+    },
+
+    // 4. Services Menu (Price & Time)
+    services: [
+      {
+        name: { type: String, required: true },
+        price: { type: Number, required: true },
+        time: { type: Number, required: true }, // Duration in minutes
+        category: { type: String, default: "General" }
+      }
+    ],
+
+    // 5. Staff Members (For Assignment)
+    staff: [
+      {
+        name: String,
+        status: { type: String, default: 'available' }
+      }
+    ]
   },
   {
     timestamps: true,
@@ -68,7 +123,7 @@ salonSchema.pre("save", async function () {
 });
 
 // -------------------------------------
-// Password Verification Logic
+// Compare Password
 // -------------------------------------
 salonSchema.methods.comparePassword = async function (plainPassword) {
   return bcrypt.compare(plainPassword, this.password);

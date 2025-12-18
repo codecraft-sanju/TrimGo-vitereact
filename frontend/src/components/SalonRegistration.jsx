@@ -1,11 +1,6 @@
-"use client";
-
 import React, { useState } from "react";
-import { Store, User, Phone, MapPin, ArrowRight, ChevronLeft, Mail, Lock, Hash } from "lucide-react";
-
-// ----------------------------------------------------------------------
-// UI HELPER COMPONENTS (Internal)
-// ----------------------------------------------------------------------
+import { Store, User, Phone, MapPin, ArrowRight, ChevronLeft, Mail, Lock, Hash, Crosshair } from "lucide-react";
+import LocationPicker from "./LocationPicker"; 
 
 const BackgroundAurora = () => (
   <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-zinc-50">
@@ -20,24 +15,14 @@ const NoiseOverlay = () => (
   <div className="fixed inset-0 z-40 pointer-events-none opacity-[0.04] mix-blend-overlay">
     <svg className="w-full h-full">
       <filter id="noise">
-        <feTurbulence
-          type="fractalNoise"
-          baseFrequency="0.80"
-          numOctaves="4"
-          stitchTiles="stitch"
-        />
+        <feTurbulence type="fractalNoise" baseFrequency="0.80" numOctaves="4" stitchTiles="stitch" />
       </filter>
       <rect width="100%" height="100%" filter="url(#noise)" />
     </svg>
   </div>
 );
 
-const ShimmerButton = ({
-  children,
-  onClick,
-  className = "",
-  disabled = false,
-}) => {
+const ShimmerButton = ({ children, onClick, className = "", disabled = false }) => {
   return (
     <button
       onClick={onClick}
@@ -52,15 +37,7 @@ const ShimmerButton = ({
   );
 };
 
-const InputGroup = ({
-  icon: Icon,
-  type,
-  placeholder,
-  label,
-  name,
-  value,
-  onChange,
-}) => (
+const InputGroup = ({ icon: Icon, type, placeholder, label, name, value, onChange }) => (
   <div className="space-y-1.5">
     <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1">
       {label}
@@ -76,19 +53,14 @@ const InputGroup = ({
         onChange={onChange}
         type={type}
         placeholder={placeholder}
-        className="w-full bg-zinc-5 border border-zinc-200 rounded-xl py-4 pl-12 pr-4 text-zinc-900 font-medium focus:outline-none focus:ring-4 focus:ring-zinc-100 focus:border-zinc-900 transition-all placeholder:text-zinc-400"
+        // UPDATED: bg-zinc-50 for visibility
+        className="w-full bg-zinc-50 border border-zinc-200 rounded-xl py-4 pl-12 pr-4 text-zinc-900 font-medium focus:outline-none focus:ring-4 focus:ring-zinc-100 focus:border-zinc-900 transition-all placeholder:text-zinc-400"
       />
     </div>
   </div>
 );
 
-const AuthLayout = ({
-  children,
-  title,
-  subtitle,
-  onBack,
-  illustration,
-}) => (
+const AuthLayout = ({ children, title, subtitle, onBack, illustration }) => (
   <div className="min-h-screen w-full bg-zinc-50 flex items-center justify-center p-4 relative font-sans overflow-hidden">
     <BackgroundAurora />
     <NoiseOverlay />
@@ -101,8 +73,9 @@ const AuthLayout = ({
     </button>
 
     <div className="w-full max-w-6xl bg-white/80 backdrop-blur-xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row relative z-10 border border-white/60">
-      <div className="w-full md:w-1/2 p-8 md:p-16 flex flex-col justify-center">
-        <div className="mb-10">
+      {/* UPDATED: Changed justify-center to justify-start to prevent top cut-off */}
+      <div className="w-full md:w-1/2 p-8 md:p-16 flex flex-col justify-start max-h-[90vh] overflow-y-auto">
+        <div className="mb-8 mt-2">
           <h2 className="text-4xl font-black text-zinc-900 mb-3 tracking-tight">
             {title}
           </h2>
@@ -120,14 +93,9 @@ const AuthLayout = ({
 );
 
 /* ----------------------------------------------------------------------
-   COMPONENT 1: SALON REGISTRATION
+   COMPONENT 1: SALON REGISTRATION (UPDATED WITH MAP)
 ---------------------------------------------------------------------- */
-export const SalonRegistration = ({
-  onBack,
-  onRegister,
-  onNavigateLogin // New Prop to switch to login
-}) => {
-  // Added fields to match Backend Schema: email, password, zipCode, address
+export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
   const [formData, setFormData] = useState({
     salonName: "",
     ownerName: "",
@@ -137,15 +105,25 @@ export const SalonRegistration = ({
     zipCode: "",
     password: "",
     type: "Unisex",
+    latitude: "",
+    longitude: "",
   });
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleLocationSelect = (location) => {
+    setFormData((prev) => ({
+      ...prev,
+      latitude: location.lat,
+      longitude: location.lng
+    }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Pass raw data to App.jsx (App.jsx will handle API call)
+    console.log("Submitting Data with Location:", formData);
     if (onRegister) onRegister(formData);
   };
 
@@ -162,8 +140,7 @@ export const SalonRegistration = ({
               <Store className="text-white" size={32} />
             </div>
             <h3 className="text-3xl font-bold text-white mb-6">
-              "Since using TrimGo, our revenue increased by 30% in the first
-              month."
+              "Since using TrimGo, our revenue increased by 30% in the first month."
             </h3>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-zinc-700 rounded-full"></div>
@@ -176,7 +153,7 @@ export const SalonRegistration = ({
         </>
       }
     >
-      <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSubmit}>
+      <form className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4" onSubmit={handleSubmit}>
         <div className="md:col-span-2">
           <InputGroup icon={Store} name="salonName" value={formData.salonName} onChange={handleChange} type="text" placeholder="Urban Cut Pro" label="Salon Name" />
         </div>
@@ -190,6 +167,30 @@ export const SalonRegistration = ({
         <div className="md:col-span-2">
            <InputGroup icon={MapPin} name="address" value={formData.address} onChange={handleChange} type="text" placeholder="Plot No 4, Shastri Nagar" label="Full Address" />
         </div>
+
+        {/* --- MAP SECTION START --- */}
+        <div className="md:col-span-2 space-y-1.5 mt-2 bg-zinc-50 p-3 rounded-xl border border-zinc-100">
+            <div className="flex justify-between items-center mb-2">
+                 <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1">
+                    📍 Pin Shop Location
+                </label>
+                {formData.latitude && (
+                    <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">
+                        Location Locked ✅
+                    </span>
+                )}
+            </div>
+            
+            {/* Map Component Container */}
+            <div className="rounded-lg overflow-hidden border border-zinc-200">
+                <LocationPicker onLocationSelect={handleLocationSelect} />
+            </div>
+            
+            <p className="text-xs text-zinc-400 mt-2 ml-1">
+                Map par pin ko drag karke apni dukan par drop karein.
+            </p>
+        </div>
+        {/* --- MAP SECTION END --- */}
         
         <div className="md:col-span-1">
              <InputGroup icon={Hash} name="zipCode" value={formData.zipCode} onChange={handleChange} type="text" placeholder="342003" label="Zip Code" />
@@ -197,26 +198,29 @@ export const SalonRegistration = ({
 
         <div className="md:col-span-1 space-y-1.5">
           <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1">Salon Type</label>
-          <select 
-            name="type"
-            value={formData.type} 
-            onChange={handleChange}
-            className="w-full bg-zinc-5 border border-zinc-200 rounded-xl py-4 px-4 text-zinc-900 font-medium focus:outline-none focus:ring-4 focus:ring-zinc-100 focus:border-zinc-900 transition-all appearance-none"
-          >
-            <option value="Unisex">Unisex</option>
-            <option value="Men Only">Men Only</option>
-            <option value="Women Only">Women Only</option>
-          </select>
+          <div className="relative group">
+             <Crosshair className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 z-10" size={20} />
+             <select 
+               name="type"
+               value={formData.type} 
+               onChange={handleChange}
+               className="w-full bg-zinc-50 border border-zinc-200 rounded-xl py-4 pl-12 pr-4 text-zinc-900 font-medium focus:outline-none focus:ring-4 focus:ring-zinc-100 focus:border-zinc-900 transition-all appearance-none relative z-0"
+             >
+               <option value="Unisex">Unisex</option>
+               <option value="Men Only">Men Only</option>
+               <option value="Women Only">Women Only</option>
+             </select>
+          </div>
         </div>
 
-        <div className="md:col-span-2 pt-2">
+        <div className="md:col-span-2 pt-4">
           <ShimmerButton className="w-full py-4">
             Complete Registration <ArrowRight size={18} />
           </ShimmerButton>
         </div>
       </form>
 
-      <div className="mt-6 text-center">
+      <div className="mt-6 text-center pb-8">
         <p className="text-zinc-500 font-medium">
           Already a partner?{" "}
           <button onClick={onNavigateLogin} className="text-zinc-900 font-bold hover:underline">
@@ -229,26 +233,12 @@ export const SalonRegistration = ({
 };
 
 /* ----------------------------------------------------------------------
-   COMPONENT 2: SALON LOGIN (New)
+   COMPONENT 2: SALON LOGIN
 ---------------------------------------------------------------------- */
-export const SalonLogin = ({
-  onBack,
-  onLogin,
-  onNavigateRegister // New Prop to switch to register
-}) => {
-  const [credentials, setCredentials] = useState({
-    identifier: "", // Email or Phone
-    password: "",
-  });
-
-  const handleChange = (e) => {
-    setCredentials({ ...credentials, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (onLogin) onLogin(credentials);
-  };
+export const SalonLogin = ({ onBack, onLogin, onNavigateRegister }) => {
+  const [credentials, setCredentials] = useState({ identifier: "", password: "" });
+  const handleChange = (e) => setCredentials({ ...credentials, [e.target.name]: e.target.value });
+  const handleSubmit = (e) => { e.preventDefault(); if (onLogin) onLogin(credentials); };
 
   return (
     <AuthLayout
@@ -256,7 +246,7 @@ export const SalonLogin = ({
       subtitle="Manage your queue, revenue, and staff."
       onBack={onBack}
       illustration={
-         <>
+        <>
           <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-black z-0"></div>
           <div className="relative z-10 h-full flex flex-col justify-center">
              <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/10 mb-6">
@@ -281,43 +271,17 @@ export const SalonLogin = ({
       }
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
-        <InputGroup
-          icon={User}
-          name="identifier"
-          value={credentials.identifier}
-          onChange={handleChange}
-          type="text"
-          placeholder="Email or Mobile Number"
-          label="Login ID"
-        />
-        <InputGroup
-          icon={Lock}
-          name="password"
-          value={credentials.password}
-          onChange={handleChange}
-          type="password"
-          placeholder="••••••••"
-          label="Password"
-        />
-
+        <InputGroup icon={User} name="identifier" value={credentials.identifier} onChange={handleChange} type="text" placeholder="Email or Mobile Number" label="Login ID" />
+        <InputGroup icon={Lock} name="password" value={credentials.password} onChange={handleChange} type="password" placeholder="••••••••" label="Password" />
         <div className="pt-4">
-          <ShimmerButton className="w-full py-4">
-            Access Dashboard <ArrowRight size={18} />
-          </ShimmerButton>
+          <ShimmerButton className="w-full py-4">Access Dashboard <ArrowRight size={18} /></ShimmerButton>
         </div>
       </form>
-
-      <div className="mt-8 text-center">
-        <p className="text-zinc-500 font-medium">
-          New to TrimGo?{" "}
-          <button onClick={onNavigateRegister} className="text-zinc-900 font-bold hover:underline">
-            Register your Salon
-          </button>
-        </p>
+      <div className="mt-8 text-center pb-8">
+        <p className="text-zinc-500 font-medium">New to TrimGo? <button onClick={onNavigateRegister} className="text-zinc-900 font-bold hover:underline">Register your Salon</button></p>
       </div>
     </AuthLayout>
   );
 };
 
-// Default export ke liye (agar purana code break na ho)
 export default SalonRegistration;

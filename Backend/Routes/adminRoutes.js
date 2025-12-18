@@ -1,0 +1,22 @@
+import express from "express";
+import { 
+    getDashboardStats, 
+    toggleSalonStatus, 
+    deleteSalon 
+} from "../Controllers/adminController.js";
+
+const router = express.Router();
+
+
+
+// 1. Get Dashboard Stats (Revenue, Users, Salons, Live Activity)
+router.get("/dashboard", getDashboardStats);
+
+// 2. Verify or Ban Salon (Status Toggle)
+// URL Example: /api/admin/verify/65a123...
+router.put("/verify/:id", toggleSalonStatus);
+
+// 3. Delete Salon Permanently
+router.delete("/delete/:id", deleteSalon);
+
+export default router;

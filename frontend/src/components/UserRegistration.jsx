@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   User,
   Phone,
@@ -8,6 +8,8 @@ import {
   CheckCircle,
   ChevronLeft,
   Mail,
+  MapPin, // New Icon added
+  AlertCircle,
 } from "lucide-react";
 // 1. Import API Helper
 import api from "../utils/api";
@@ -136,10 +138,39 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser }) => {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-
-  // 2. Add State for API handling
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  
+  // NEW: State to track location permission status
+  const [locationStatus, setLocationStatus] = useState("pending"); // pending, granted, denied
+
+  // --- NEW: Function to manually trigger location permission ---
+  const handleRequestLocation = () => {
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported by your browser.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        console.log("✅ Location access granted at registration.");
+        setLocationStatus("granted");
+      },
+      (err) => {
+        console.log("❌ Location access denied:", err.message);
+        setLocationStatus("denied");
+        if (err.code === 1) {
+          setError("Please enable location permissions in your browser settings.");
+        }
+      },
+      { enableHighAccuracy: true, timeout: 5000 }
+    );
+  };
+
+  // Attempt to request on load, but many browsers will block this without a click
+  useEffect(() => {
+    handleRequestLocation();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -212,9 +243,42 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser }) => {
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
         
-        {/* 4. Display Error Message if it exists */}
+        {/* --- NEW: Interactive Location Status UI --- */}
+        <div 
+          onClick={handleRequestLocation}
+          className={`group flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer ${
+            locationStatus === "granted" 
+            ? "bg-emerald-50 border-emerald-100" 
+            : "bg-zinc-50 border-zinc-200 hover:border-zinc-300"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+              locationStatus === "granted" ? "bg-emerald-500 text-white" : "bg-zinc-200 text-zinc-500"
+            }`}>
+              <MapPin size={18} />
+            </div>
+            <div>
+              <p className={`text-xs font-bold uppercase tracking-wider ${
+                locationStatus === "granted" ? "text-emerald-700" : "text-zinc-500"
+              }`}>
+                {locationStatus === "granted" ? "Location Verified" : "Enable Location"}
+              </p>
+              <p className="text-[10px] text-zinc-400">Required for live queue tracking</p>
+            </div>
+          </div>
+          {locationStatus !== "granted" && (
+            <span className="text-[10px] font-bold px-2 py-1 rounded bg-white shadow-sm group-hover:bg-zinc-900 group-hover:text-white transition-colors">
+              Click to Allow
+            </span>
+          )}
+          {locationStatus === "granted" && <CheckCircle className="text-emerald-500" size={18} />}
+        </div>
+
+        {/* Display Error Message if it exists */}
         {error && (
-          <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-500 text-sm font-medium animate-pulse">
+          <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-500 text-sm font-medium flex items-center gap-2">
+            <AlertCircle size={16} />
             {error}
           </div>
         )}
@@ -259,7 +323,6 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser }) => {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        {/* 5. Update Button for Loading State */}
         <ShimmerButton className="w-full py-4 mt-4" disabled={loading}>
           {loading ? "Creating Account..." : "Create Free Account"}
         </ShimmerButton>

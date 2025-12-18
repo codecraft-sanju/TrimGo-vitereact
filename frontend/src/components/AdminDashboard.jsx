@@ -3,11 +3,30 @@ import React, { useState, useEffect } from "react";
 import {
   ShieldCheck, User, Lock, LayoutDashboard, Store, Users, CreditCard,
   LogOut, Globe2, Bell, DollarSign, Activity, Clock, Download, Zap,
-  CheckCircle, AlertTriangle, Star, Ban, Settings, Search, Mail, Phone, Calendar
+  CheckCircle, AlertTriangle, Star, Ban, Settings, Search, Mail, Phone, Calendar, MapPin
 } from "lucide-react";
-import api from "../utils/api"; 
+import api from "../utils/api";
+import { io } from "socket.io-client"; // Import Socket.io
 
-// --- ADMIN LOGIN COMPONENT (No Changes) ---
+// --- MAP IMPORTS ---
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// --- LEAFLET ICON FIX (Required for React) ---
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+    iconUrl: icon.src || icon,
+    shadowUrl: iconShadow.src || iconShadow,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+});
+L.Marker.prototype.options.icon = DefaultIcon;
+
+// --- ADMIN LOGIN COMPONENT ---
 export const AdminLogin = ({ onBack, onLogin }) => {
   const [creds, setCreds] = useState({ username: "", password: "" });
   
@@ -68,35 +87,118 @@ export const AdminLogin = ({ onBack, onLogin }) => {
   );
 };
 
+// --- NEW COMPONENT: ADMIN MAP VIEW ---
+const AdminMap = ({ salons }) => {
+    // Default Center (Jodhpur) - Adjust if needed
+    const defaultCenter = [26.2389, 73.0243]; 
+
+    return (
+        <div className="h-80 w-full rounded-3xl overflow-hidden border border-zinc-800 z-0 relative mb-6">
+            <MapContainer 
+                center={defaultCenter} 
+                zoom={12} 
+                scrollWheelZoom={false} 
+                style={{ height: "100%", width: "100%" }}
+            >
+                <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {salons.map((salon) => (
+                    salon.latitude && salon.longitude && (
+                        <Marker key={salon._id} position={[salon.latitude, salon.longitude]}>
+                            <Popup>
+                                <div className="text-zinc-900 font-sans p-1">
+                                    <h3 className="font-bold text-sm">{salon.salonName}</h3>
+                                    <p className="text-xs text-zinc-500">{salon.area}</p>
+                                    <div className={`mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full inline-block ${salon.verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                        {salon.verified ? "Verified" : "Pending"}
+                                    </div>
+                                </div>
+                            </Popup>
+                        </Marker>
+                    )
+                ))}
+            </MapContainer>
+            {/* Dark Overlay for Dashboard aesthetic */}
+            <div className="absolute inset-0 pointer-events-none border-[6px] border-zinc-900/20 rounded-3xl z-[400]"></div>
+        </div>
+    );
+};
+
 // --- ADMIN DASHBOARD COMPONENT ---
 
 export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
   const [activeTab, setActiveTab] = useState("overview");
-  const [liveUsers, setLiveUsers] = useState(124);
   const [searchQuery, setSearchQuery] = useState("");
   
-  // Real User Data State
+  // Dynamic Data States
+  const [stats, setStats] = useState({ users: 0, salons: 0, revenue: 0 });
+  const [activityLog, setActivityLog] = useState([]);
   const [userList, setUserList] = useState([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [localSalons, setLocalSalons] = useState([]); // Use this to manage salons inside dashboard
 
-  // Simulated Real-time Logic for "Live Users"
+  const [loading, setLoading] = useState(false);
+
+  // --- 1. SOCKET.IO CONNECTION ---
   useEffect(() => {
-    const interval = setInterval(() => {
-      setLiveUsers(prev => prev + (Math.random() > 0.5 ? 1 : -1));
-    }, 3000);
-    return () => clearInterval(interval);
+    // Connect to Backend Socket
+    const socket = io("http://localhost:5000"); 
+
+    // Join Admin Room
+    socket.emit("join_room", "admin_room");
+
+    // Listen for Real-Time Updates
+    socket.on("admin_stats_update", () => {
+        console.log("⚡ Admin Stats Updated via Socket");
+        fetchDashboardData(); 
+    });
+
+    return () => socket.disconnect();
   }, []);
 
-  // Fetch Real Users when tab is "users"
+  // --- 2. INITIAL DATA FETCH ---
+  useEffect(() => {
+    fetchDashboardData();
+    fetchSalons(); 
+  }, []);
+
+  // Fetch Users when tab changes
   useEffect(() => {
     if (activeTab === "users") {
       fetchUsers();
     }
   }, [activeTab]);
 
+  // --- API CALLS ---
+
+  const fetchDashboardData = async () => {
+    try {
+        const { data } = await api.get("/admin/dashboard");
+        if(data.success) {
+            setStats(data.stats);
+            setActivityLog(data.activity);
+        }
+    } catch (error) {
+        console.error("Dashboard Fetch Error", error);
+    }
+  };
+
+  const fetchSalons = async () => {
+    try {
+        const { data } = await api.get("/salon/all");
+        if(data.success) {
+            setLocalSalons(data.salons);
+            if(setSalons) setSalons(data.salons); 
+        }
+    } catch (error) {
+        console.error("Salons Fetch Error", error);
+    }
+  };
+
   const fetchUsers = async () => {
     try {
-      setLoadingUsers(true);
+      setLoading(true);
       const { data } = await api.get("/auth/all");
       if (data.success) {
         setUserList(data.users);
@@ -104,27 +206,40 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
     } catch (error) {
       console.error("Failed to fetch users", error);
     } finally {
-      setLoadingUsers(false);
+      setLoading(false);
     }
   };
 
-  // Safe Stats Calculations
-  // Agar salons data load nahi hua toh 0 dikhayega, crash nahi karega
-  const safeSalons = Array.isArray(salons) ? salons : [];
-  const totalRevenue = safeSalons.reduce((acc, curr) => acc + (curr.revenue || 0), 0);
-  const totalWaitTime = safeSalons.reduce((acc, curr) => acc + (curr.waiting || 0), 0);
-  const avgWaitTime = safeSalons.length ? Math.round((totalWaitTime * 15) / safeSalons.length) : 0;
-  
-  // Handlers
-  const toggleVerify = (id) => {
-    setSalons(prev => prev.map(s => s.id === id ? { ...s, verified: !s.verified } : s));
-  };
+  // --- ACTIONS ---
 
-  const deleteSalon = (id) => {
-    if(window.confirm("CONFIRM BAN: This will remove the salon and all its data immediately.")) {
-      setSalons(prev => prev.filter(s => s.id !== id));
+  const toggleVerify = async (id, currentStatus) => {
+    try {
+        const { data } = await api.put(`/admin/verify/${id}`, { verified: !currentStatus });
+        if(data.success) {
+            setLocalSalons(prev => prev.map(s => s._id === id ? { ...s, verified: !currentStatus } : s));
+            alert(data.message);
+        }
+    } catch (error) {
+        alert("Action Failed");
     }
   };
+
+  const deleteSalon = async (id) => {
+    if(window.confirm("CONFIRM DELETION: This action cannot be undone.")) {
+      try {
+        const { data } = await api.delete(`/admin/delete/${id}`);
+        if(data.success) {
+            setLocalSalons(prev => prev.filter(s => s._id !== id));
+            alert(data.message);
+        }
+      } catch (error) {
+        alert("Delete Failed");
+      }
+    }
+  };
+
+  const displayedSalons = localSalons.length > 0 ? localSalons : salons;
+  const filteredSalons = displayedSalons.filter(s => s.salonName.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-indigo-500 selection:text-white flex overflow-hidden">
@@ -174,7 +289,7 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
         <header className="h-16 border-b border-zinc-800 flex items-center justify-between px-8 bg-zinc-900/30 backdrop-blur-md sticky top-0 z-10">
           <h2 className="text-xl font-bold flex items-center gap-2">
             {activeTab === 'overview' ? "Command Center" : activeTab === 'users' ? "User Base" : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-            {activeTab === 'overview' && <span className="text-xs font-normal text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded-full border border-zinc-700">Live Updates</span>}
+            {activeTab === 'overview' && <span className="text-xs font-normal text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded-full border border-zinc-700">Live Socket: Connected</span>}
           </h2>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-bold">
@@ -189,17 +304,17 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
 
         <div className="flex-1 overflow-y-auto p-8 scrollbar-hide">
           
-          {/* ---------------- OVERVIEW VIEW (Graphs & Dummy Data) ---------------- */}
+          {/* ---------------- OVERVIEW VIEW (Dynamic Data) ---------------- */}
           {activeTab === "overview" && (
             <div className="space-y-8 animate-[slideUp_0.4s_ease-out]">
               
               {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 {[
-                  { label: "Total Revenue", val: `₹${totalRevenue.toLocaleString()}`, change: "+12.5%", icon: DollarSign, color: "text-green-400" },
-                  { label: "Active Salons", val: safeSalons.length, change: "+2 this week", icon: Store, color: "text-purple-400" },
-                  { label: "Live Users", val: liveUsers, change: "Real-time", icon: Activity, color: "text-indigo-400", live: true },
-                  { label: "Avg Wait Time", val: `${avgWaitTime} min`, change: "-2.4% faster", icon: Clock, color: "text-blue-400" },
+                  { label: "Total Revenue", val: `₹${stats.revenue?.toLocaleString() || 0}`, change: "Lifetime", icon: DollarSign, color: "text-green-400" },
+                  { label: "Total Partners", val: stats.salons || 0, change: "Registered", icon: Store, color: "text-purple-400" },
+                  { label: "Total Users", val: stats.users || 0, change: "Registered DB", icon: Users, color: "text-indigo-400" },
+                  { label: "Live Queue Activity", val: "Active", change: "Socket On", icon: Activity, color: "text-blue-400", live: true },
                 ].map((stat, i) => (
                   <div key={i} className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl relative overflow-hidden group hover:border-zinc-700 transition-all">
                     <div className="flex justify-between items-start mb-4">
@@ -217,12 +332,12 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
-                {/* Main Graph (Dummy Data Preserved) */}
+                {/* Main Graph (Still visual only, but represents data) */}
                 <div className="lg:col-span-2 bg-zinc-900/50 border border-zinc-800 rounded-3xl p-8 relative overflow-hidden">
                   <div className="flex justify-between items-center mb-8">
                     <div>
-                      <h3 className="font-bold text-lg text-white">Revenue Growth</h3>
-                      <p className="text-zinc-500 text-xs">Platform performance overview</p>
+                      <h3 className="font-bold text-lg text-white">Projected Growth</h3>
+                      <p className="text-zinc-500 text-xs">Visual Representation of Scale</p>
                     </div>
                     <button className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 transition"><Download size={18}/></button>
                   </div>
@@ -230,56 +345,45 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                   <div className="h-64 flex items-end justify-between gap-2">
                     {[35, 45, 30, 50, 45, 60, 55, 70, 65, 80, 75, 90, 85, 100].map((h, i) => (
                       <div key={i} className="w-full bg-zinc-800/50 rounded-t-lg relative group hover:bg-indigo-600/50 transition-all duration-300" style={{ height: `${h}%` }}>
-                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-white text-black font-bold text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                          ₹{h * 100}
-                        </div>
                       </div>
                     ))}
-                  </div>
-                  {/* Axis Label */}
-                  <div className="flex justify-between mt-4 text-xs font-mono text-zinc-600 uppercase">
-                    <span>01 Nov</span>
-                    <span>15 Nov</span>
-                    <span>30 Nov</span>
                   </div>
                 </div>
 
-                {/* Live Activity Feed (Dummy Data Preserved) */}
-                <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-6 flex flex-col">
+                {/* Live Activity Feed (REAL DATA FROM DB) */}
+                <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-6 flex flex-col h-[400px]">
                   <h3 className="font-bold text-lg text-white mb-6 flex items-center gap-2">
-                    <Zap size={18} className="text-yellow-400" /> Live Activity
+                    <Zap size={18} className="text-yellow-400" /> Recent Activity
                   </h3>
                   <div className="space-y-6 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                    {[
-                      { user: "Suresh R.", action: "joined queue at", target: "Urban Cut Pro", time: "2s ago" },
-                      { user: "New Salon", action: "registered", target: "Style Studio", time: "45s ago", type: "alert" },
-                      { user: "Amit V.", action: "completed payment", target: "₹350.00", time: "2m ago", type: "success" },
-                      { user: "Rahul S.", action: "left queue at", target: "Fade & Blade", time: "5m ago", type: "error" },
-                      { user: "Admin", action: "verified", target: "Royal Cut", time: "12m ago" },
-                    ].map((log, i) => (
-                      <div key={i} className="flex gap-3 relative pl-4 border-l border-zinc-800">
-                        <div className={`absolute -left-[5px] top-1 w-2.5 h-2.5 rounded-full ${log.type === 'alert' ? 'bg-yellow-500' : log.type === 'success' ? 'bg-green-500' : log.type === 'error' ? 'bg-red-500' : 'bg-indigo-500'}`}></div>
-                        <div>
-                          <p className="text-sm text-zinc-300 leading-snug">
-                            <span className="font-bold text-white">{log.user}</span> {log.action} <span className="text-zinc-100 font-medium">{log.target}</span>
-                          </p>
-                          <p className="text-[10px] text-zinc-600 font-mono mt-1">{log.time}</p>
+                    {activityLog.length === 0 ? (
+                        <p className="text-zinc-500 text-sm text-center mt-10">No recent activity found.</p>
+                    ) : (
+                        activityLog.map((log, i) => (
+                        <div key={i} className="flex gap-3 relative pl-4 border-l border-zinc-800">
+                            <div className={`absolute -left-[5px] top-1 w-2.5 h-2.5 rounded-full bg-indigo-500`}></div>
+                            <div>
+                            <p className="text-sm text-zinc-300 leading-snug">
+                                <span className="font-bold text-white">{log.userId?.name || "User"}</span> joined queue at <span className="text-zinc-100 font-medium">{log.salonId?.salonName || "Salon"}</span>
+                            </p>
+                            <p className="text-[10px] text-zinc-600 font-mono mt-1">{new Date(log.updatedAt).toLocaleTimeString()}</p>
+                            </div>
                         </div>
-                      </div>
-                    ))}
+                        ))
+                    )}
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ---------------- SALONS VIEW (Partners) ---------------- */}
+          {/* ---------------- SALONS VIEW (Dynamic with Map) ---------------- */}
           {activeTab === "salons" && (
             <div className="animate-[slideUp_0.4s_ease-out]">
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h2 className="text-2xl font-black text-white">Partner Management</h2>
-                  <p className="text-zinc-500 text-sm">Manage verification, bans, and payouts.</p>
+                  <p className="text-zinc-500 text-sm">Geospatial view of all registered partners.</p>
                 </div>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16}/>
@@ -293,7 +397,10 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                 </div>
               </div>
 
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl overflow-hidden">
+              {/* --- ADDED MAP HERE --- */}
+              <AdminMap salons={filteredSalons} />
+
+              <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl overflow-hidden mt-6">
                 <table className="w-full text-left text-sm text-zinc-400">
                   <thead className="bg-zinc-900 text-zinc-500 font-bold uppercase text-[10px] tracking-wider">
                     <tr>
@@ -304,16 +411,16 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-800/50">
-                    {safeSalons.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase())).map(salon => (
-                      <tr key={salon.id} className="hover:bg-white/[0.02] transition">
+                    {filteredSalons.map(salon => (
+                      <tr key={salon._id} className="hover:bg-white/[0.02] transition">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center font-bold text-white text-xs border border-zinc-700">
-                              {salon.name.substring(0, 2).toUpperCase()}
+                              {salon.salonName.substring(0, 2).toUpperCase()}
                             </div>
                             <div>
-                              <p className="font-bold text-white text-sm">{salon.name}</p>
-                              <p className="text-xs text-zinc-500">{salon.area}, {salon.city}</p>
+                              <p className="font-bold text-white text-sm">{salon.salonName}</p>
+                              <p className="text-xs text-zinc-500">{salon.address}</p>
                             </div>
                           </div>
                         </td>
@@ -330,10 +437,10 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                         </td>
                         <td className="px-6 py-4 text-white font-mono">₹{salon.revenue?.toLocaleString() ?? 0}</td>
                         <td className="px-6 py-4 text-right">
-                          <button onClick={() => toggleVerify(salon.id)} className="text-indigo-400 hover:underline text-xs mr-3">
+                          <button onClick={() => toggleVerify(salon._id, salon.verified)} className="text-indigo-400 hover:underline text-xs mr-3">
                             {salon.verified ? "Revoke" : "Verify"}
                           </button>
-                          <button onClick={() => deleteSalon(salon.id)} className="text-red-400 hover:underline text-xs">
+                          <button onClick={() => deleteSalon(salon._id)} className="text-red-400 hover:underline text-xs">
                             Ban
                           </button>
                         </td>
@@ -345,7 +452,7 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
             </div>
           )}
 
-          {/* ---------------- USERS VIEW (Real Data from Database) ---------------- */}
+          {/* ---------------- USERS VIEW (Real Data) ---------------- */}
           {activeTab === "users" && (
              <div className="animate-[slideUp_0.4s_ease-out]">
                 <div className="flex justify-between items-center mb-6">
@@ -360,7 +467,7 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                   </div>
                 </div>
 
-                {loadingUsers ? (
+                {loading ? (
                    <div className="flex justify-center py-20">
                       <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
                    </div>

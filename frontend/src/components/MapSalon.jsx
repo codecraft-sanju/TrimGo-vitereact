@@ -1,60 +1,147 @@
 "use client";
-import React from "react";
-import { Scissors } from "lucide-react";
+import React, { useEffect, useRef } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { Scissors, Clock, Users, MapPin, ArrowRight } from "lucide-react";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
 
-const MapSalon = ({ salons, onSelect }) => {
+// --- Fix for Default Leaflet Icon ---
+import icon from "leaflet/dist/images/marker-icon.png";
+import iconShadow from "leaflet/dist/images/marker-shadow.png";
+
+let DefaultIcon = L.icon({
+  iconUrl: icon.src || icon,
+  shadowUrl: iconShadow.src || iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+});
+L.Marker.prototype.options.icon = DefaultIcon;
+
+// --- Custom User Blue Dot Icon ---
+const userIcon = L.divIcon({
+  className: 'custom-user-marker',
+  html: `
+    <div style="position: relative;">
+      <div style="background-color: #3b82f6; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; position: relative; z-index: 2;"></div>
+      <div style="background-color: #3b82f6; width: 14px; height: 14px; border-radius: 50%; position: absolute; top: 0; left: 0; animation: pulse 2s infinite; z-index: 1;"></div>
+    </div>
+    <style>
+      @keyframes pulse {
+        0% { transform: scale(1); opacity: 0.8; }
+        100% { transform: scale(3); opacity: 0; }
+      }
+    </style>
+  `,
+  iconSize: [14, 14],
+  iconAnchor: [7, 7]
+});
+
+// Helper to auto-center map smoothly
+const MapAutoCenter = ({ center }) => {
+  const map = useMap();
+  const hasCentered = useRef(false);
+
+  useEffect(() => {
+    if (center && !hasCentered.current) {
+      map.flyTo([center.lat, center.lng], 14, { duration: 1.5 });
+      hasCentered.current = true;
+    }
+  }, [center, map]);
+  return null;
+};
+
+const MapSalon = ({ salons, onSelect, userLocation }) => {
+  const defaultCenter = [26.2389, 73.0243];
+
   return (
-    <div className="w-full h-[400px] bg-zinc-900 rounded-3xl overflow-hidden relative border border-zinc-800 shadow-2xl group">
-      {/* Map Grid Background */}
-      <div className="absolute inset-0 opacity-20" 
-           style={{ backgroundImage: 'linear-gradient(#333 1px, transparent 1px), linear-gradient(90deg, #333 1px, transparent 1px)', backgroundSize: '40px 40px' }}>
-      </div>
-      
-      {/* Radar Scan Effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/10 to-emerald-500/0 w-[200%] animate-[scan_4s_linear_infinite] pointer-events-none"></div>
+    <div className="w-full h-[450px] bg-zinc-900 rounded-3xl overflow-hidden relative border border-zinc-200 shadow-2xl z-0 group">
+      <MapContainer
+        center={defaultCenter}
+        zoom={13}
+        scrollWheelZoom={false}
+        style={{ height: "100%", width: "100%" }}
+        className="z-0"
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+        />
 
-      {/* User Location */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-        <div className="w-4 h-4 bg-blue-500 rounded-full shadow-[0_0_20px_#3b82f6] animate-pulse"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border border-blue-500/30 rounded-full animate-ping"></div>
-      </div>
+        {/* --- 1. USER'S LIVE LOCATION --- */}
+        {userLocation && (
+          <>
+            <Marker position={[userLocation.lat, userLocation.lng]} icon={userIcon} interactive={false}>
+              <Popup>Aap Yahan Hain</Popup>
+            </Marker>
+            <MapAutoCenter center={userLocation} />
+          </>
+        )}
 
-      {/* Salon Pins - Simulated Positions */}
-      {salons.map((salon, i) => {
-        // Random positions for demo
-        const top = 50 + (Math.cos(i) * 30); 
-        const left = 50 + (Math.sin(i) * 35);
-        
-        return (
-          <button
-            key={salon.id}
-            onClick={() => onSelect(salon)}
-            className="absolute group/pin -translate-x-1/2 -translate-y-1/2 transition-all duration-500 hover:scale-110 z-20"
-            style={{ top: `${top}%`, left: `${left}%` }}
-          >
-            <div className="relative">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg backdrop-blur-md border border-white/20 transition-colors ${salon.waiting < 3 ? 'bg-emerald-500' : 'bg-zinc-800'}`}>
-                <Scissors size={18} />
-              </div>
-              <div className="absolute -top-1 -right-1 w-5 h-5 bg-white text-zinc-900 rounded-full text-[10px] font-bold flex items-center justify-center border border-zinc-200">
-                {salon.eta}
-              </div>
-              
-              {/* Tooltip */}
-              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-40 bg-white/90 backdrop-blur rounded-xl p-3 shadow-xl opacity-0 group-hover/pin:opacity-100 transition-all pointer-events-none">
-                <h4 className="font-bold text-zinc-900 text-xs">{salon.name}</h4>
-                <div className="flex justify-between text-[10px] text-zinc-500 mt-1">
-                  <span>{salon.waiting} waiting</span>
-                  <span className="text-emerald-600 font-bold">₹{salon.price}</span>
+        {/* --- 2. SALON MARKERS --- */}
+        {salons.map((salon) => (
+          salon.latitude && salon.longitude && (
+            <Marker 
+              key={salon._id} 
+              position={[salon.latitude, salon.longitude]}
+            >
+              <Popup className="custom-popup">
+                <div className="p-1 min-w-[180px]">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                        <h3 className="font-bold text-sm text-zinc-900 line-clamp-1">{salon.salonName}</h3>
+                        <p className="text-[10px] text-zinc-500 flex items-center gap-1">
+                            <MapPin size={10} /> {salon.area || "City Center"}
+                        </p>
+                    </div>
+                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-white ${salon.isOnline ? 'bg-zinc-900' : 'bg-red-500'}`}>
+                        <Scissors size={12} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 mb-3 bg-zinc-50 p-2 rounded-lg border border-zinc-100">
+                    <div className="flex flex-col items-center">
+                        <span className="text-[10px] text-zinc-400 font-bold uppercase">Waiting</span>
+                        <div className="flex items-center gap-1 font-bold text-zinc-900">
+                            <Users size={12} className="text-blue-500"/> {salon.waiting || 0}
+                        </div>
+                    </div>
+                    <div className="flex flex-col items-center border-l border-zinc-200">
+                        <span className="text-[10px] text-zinc-400 font-bold uppercase">ETA</span>
+                        <div className="flex items-center gap-1 font-bold text-zinc-900">
+                            <Clock size={12} className="text-emerald-500"/> {salon.eta || 15}m
+                        </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => onSelect(salon)}
+                    disabled={!salon.isOnline}
+                    className={`w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-colors ${
+                        salon.isOnline 
+                        ? 'bg-zinc-900 text-white hover:bg-black' 
+                        : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                    }`}
+                  >
+                    {salon.isOnline ? (
+                        <>Book Now <ArrowRight size={12} /></>
+                    ) : (
+                        "Closed"
+                    )}
+                  </button>
                 </div>
-              </div>
-            </div>
-          </button>
-        );
-      })}
+              </Popup>
+            </Marker>
+          )
+        ))}
+      </MapContainer>
 
-      <div className="absolute bottom-4 right-4 bg-zinc-900/80 backdrop-blur px-3 py-1 rounded-full border border-white/10 text-[10px] text-zinc-400">
-        Live Traffic Layer • Active
+      <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full border border-white/20 text-[10px] font-bold text-zinc-600 shadow-lg z-[400] pointer-events-none flex items-center gap-2">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        </span>
+        Live Traffic Layer
       </div>
     </div>
   );

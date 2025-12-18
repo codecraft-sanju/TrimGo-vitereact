@@ -23,22 +23,6 @@ import { BackgroundAurora, NoiseOverlay } from "./components/SharedUI";
 import AdvancedDashboardSection from "./components/AdvancedDashboardSection"; 
 
 /* ---------------------------------
-   INITIAL DATA 
----------------------------------- */
-const INITIAL_SALON_DATA = [
-  { id: 1, name: "Urban Cut Pro", area: "Shastri Nagar", city: "Jodhpur", distance: "1.2 km", waiting: 3, eta: 15, rating: 4.8, reviews: 321, tag: "Fastest nearby", price: "₹₹", type: "Unisex", verified: true, revenue: 15400 },
-  { id: 2, name: "The Royal Cut Studio", area: "Ratanada", city: "Jodhpur", distance: "2.0 km", waiting: 9, eta: 45, rating: 4.5, reviews: 189, tag: "Most booked", price: "₹₹₹", type: "Men Only", verified: true, revenue: 8900 },
-  { id: 3, name: "Fade & Blade Men’s Salon", area: "Sardarpura", city: "Jodhpur", distance: "0.9 km", waiting: 1, eta: 5, rating: 4.9, reviews: 412, tag: "Low waiting now", price: "₹₹", type: "Men Only", verified: true, revenue: 21000 },
-  { id: 4, name: "Glow & Glam Unisex Salon", area: "Civil Lines", city: "Jodhpur", distance: "3.4 km", waiting: 6, eta: 30, rating: 4.3, reviews: 102, tag: "Family friendly", price: "₹₹", type: "Women Only", verified: false, revenue: 3200 },
-];
-
-const INITIAL_USERS = [
-  { id: 101, name: "Suresh Raina", email: "suresh@example.com", joined: "2025-10-12", status: "Active" },
-  { id: 102, name: "Rohit Sharma", email: "rohit@example.com", joined: "2025-11-05", status: "Active" },
-  { id: 103, name: "Virat Kohli", email: "virat@example.com", joined: "2025-11-28", status: "Active" },
-];
-
-/* ---------------------------------
    HELPER HOOKS
 ---------------------------------- */
 const useOnScreen = (options) => {
@@ -58,7 +42,7 @@ const useOnScreen = (options) => {
 };
 
 /* ---------------------------------
-   UI HELPER COMPONENTS (Missing Fixed Here)
+   UI HELPER COMPONENTS 
 ---------------------------------- */
 
 // 1. Toast Notification
@@ -89,10 +73,12 @@ const LiveTicket = ({ ticket, onCancel }) => {
   useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft((prev) => Math.max(0, prev - 1));
-    }, 2000);
+    }, 60000); // Update every minute for realism, or keep 2000 for fast demo
     return () => clearInterval(timer);
   }, []);
+  
   if (!ticket) return null;
+  
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-md z-50">
       <div className="bg-zinc-900 text-white rounded-3xl p-5 shadow-2xl border border-white/10 relative overflow-hidden">
@@ -115,7 +101,7 @@ const LiveTicket = ({ ticket, onCancel }) => {
             <div className="text-[10px] text-zinc-400 uppercase">Mins Left</div>
           </div>
           <div className="bg-white/5 rounded-2xl p-3 text-center border border-white/5">
-            <div className="text-2xl font-black text-emerald-400">#{ticket.number}</div>
+            <div className="text-2xl font-black text-emerald-400">#{ticket.number || "-"}</div>
             <div className="text-[10px] text-zinc-400 uppercase">Your Position</div>
           </div>
         </div>
@@ -128,14 +114,12 @@ const LiveTicket = ({ ticket, onCancel }) => {
   );
 };
 
-// 3. Infinite Marquee (THIS WAS MISSING)
-// 3. Infinite Marquee (Fixed with internal CSS)
+// 3. Infinite Marquee 
 const InfiniteMarquee = () => {
   const logos = ["Glamour Zone", "The Barber", "Hair Masters", "Trimmed", "Urban Cut"];
   
   return (
     <div className="w-full overflow-hidden bg-white/50 backdrop-blur-sm py-10 border-y border-zinc-200/50 relative">
-      {/* --- Yaha Humne CSS Inject Ki Hai --- */}
       <style>{`
         @keyframes scroll {
           0% { transform: translateX(0); }
@@ -149,7 +133,6 @@ const InfiniteMarquee = () => {
       <div className="absolute left-0 top-0 h-full w-24 bg-gradient-to-r from-zinc-50 to-transparent z-10"></div>
       <div className="absolute right-0 top-0 h-full w-24 bg-gradient-to-l from-zinc-50 to-transparent z-10"></div>
       
-      {/* Width 200% set kiya taaki seamless loop ho sake */}
       <div className="flex w-[200%] animate-scroll">
         {[...logos, ...logos, ...logos, ...logos].map((logo, i) => (
           <div key={i} className="flex-shrink-0 mx-8 flex items-center gap-2 text-zinc-400 font-bold text-xl uppercase tracking-tighter hover:text-zinc-900 transition-colors cursor-default">
@@ -161,7 +144,7 @@ const InfiniteMarquee = () => {
   );
 };
 
-// 4. Feature Card (THIS WAS MISSING)
+// 4. Feature Card 
 const FeatureCard = ({ icon: Icon, title, desc, delay, colSpan = "col-span-1" }) => {
   const [ref, isVisible] = useOnScreen({ threshold: 0.1 });
   return (
@@ -260,8 +243,8 @@ const AppContent = () => {
   const navigate = useNavigate();
   const location = useLocation();
       
-  const [salons, setSalons] = useState(INITIAL_SALON_DATA);
-  const [users, setUsers] = useState(INITIAL_USERS);
+  const [salons, setSalons] = useState([]); // Dynamic salons array
+  const [users, setUsers] = useState([]); // Dynamic users array
   const [toast, setToast] = useState(null);
   const [activeTicket, setActiveTicket] = useState(null);
 
@@ -282,8 +265,8 @@ const AppContent = () => {
         const userRes = await api.get("/auth/me");
         if (userRes.data.success) {
           setCurrentUser(userRes.data.user);
-          setAuthLoading(false);
-          return;
+          // Check for active ticket if user is logged in
+          fetchActiveTicket();
         }
       } catch (err) {}
 
@@ -293,17 +276,41 @@ const AppContent = () => {
           setCurrentSalon(salonRes.data.salon);
         }
       } catch (err) {} 
-      finally {
-        setAuthLoading(false);
-      }
+      
+      // Also fetch salons for initial public view if needed, or leave it to UserDashboard
+      try {
+          const salonListRes = await api.get("/salon/all");
+          if(salonListRes.data.success) {
+              setSalons(salonListRes.data.salons);
+          }
+      } catch (err) {}
+
+      setAuthLoading(false);
     };
     checkAuth();
   }, []);
+
+  const fetchActiveTicket = async () => {
+      try {
+          const { data } = await api.get("/queue/my-ticket");
+          if(data.success && data.ticket) {
+              setActiveTicket({
+                  salonName: data.ticket.salonId.salonName,
+                  number: data.ticket.queueNumber,
+                  eta: data.ticket.totalTime,
+                  status: data.ticket.status
+              });
+          }
+      } catch (error) {
+          console.log("No active ticket found.");
+      }
+  };
 
   // --- HANDLERS ---
 
   const handleUserLoginSuccess = (userData) => {
     setCurrentUser(userData);
+    fetchActiveTicket(); // Check if this user has a pending ticket
     showToast(`Welcome, ${userData.name}!`);
     navigate("/dashboard/user");
   };
@@ -341,6 +348,7 @@ const AppContent = () => {
       
       setCurrentUser(null);
       setCurrentSalon(null);
+      setActiveTicket(null); // Clear ticket on logout
       showToast("Logged out successfully");
       navigate("/");
     } catch (error) {
@@ -362,16 +370,18 @@ const AppContent = () => {
     navigate("/admin/login", { replace: true });
   };
 
-  const handleJoinQueue = (salon) => {
+  // Updated Join Queue Handler to receive dynamic ticket data
+  const handleJoinQueue = (ticketData) => {
     if(activeTicket) {
       showToast("You are already in a queue!", "error");
       return;
     }
-    showToast(`Joined queue for ${salon.name}`);
+    showToast(`Request sent to ${ticketData.salonName}`);
     setActiveTicket({
-      salonName: salon.name,
-      number: salon.waiting + 1,
-      eta: salon.eta
+      salonName: ticketData.salonName,
+      number: ticketData.number, // might be null initially until accepted
+      eta: ticketData.eta,
+      status: ticketData.status
     });
   };
 
@@ -388,7 +398,13 @@ const AppContent = () => {
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       
       {activeTicket && !isDashboard && (
-        <LiveTicket ticket={activeTicket} onCancel={() => setActiveTicket(null)} />
+        <LiveTicket 
+            ticket={activeTicket} 
+            onCancel={() => {
+                // Ideally call API to cancel ticket here
+                setActiveTicket(null);
+            }} 
+        />
       )}
 
       <Routes>
@@ -449,6 +465,8 @@ const AppContent = () => {
              <UserDashboard
                user={currentUser}
                onLogout={handleLogout}
+               // Note: UserDashboard fetches its own salons dynamically now, 
+               // but we can pass initial ones if available
                salons={salons} 
                onJoinQueue={handleJoinQueue}
                onProfileClick={() => navigate("/dashboard/user/profile")} 
@@ -490,9 +508,7 @@ const AppContent = () => {
         <Route path="/admin/dashboard" element={
           <ProtectedAdminRoute>
             <AdminDashboard 
-              salons={salons}
-              setSalons={setSalons} 
-              users={users}
+              // AdminDashboard also fetches its own data dynamically
               onLogout={handleAdminLogout}
             />
           </ProtectedAdminRoute>
