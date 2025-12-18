@@ -167,7 +167,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
 
   // --- 1. INITIAL FETCH & SOCKET ---
   useEffect(() => {
-    const socket = io("http://localhost:5000");
+   const socket = io(import.meta.env.VITE_BACKEND_URL || "https://trimgo-vitereact.onrender.com");
     if(salon?._id) {
         socket.emit("join_room", `salon_${salon._id}`);
     }

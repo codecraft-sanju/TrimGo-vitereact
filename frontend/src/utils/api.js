@@ -1,8 +1,10 @@
 import axios from "axios";
 
 const api = axios.create({
-  
-  baseURL: "http://localhost:5000/api", 
+  // Vite uses import.meta.env instead of process.env
+  baseURL: import.meta.env.VITE_BACKEND_URL 
+    ? `${import.meta.env.VITE_BACKEND_URL}/api` 
+    : "https://trimgo-vitereact.onrender.com/api", 
   withCredentials: true, 
 });
 

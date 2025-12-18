@@ -213,7 +213,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
   useEffect(() => {
     startLocationTracking();
 
-    const socket = io("http://localhost:5000"); 
+    const socket = io(import.meta.env.VITE_BACKEND_URL || "https://trimgo-vitereact.onrender.com");
     if(user?._id) socket.emit("join_room", `user_${user._id}`); 
 
     socket.on("salon_updated", (updatedData) => {
