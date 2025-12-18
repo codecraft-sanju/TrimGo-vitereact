@@ -6,7 +6,7 @@ import {
   logoutUser,
   getAllUsers, // <--- 1. Import Added
 } from "../Controllers/authController.js";
-import { protect } from "../middleware/authMiddleware.js";
+import { protect } from "../Middleware/authMiddleware.js";
 
 const router = express.Router();
 
