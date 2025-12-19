@@ -9,7 +9,7 @@ const createToken = (userId) => {
 
 const cookieOptions = {
   httpOnly: true,
-  secure: false, 
+  secure: true, 
   sameSite: "lax", 
   maxAge: 7 * 24 * 60 * 60 * 1000, 
 };
@@ -138,7 +138,7 @@ export const logoutUser = (req, res) => {
   
   res.clearCookie("auth_token", {
     httpOnly: true,
-    secure: false, 
+    secure: true, 
     sameSite: "lax",
   });
 
