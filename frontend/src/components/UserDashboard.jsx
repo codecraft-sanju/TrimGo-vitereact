@@ -163,16 +163,39 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
   const [loading, setLoading] = useState(true);
   const [activeBookingSalon, setActiveBookingSalon] = useState(null);
   
-  // User Location
+  // User Location & Orientation
   const [userLocation, setUserLocation] = useState(null); 
+  const [heading, setHeading] = useState(0); // For triangle rotation
   const watchId = useRef(null); 
 
-  // --- 1. FUNCTION TO GET LIVE LOCATION (Optimized for Laptop/Timeout) ---
+  // --- 1. FUNCTION TO GET LIVE LOCATION & HEADING ---
   const startLocationTracking = () => {
     if (!navigator.geolocation) {
         alert("Geolocation is not supported by your browser.");
         setSelectedCity("Location N/A");
         return;
+    }
+
+    // --- HEADING / COMPASS LOGIC ---
+    const handleOrientation = (e) => {
+        // iOS provides webkitCompassHeading, others provide alpha
+        const compass = e.webkitCompassHeading || (360 - e.alpha);
+        if (compass) {
+            setHeading(compass);
+        }
+    };
+
+    // Permission request for iOS devices
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+            .then(response => {
+                if (response === 'granted') {
+                    window.addEventListener('deviceorientation', handleOrientation);
+                }
+            })
+            .catch(console.error);
+    } else {
+        window.addEventListener('deviceorientation', handleOrientation);
     }
 
     if (watchId.current !== null) {
@@ -187,11 +210,14 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
                 lat: position.coords.latitude,
                 lng: position.coords.longitude
             });
+            // Update heading from GPS if available and device orientation is not supported
+            if (position.coords.heading !== null && position.coords.heading !== undefined) {
+                setHeading(position.coords.heading);
+            }
             setSelectedCity("Live Tracking");
         },
         (error) => {
             console.error("❌ Location Error:", error);
-            // Handle Timeout specifically for Laptops
             if(error.code === 3) {
                 setSelectedCity("GPS Signal Weak");
             } else if(error.code === 1) {
@@ -203,8 +229,8 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
         },
         { 
           enableHighAccuracy: true, 
-          timeout: 20000, // Increased to 20 seconds to prevent timeout on laptops
-          maximumAge: 5000 // Allow using a location cached in the last 5 seconds
+          timeout: 20000, 
+          maximumAge: 5000 
         } 
     );
   };
@@ -229,6 +255,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
       if (watchId.current !== null) {
         navigator.geolocation.clearWatch(watchId.current);
       }
+      window.removeEventListener('deviceorientation', () => {});
     };
   }, [user]);
 
@@ -311,7 +338,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
                 price: s.price, 
                 time: s.time, 
                 category: s.category 
-            })),
+             })),
             totalPrice: totals.price,
             totalTime: totals.time
         };
@@ -396,9 +423,12 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
             </div>
           </div>
 
-          <MapSalon salons={sortedSalons} 
-          userLocation={userLocation}
-          onSelect={(s) => handleOpenBooking(s)} />
+          <MapSalon 
+            salons={sortedSalons} 
+            userLocation={userLocation}
+            heading={heading} // Passing the rotation degree here
+            onSelect={(s) => handleOpenBooking(s)} 
+          />
 
           <div className="flex flex-col md:flex-row gap-4 mt-6">
             <div className="relative flex-1">

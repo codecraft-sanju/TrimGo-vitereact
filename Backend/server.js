@@ -21,7 +21,7 @@ connectDB();
 const app = express();
 
 // --- SOCKET.IO SETUP START ---
-const server = http.createServer(app); // App ko HTTP server mein wrap karein
+const server = http.createServer(app); 
 
 const io = new Server(server, {
   cors: {

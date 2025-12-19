@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import { Scissors, Clock, Users, MapPin, ArrowRight } from "lucide-react";
@@ -18,23 +17,41 @@ let DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-// --- Custom User Blue Dot Icon ---
-const userIcon = L.divIcon({
+// --- Custom User Navigation Triangle Icon ---
+// This function generates the icon with a dynamic rotation (heading)
+const getUserIcon = (heading) => L.divIcon({
   className: 'custom-user-marker',
   html: `
-    <div style="position: relative;">
-      <div style="background-color: #3b82f6; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; position: relative; z-index: 2;"></div>
-      <div style="background-color: #3b82f6; width: 14px; height: 14px; border-radius: 50%; position: absolute; top: 0; left: 0; animation: pulse 2s infinite; z-index: 1;"></div>
+    <div style="transform: rotate(${heading || 0}deg); transition: transform 0.2s ease-out; display: flex; align-items: center; justify-content: center;">
+      <div style="
+        width: 0; 
+        height: 0; 
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-bottom: 20px solid #3b82f6;
+        filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));
+        position: relative;
+        z-index: 2;
+      "></div>
+      <div style="
+        position: absolute;
+        background-color: #3b82f6;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+        z-index: 1;
+      "></div>
     </div>
     <style>
       @keyframes pulse {
-        0% { transform: scale(1); opacity: 0.8; }
-        100% { transform: scale(3); opacity: 0; }
+        0% { transform: scale(1); opacity: 0.6; }
+        100% { transform: scale(3.5); opacity: 0; }
       }
     </style>
   `,
-  iconSize: [14, 14],
-  iconAnchor: [7, 7]
+  iconSize: [20, 20],
+  iconAnchor: [10, 10]
 });
 
 // Helper to auto-center map smoothly
@@ -51,7 +68,7 @@ const MapAutoCenter = ({ center }) => {
   return null;
 };
 
-const MapSalon = ({ salons, onSelect, userLocation }) => {
+const MapSalon = ({ salons, onSelect, userLocation, heading }) => {
   const defaultCenter = [26.2389, 73.0243];
 
   return (
@@ -68,10 +85,14 @@ const MapSalon = ({ salons, onSelect, userLocation }) => {
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
         />
 
-        {/* --- 1. USER'S LIVE LOCATION --- */}
+        {/* --- 1. USER'S LIVE LOCATION WITH ROTATION --- */}
         {userLocation && (
           <>
-            <Marker position={[userLocation.lat, userLocation.lng]} icon={userIcon} interactive={false}>
+            <Marker 
+              position={[userLocation.lat, userLocation.lng]} 
+              icon={getUserIcon(heading)} 
+              interactive={false}
+            >
               <Popup>Aap Yahan Hain</Popup>
             </Marker>
             <MapAutoCenter center={userLocation} />
