@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
 import {
@@ -73,7 +72,7 @@ const LiveTicket = ({ ticket, onCancel }) => {
   useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft((prev) => Math.max(0, prev - 1));
-    }, 60000); // Update every minute for realism, or keep 2000 for fast demo
+    }, 60000);
     return () => clearInterval(timer);
   }, []);
   
@@ -202,7 +201,6 @@ const LandingPage = ({ onNavigateUser, onNavigateSalon, onNavigateAdmin, onNavig
    ROUTE GUARDS (SECURITY) 🔒
 ---------------------------------- */
 
-// 1. ProtectedRoute: For Logged In Users Only
 const ProtectedRoute = ({ user, children }) => {
   if (!user) {
     return <Navigate to="/user/login" replace />;
@@ -210,14 +208,12 @@ const ProtectedRoute = ({ user, children }) => {
   return children;
 };
 
-// 2. PublicRoute: For Guests
 const PublicRoute = ({ user, salon, children }) => {
   if (user) return <Navigate to="/dashboard/user" replace />;
   if (salon) return <Navigate to="/dashboard/salon" replace />;
   return children;
 };
 
-// 3. ProtectedAdminRoute: Admin Only
 const ProtectedAdminRoute = ({ children }) => {
   const isAdminLoggedIn = localStorage.getItem("adminAuth") === "true";
   if (!isAdminLoggedIn) {
@@ -226,7 +222,6 @@ const ProtectedAdminRoute = ({ children }) => {
   return children;
 };
 
-// 4. AdminPublicRoute: If Admin logged in, goto Dashboard
 const AdminPublicRoute = ({ children }) => {
   const isAdminLoggedIn = localStorage.getItem("adminAuth") === "true";
   if (isAdminLoggedIn) {
@@ -243,49 +238,53 @@ const AppContent = () => {
   const navigate = useNavigate();
   const location = useLocation();
       
-  const [salons, setSalons] = useState([]); // Dynamic salons array
-  const [users, setUsers] = useState([]); // Dynamic users array
+  const [salons, setSalons] = useState([]);
+  const [users, setUsers] = useState([]);
   const [toast, setToast] = useState(null);
   const [activeTicket, setActiveTicket] = useState(null);
 
   // AUTH STATES
   const [currentUser, setCurrentUser] = useState(null);
   const [currentSalon, setCurrentSalon] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true); // START AS TRUE
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
 
-  // CHECK AUTH ON APP LOAD
+  // CHECK AUTH ON APP LOAD - FIXED FOR RELOAD
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const userRes = await api.get("/auth/me");
-        if (userRes.data.success) {
-          setCurrentUser(userRes.data.user);
-          // Check for active ticket if user is logged in
-          fetchActiveTicket();
-        }
-      } catch (err) {}
+        // Parallel check for both user and salon
+        const [userRes, salonRes] = await Promise.allSettled([
+          api.get("/auth/me"),
+          api.get("/salon/me")
+        ]);
 
-      try {
-        const salonRes = await api.get("/salon/me");
-        if (salonRes.data.success) {
-          setCurrentSalon(salonRes.data.salon);
+        if (userRes.status === "fulfilled" && userRes.value.data.success) {
+          setCurrentUser(userRes.value.data.user);
+          // Only fetch ticket if user exists
+          await fetchActiveTicket();
         }
-      } catch (err) {} 
-      
-      // Also fetch salons for initial public view if needed, or leave it to UserDashboard
-      try {
-          const salonListRes = await api.get("/salon/all");
-          if(salonListRes.data.success) {
-              setSalons(salonListRes.data.salons);
-          }
-      } catch (err) {}
 
-      setAuthLoading(false);
+        if (salonRes.status === "fulfilled" && salonRes.value.data.success) {
+          setCurrentSalon(salonRes.value.data.salon);
+        }
+        
+        // Fetch salons for public view
+        const salonListRes = await api.get("/salon/all");
+        if(salonListRes.data.success) {
+          setSalons(salonListRes.data.salons);
+        }
+
+      } catch (err) {
+        console.log("Auth session check completed with no active session.");
+      } finally {
+        // ESSENTIAL: Set loading to false only after ALL checks are done
+        setAuthLoading(false);
+      }
     };
     checkAuth();
   }, []);
@@ -306,11 +305,9 @@ const AppContent = () => {
       }
   };
 
-  // --- HANDLERS ---
-
   const handleUserLoginSuccess = (userData) => {
     setCurrentUser(userData);
-    fetchActiveTicket(); // Check if this user has a pending ticket
+    fetchActiveTicket();
     showToast(`Welcome, ${userData.name}!`);
     navigate("/dashboard/user");
   };
@@ -348,15 +345,13 @@ const AppContent = () => {
       
       setCurrentUser(null);
       setCurrentSalon(null);
-      setActiveTicket(null); // Clear ticket on logout
+      setActiveTicket(null);
       showToast("Logged out successfully");
       navigate("/");
     } catch (error) {
       showToast("Error logging out", "error");
     }
   };
-
-  // --- ADMIN HANDLERS ---
 
   const handleAdminLogin = () => {
     localStorage.setItem("adminAuth", "true");
@@ -370,7 +365,6 @@ const AppContent = () => {
     navigate("/admin/login", { replace: true });
   };
 
-  // Updated Join Queue Handler to receive dynamic ticket data
   const handleJoinQueue = (ticketData) => {
     if(activeTicket) {
       showToast("You are already in a queue!", "error");
@@ -379,7 +373,7 @@ const AppContent = () => {
     showToast(`Request sent to ${ticketData.salonName}`);
     setActiveTicket({
       salonName: ticketData.salonName,
-      number: ticketData.number, // might be null initially until accepted
+      number: ticketData.number,
       eta: ticketData.eta,
       status: ticketData.status
     });
@@ -387,6 +381,7 @@ const AppContent = () => {
 
   const isDashboard = location.pathname.includes('dashboard') || location.pathname.includes('admin');
 
+  // PREVENT REDIRECTS DURING LOADING
   if (authLoading) return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-50 font-sans">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-zinc-900"></div>
@@ -401,14 +396,12 @@ const AppContent = () => {
         <LiveTicket 
             ticket={activeTicket} 
             onCancel={() => {
-                // Ideally call API to cancel ticket here
                 setActiveTicket(null);
             }} 
         />
       )}
 
       <Routes>
-        {/* --- PUBLIC ROUTES --- */}
         <Route path="/" element={
           <PublicRoute user={currentUser} salon={currentSalon}>
             <LandingPage
@@ -459,14 +452,11 @@ const AppContent = () => {
            </PublicRoute>
         } />
 
-        {/* --- DASHBOARD ROUTES --- */}
         <Route path="/dashboard/user" element={
           <ProtectedRoute user={currentUser}>
              <UserDashboard
                user={currentUser}
                onLogout={handleLogout}
-               // Note: UserDashboard fetches its own salons dynamically now, 
-               // but we can pass initial ones if available
                salons={salons} 
                onJoinQueue={handleJoinQueue}
                onProfileClick={() => navigate("/dashboard/user/profile")} 
@@ -495,7 +485,6 @@ const AppContent = () => {
           )
         } />
 
-        {/* --- ADMIN ROUTES --- */}
         <Route path="/admin/login" element={
           <AdminPublicRoute>
             <AdminLogin 
@@ -508,7 +497,6 @@ const AppContent = () => {
         <Route path="/admin/dashboard" element={
           <ProtectedAdminRoute>
             <AdminDashboard 
-              // AdminDashboard also fetches its own data dynamically
               onLogout={handleAdminLogout}
             />
           </ProtectedAdminRoute>
