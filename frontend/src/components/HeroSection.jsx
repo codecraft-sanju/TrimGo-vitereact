@@ -1,4 +1,4 @@
-"use client";
+
 import React from "react";
 import { Building2, Clock, TrendingUp, Star } from "lucide-react";
 

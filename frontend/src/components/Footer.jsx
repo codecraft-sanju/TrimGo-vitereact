@@ -1,4 +1,4 @@
-"use client";
+
 import React from "react";
 import { Heart, Globe, Mail } from "lucide-react";
 

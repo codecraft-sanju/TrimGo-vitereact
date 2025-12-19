@@ -1,4 +1,3 @@
-"use client";
 import React, { useState, useEffect } from "react";
 import {
   ShieldCheck, User, Lock, LayoutDashboard, Store, Users, CreditCard,
