@@ -9,7 +9,7 @@ const createToken = (id) => {
 
 const cookieOptions = {
   httpOnly: true,
-  secure: true, // Set to true if using HTTPS in production
+  secure: true, 
   sameSite: "lax",
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };

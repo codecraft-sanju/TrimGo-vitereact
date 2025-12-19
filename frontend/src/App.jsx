@@ -201,14 +201,16 @@ const LandingPage = ({ onNavigateUser, onNavigateSalon, onNavigateAdmin, onNavig
    ROUTE GUARDS (SECURITY) 🔒
 ---------------------------------- */
 
-const ProtectedRoute = ({ user, children }) => {
+const ProtectedRoute = ({ user, authLoading, children }) => {
+  if (authLoading) return null; // Wait for auth check to complete
   if (!user) {
     return <Navigate to="/user/login" replace />;
   }
   return children;
 };
 
-const PublicRoute = ({ user, salon, children }) => {
+const PublicRoute = ({ user, salon, authLoading, children }) => {
+  if (authLoading) return null; // Wait for auth check to complete
   if (user) return <Navigate to="/dashboard/user" replace />;
   if (salon) return <Navigate to="/dashboard/salon" replace />;
   return children;
@@ -403,7 +405,7 @@ const AppContent = () => {
 
       <Routes>
         <Route path="/" element={
-          <PublicRoute user={currentUser} salon={currentSalon}>
+          <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
             <LandingPage
               onNavigateUser={() => navigate("/register/user")}
               onNavigateSalon={() => navigate("/register/salon")}
@@ -414,7 +416,7 @@ const AppContent = () => {
         } />
 
         <Route path="/user/login" element={
-          <PublicRoute user={currentUser} salon={currentSalon}>
+          <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
             <UserLogin 
                onBack={() => navigate("/")}
                onLogin={handleUserLoginSuccess} 
@@ -424,7 +426,7 @@ const AppContent = () => {
         } />
 
         <Route path="/register/user" element={
-          <PublicRoute user={currentUser} salon={currentSalon}>
+          <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
             <UserRegistration
               onBack={() => navigate("/")}
               onRegisterUser={handleUserLoginSuccess} 
@@ -433,7 +435,7 @@ const AppContent = () => {
         } />
 
         <Route path="/register/salon" element={
-          <PublicRoute user={currentUser} salon={currentSalon}>
+          <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
             <SalonRegistration
               onBack={() => navigate("/")}
               onRegister={handleRegisterSalon}
@@ -443,7 +445,7 @@ const AppContent = () => {
         } />
 
         <Route path="/salon/login" element={
-           <PublicRoute user={currentUser} salon={currentSalon}>
+           <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
             <SalonLogin
               onBack={() => navigate("/")}
               onLogin={handleSalonLogin}
@@ -453,7 +455,7 @@ const AppContent = () => {
         } />
 
         <Route path="/dashboard/user" element={
-          <ProtectedRoute user={currentUser}>
+          <ProtectedRoute user={currentUser} authLoading={authLoading}>
              <UserDashboard
                user={currentUser}
                onLogout={handleLogout}
@@ -465,7 +467,7 @@ const AppContent = () => {
         } />
 
         <Route path="/dashboard/user/profile" element={
-          <ProtectedRoute user={currentUser}>
+          <ProtectedRoute user={currentUser} authLoading={authLoading}>
             <UserProfile 
               user={currentUser} 
               onBack={() => navigate("/dashboard/user")} 
@@ -475,14 +477,14 @@ const AppContent = () => {
         } />
 
         <Route path="/dashboard/salon" element={
-          currentSalon ? (
+          authLoading ? null : (currentSalon ? (
             <SalonDashboard
               salon={currentSalon} 
               onLogout={handleLogout}
             />
           ) : (
             <Navigate to="/salon/login" replace />
-          )
+          ))
         } />
 
         <Route path="/admin/login" element={
