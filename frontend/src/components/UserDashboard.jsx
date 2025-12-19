@@ -452,7 +452,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
                 <div key={salon._id} className="group relative rounded-2xl bg-white/80 backdrop-blur-sm border border-zinc-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/60 via-transparent to-sky-50/60 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <div className="relative p-5 flex flex-col gap-4">
-                    <div className="flex items-start justify-between gap-3">//
+                    <div className="flex items-start justify-between gap-3">
                     <div>
                         <h2 className="text-base md:text-lg font-bold text-zinc-900 flex items-center gap-2">
                         {salon.salonName || "Unknown Salon"}
