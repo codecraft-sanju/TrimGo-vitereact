@@ -10,8 +10,8 @@ import {
   Search,
   Check,
   Sparkles,
-  Navigation,
-  Crosshair
+  Navigation, // Icon for location
+  Crosshair // Icon for Locate Me
 } from "lucide-react";
 import { io } from "socket.io-client"; 
 import api from "../utils/api"; 
@@ -22,7 +22,7 @@ import { BackgroundAurora, NoiseOverlay, Logo } from "./SharedUI";
 import AIConcierge from "./AIConcierge"; 
 
 /* ---------------------------------
-   HELPER: HAVERSINE DISTANCE FORMULA
+   HELPER: HAVERSINE DISTANCE FORMULA (Updated for Meters/KM)
 ---------------------------------- */
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
   if (!lat1 || !lon1 || !lat2 || !lon2) return null;
@@ -38,9 +38,9 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const d = R * c; 
   
   if (d < 1) {
-    return `${Math.round(d * 1000)} m`;
+    return `${Math.round(d * 1000)} m`; // Returns meters if less than 1km
   }
-  return `${d.toFixed(1)} km`;
+  return `${d.toFixed(1)} km`; // Returns km otherwise
 };
 
 const deg2rad = (deg) => {
@@ -165,8 +165,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
   
   // User Location & Orientation
   const [userLocation, setUserLocation] = useState(null); 
-  const [heading, setHeading] = useState(0); 
-  const [selectedDestination, setSelectedDestination] = useState(null); // Track routing destination
+  const [heading, setHeading] = useState(0); // For triangle rotation
   const watchId = useRef(null); 
 
   // --- 1. FUNCTION TO GET LIVE LOCATION & HEADING ---
@@ -177,13 +176,16 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
         return;
     }
 
+    // --- HEADING / COMPASS LOGIC ---
     const handleOrientation = (e) => {
+        // iOS provides webkitCompassHeading, others provide alpha
         const compass = e.webkitCompassHeading || (360 - e.alpha);
         if (compass) {
             setHeading(compass);
         }
     };
 
+    // Permission request for iOS devices
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
             .then(response => {
@@ -208,6 +210,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
                 lat: position.coords.latitude,
                 lng: position.coords.longitude
             });
+            // Update heading from GPS if available and device orientation is not supported
             if (position.coords.heading !== null && position.coords.heading !== undefined) {
                 setHeading(position.coords.heading);
             }
@@ -215,7 +218,14 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
         },
         (error) => {
             console.error("❌ Location Error:", error);
-            setSelectedCity("Location Offline");
+            if(error.code === 3) {
+                setSelectedCity("GPS Signal Weak");
+            } else if(error.code === 1) {
+                alert("Please allow location access for real-time tracking.");
+                setSelectedCity("Location Offline"); 
+            } else {
+                setSelectedCity("Location Offline");
+            }
         },
         { 
           enableHighAccuracy: true, 
@@ -245,7 +255,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
       if (watchId.current !== null) {
         navigator.geolocation.clearWatch(watchId.current);
       }
-      window.removeEventListener('deviceorientation', handleOrientation);
+      window.removeEventListener('deviceorientation', () => {});
     };
   }, [user]);
 
@@ -285,6 +295,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
 
   const sortedSalons = useMemo(() => {
       let sorted = [...salonsWithDistance];
+
       sorted.sort((a, b) => b.isOnline - a.isOnline);
 
       if (sortBy === "distance") {
@@ -306,35 +317,34 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
       return sorted;
   }, [salonsWithDistance, sortBy]);
 
+
   // --- HANDLERS ---
   const handleOpenBooking = (salon) => {
     if(!salon.isOnline) {
-        alert("This salon is currently offline.");
+        alert("This salon is currently offline and not accepting requests.");
         return;
     }
     setActiveBookingSalon(salon);
   };
 
-  const handleShowRoute = (salon) => {
-    if (salon.latitude && salon.longitude) {
-      setSelectedDestination({ lat: salon.latitude, lng: salon.longitude });
-      window.scrollTo({ top: 100, behavior: "smooth" });
-    } else {
-      alert("Location coordinates not available for this salon.");
-    }
-  };
+  const handleCloseBooking = () => setActiveBookingSalon(null);
 
   const handleConfirmBooking = async (salon, services, totals) => {
     try {
         const payload = {
             salonId: salon._id, 
             services: services.map(s => ({ 
-                name: s.name, price: s.price, time: s.time, category: s.category 
+                name: s.name, 
+                price: s.price, 
+                time: s.time, 
+                category: s.category 
              })),
             totalPrice: totals.price,
             totalTime: totals.time
         };
+
         const { data } = await api.post("/queue/join", payload);
+
         if(data.success) {
             onJoinQueue({
                 ...salon,
@@ -358,7 +368,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
       {activeBookingSalon && (
         <ServiceSelectionModal 
             salon={activeBookingSalon} 
-            onClose={() => setActiveBookingSalon(null)} 
+            onClose={handleCloseBooking} 
             onConfirm={handleConfirmBooking} 
         />
       )}
@@ -372,25 +382,28 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
               <div className="relative">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 p-[2px] shadow-lg group-hover:shadow-indigo-500/20 transition-all duration-300">
                   <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || "Guest"}`} alt="User" className="w-full h-full object-cover" />
+                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || "Guest"}`} alt={user?.name || "User"} className="w-full h-full object-cover" />
                   </div>
                 </div>
                 <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
               </div>
               <div className="hidden sm:flex flex-col">
-                <span className="text-sm font-bold text-zinc-900">{user?.name || "Guest"}</span>
+                <span className="text-sm font-bold text-zinc-900 group-hover:text-indigo-600 transition-colors">{user?.name || "Guest"}</span>
                 <span className="text-[10px] font-medium text-zinc-500">Free Plan</span>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-4">
+            
             <button 
                 onClick={startLocationTracking}
                 className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${userLocation ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-zinc-100 text-zinc-600 border-zinc-200 hover:bg-zinc-200'}`}
+                title="Click to re-sync tracking"
             >
               {userLocation ? <Navigation size={14} className="animate-pulse" /> : <Crosshair size={14} />}
               <span>{selectedCity}</span>
             </button>
+
             <button onClick={onLogout} className="text-xs sm:text-sm font-bold px-4 py-2 rounded-full bg-zinc-900 text-white hover:scale-105 transition-transform">Log out</button>
           </div>
         </div>
@@ -405,7 +418,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
             </div>
             <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
               {["All", "Unisex", "Men Only", "Women Only"].map((type) => (
-                <button key={type} onClick={() => setFilterType(type)} className={`px-4 py-3 rounded-2xl font-bold whitespace-nowrap border transition-all text-xs md:text-sm ${filterType === type ? "bg-zinc-900 text-white border-zinc-900" : "bg-white text-zinc-600 border-zinc-200"}`}>{type}</button>
+                <button key={type} onClick={() => setFilterType(type)} className={`px-4 py-3 rounded-2xl font-bold whitespace-nowrap border transition-all text-xs md:text-sm ${filterType === type ? "bg-zinc-900 text-white border-zinc-900" : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50"}`}>{type}</button>
               ))}
             </div>
           </div>
@@ -413,14 +426,13 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
           <MapSalon 
             salons={sortedSalons} 
             userLocation={userLocation}
-            heading={heading}
-            selectedDestination={selectedDestination}
+            heading={heading} // Passing the rotation degree here
             onSelect={(s) => handleOpenBooking(s)} 
           />
 
           <div className="flex flex-col md:flex-row gap-4 mt-6">
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={20} />
+              <Search className="absolute left-4 top-1/2 -translate-x-0 -translate-y-1/2 text-zinc-400" size={20} />
               <input type="text" placeholder="Search by salon name or area..." className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white border border-zinc-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-zinc-900" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
             <div className="flex items-center gap-2">
@@ -458,6 +470,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
                                 </span>
                             )}
                         </div>
+
                         <div className="mt-2 text-[10px] text-zinc-500 font-bold uppercase tracking-wider bg-zinc-100 inline-block px-2 py-0.5 rounded-md">{salon.salonType || "Unisex"}</div>
                     </div>
                     <div className="flex flex-col items-end">
@@ -465,23 +478,16 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
                         <p className="text-[11px] text-zinc-500">{salon.reviewsCount || 0}+ ratings</p>
                     </div>
                     </div>
-                    
                     <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                          <div className="flex flex-col"><span className="text-[11px] uppercase text-zinc-500 font-semibold tracking-[0.16em]">Waiting</span><div className="flex items-baseline gap-1"><span className="text-3xl font-black text-zinc-900">{salon.waiting || 0}</span><span className="text-xs text-zinc-500">people</span></div></div>
-                          <div className="hidden sm:flex flex-col border-l border-dashed border-zinc-200 pl-4"><span className="text-[11px] uppercase text-zinc-500 font-semibold tracking-[0.16em]">Est. Wait</span><span className="text-sm font-semibold text-zinc-900">{(salon.waiting || 0) * 15} mins</span></div>
-                      </div>
-                      
-                      {/* Navigation Shortcut Button */}
-                      <button 
-                        onClick={() => handleShowRoute(salon)}
-                        className="p-3 rounded-2xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300 shadow-sm border border-blue-100"
-                        title="Show Route"
-                      >
-                        <Navigation size={20} />
-                      </button>
+                    <div className="flex items-center gap-4">
+                        <div className="flex flex-col"><span className="text-[11px] uppercase text-zinc-500 font-semibold tracking-[0.16em]">Current waiting</span><div className="flex items-baseline gap-1"><span className="text-3xl font-black text-zinc-900">{salon.waiting || 0}</span><span className="text-xs text-zinc-500 font-medium">people</span></div></div>
+                        <div className="hidden sm:flex flex-col border-l border-dashed border-zinc-200 pl-4"><span className="text-[11px] uppercase text-zinc-500 font-semibold tracking-[0.16em]">Est. Wait</span><span className="text-sm font-semibold text-zinc-900">{(salon.waiting || 0) * 15} mins</span></div>
                     </div>
-
+                    <div className="hidden md:flex flex-col items-end text-[11px] text-zinc-500">
+                        <div className="flex items-center gap-1"><Users size={14} /><span>Staff: {salon.staff?.length || 1}</span></div>
+                        <div className="flex items-center gap-1 mt-1"><Clock size={14} /><span>Live Updates</span></div>
+                    </div>
+                    </div>
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-zinc-100">
                     <div className="flex items-center gap-2 text-xs text-emerald-700 font-semibold"><Sparkles size={14} /><span>{salon.tag || "Best in Town"}</span></div>
                     <div className="flex gap-2">
@@ -500,6 +506,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
           <div className="text-center py-20 opacity-50">
             <Filter size={48} className="mx-auto mb-4" />
             <p className="text-xl font-bold">No salons found</p>
+            <p>Try changing your search or filters.</p>
           </div>
         )}
 
