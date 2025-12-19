@@ -18,40 +18,42 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 // --- Custom User Navigation Triangle Icon ---
-// This function generates the icon with a dynamic rotation (heading)
 const getUserIcon = (heading) => L.divIcon({
   className: 'custom-user-marker',
   html: `
-    <div style="transform: rotate(${heading || 0}deg); transition: transform 0.2s ease-out; display: flex; align-items: center; justify-content: center;">
+    <div style="transform: rotate(${heading || 0}deg); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center;">
       <div style="
         width: 0; 
         height: 0; 
-        border-left: 8px solid transparent;
-        border-right: 8px solid transparent;
-        border-bottom: 20px solid #3b82f6;
-        filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));
+        border-left: 10px solid transparent;
+        border-right: 10px solid transparent;
+        border-bottom: 24px solid #3b82f6;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
         position: relative;
         z-index: 2;
+        transform: translateY(-4px); 
       "></div>
+      
       <div style="
         position: absolute;
         background-color: #3b82f6;
-        width: 12px;
-        height: 12px;
+        width: 14px;
+        height: 14px;
         border-radius: 50%;
+        border: 2px solid white;
         animation: pulse 2s infinite;
         z-index: 1;
       "></div>
     </div>
     <style>
       @keyframes pulse {
-        0% { transform: scale(1); opacity: 0.6; }
+        0% { transform: scale(1); opacity: 0.8; }
         100% { transform: scale(3.5); opacity: 0; }
       }
     </style>
   `,
-  iconSize: [20, 20],
-  iconAnchor: [10, 10]
+  iconSize: [40, 40],
+  iconAnchor: [20, 20] 
 });
 
 // Helper to auto-center map smoothly
@@ -61,7 +63,7 @@ const MapAutoCenter = ({ center }) => {
 
   useEffect(() => {
     if (center && !hasCentered.current) {
-      map.flyTo([center.lat, center.lng], 14, { duration: 1.5 });
+      map.flyTo([center.lat, center.lng], 15, { duration: 1.5 });
       hasCentered.current = true;
     }
   }, [center, map]);

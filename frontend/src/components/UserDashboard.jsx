@@ -10,8 +10,8 @@ import {
   Search,
   Check,
   Sparkles,
-  Navigation, // Icon for location
-  Crosshair // Icon for Locate Me
+  Navigation,
+  Crosshair
 } from "lucide-react";
 import { io } from "socket.io-client"; 
 import api from "../utils/api"; 
@@ -22,7 +22,7 @@ import { BackgroundAurora, NoiseOverlay, Logo } from "./SharedUI";
 import AIConcierge from "./AIConcierge"; 
 
 /* ---------------------------------
-   HELPER: HAVERSINE DISTANCE FORMULA (Updated for Meters/KM)
+   HELPER: HAVERSINE DISTANCE FORMULA
 ---------------------------------- */
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
   if (!lat1 || !lon1 || !lat2 || !lon2) return null;
@@ -38,14 +38,12 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const d = R * c; 
   
   if (d < 1) {
-    return `${Math.round(d * 1000)} m`; // Returns meters if less than 1km
+    return `${Math.round(d * 1000)} m`;
   }
-  return `${d.toFixed(1)} km`; // Returns km otherwise
+  return `${d.toFixed(1)} km`;
 };
 
-const deg2rad = (deg) => {
-  return deg * (Math.PI / 180);
-};
+const deg2rad = (deg) => deg * (Math.PI / 180);
 
 /* ---------------------------------
    HELPER COMPONENT: SERVICE MODAL 
@@ -152,7 +150,6 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm }) => {
 /* ---------------------------------
    MAIN COMPONENT 
 ---------------------------------- */
-
 const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
   const [selectedCity, setSelectedCity] = useState("Locating...");
   const [sortBy, setSortBy] = useState("distance"); 
@@ -163,12 +160,10 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
   const [loading, setLoading] = useState(true);
   const [activeBookingSalon, setActiveBookingSalon] = useState(null);
   
-  // User Location & Orientation
   const [userLocation, setUserLocation] = useState(null); 
-  const [heading, setHeading] = useState(0); // For triangle rotation
+  const [heading, setHeading] = useState(0); 
   const watchId = useRef(null); 
 
-  // --- 1. FUNCTION TO GET LIVE LOCATION & HEADING ---
   const startLocationTracking = () => {
     if (!navigator.geolocation) {
         alert("Geolocation is not supported by your browser.");
@@ -176,16 +171,13 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
         return;
     }
 
-    // --- HEADING / COMPASS LOGIC ---
     const handleOrientation = (e) => {
-        // iOS provides webkitCompassHeading, others provide alpha
         const compass = e.webkitCompassHeading || (360 - e.alpha);
         if (compass) {
             setHeading(compass);
         }
     };
 
-    // Permission request for iOS devices
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
             .then(response => {
@@ -195,7 +187,11 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
             })
             .catch(console.error);
     } else {
-        window.addEventListener('deviceorientation', handleOrientation);
+        if ('ondeviceorientationabsolute' in window) {
+            window.addEventListener('deviceorientationabsolute', handleOrientation);
+        } else {
+            window.addEventListener('deviceorientation', handleOrientation);
+        }
     }
 
     if (watchId.current !== null) {
@@ -210,7 +206,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
                 lat: position.coords.latitude,
                 lng: position.coords.longitude
             });
-            // Update heading from GPS if available and device orientation is not supported
             if (position.coords.heading !== null && position.coords.heading !== undefined) {
                 setHeading(position.coords.heading);
             }
@@ -218,24 +213,12 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
         },
         (error) => {
             console.error("❌ Location Error:", error);
-            if(error.code === 3) {
-                setSelectedCity("GPS Signal Weak");
-            } else if(error.code === 1) {
-                alert("Please allow location access for real-time tracking.");
-                setSelectedCity("Location Offline"); 
-            } else {
-                setSelectedCity("Location Offline");
-            }
+            setSelectedCity("Location Offline");
         },
-        { 
-          enableHighAccuracy: true, 
-          timeout: 20000, 
-          maximumAge: 5000 
-        } 
+        { enableHighAccuracy: true, timeout: 20000, maximumAge: 5000 } 
     );
   };
 
-  // --- 2. INITIAL FETCH & SOCKET ---
   useEffect(() => {
     startLocationTracking();
 
@@ -255,11 +238,10 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
       if (watchId.current !== null) {
         navigator.geolocation.clearWatch(watchId.current);
       }
-      window.removeEventListener('deviceorientation', () => {});
+      window.removeEventListener('deviceorientation', handleOrientation);
     };
   }, [user]);
 
-  // --- 3. FETCH SALONS ---
   const fetchSalons = async () => {
     try {
         setLoading(true);
@@ -282,7 +264,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
     return () => clearTimeout(timer);
   }, [searchTerm, filterType]);
 
-  // --- 4. CALCULATE DISTANCE & SORT ---
   const salonsWithDistance = useMemo(() => {
       return salons.map(salon => {
           let distStr = null;
@@ -295,7 +276,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
 
   const sortedSalons = useMemo(() => {
       let sorted = [...salonsWithDistance];
-
       sorted.sort((a, b) => b.isOnline - a.isOnline);
 
       if (sortBy === "distance") {
@@ -317,8 +297,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
       return sorted;
   }, [salonsWithDistance, sortBy]);
 
-
-  // --- HANDLERS ---
   const handleOpenBooking = (salon) => {
     if(!salon.isOnline) {
         alert("This salon is currently offline and not accepting requests.");
@@ -326,8 +304,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
     }
     setActiveBookingSalon(salon);
   };
-
-  const handleCloseBooking = () => setActiveBookingSalon(null);
 
   const handleConfirmBooking = async (salon, services, totals) => {
     try {
@@ -368,7 +344,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
       {activeBookingSalon && (
         <ServiceSelectionModal 
             salon={activeBookingSalon} 
-            onClose={handleCloseBooking} 
+            onClose={() => setActiveBookingSalon(null)} 
             onConfirm={handleConfirmBooking} 
         />
       )}
@@ -394,7 +370,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            
             <button 
                 onClick={startLocationTracking}
                 className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${userLocation ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-zinc-100 text-zinc-600 border-zinc-200 hover:bg-zinc-200'}`}
@@ -403,7 +378,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
               {userLocation ? <Navigation size={14} className="animate-pulse" /> : <Crosshair size={14} />}
               <span>{selectedCity}</span>
             </button>
-
             <button onClick={onLogout} className="text-xs sm:text-sm font-bold px-4 py-2 rounded-full bg-zinc-900 text-white hover:scale-105 transition-transform">Log out</button>
           </div>
         </div>
@@ -426,7 +400,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
           <MapSalon 
             salons={sortedSalons} 
             userLocation={userLocation}
-            heading={heading} // Passing the rotation degree here
+            heading={heading} 
             onSelect={(s) => handleOpenBooking(s)} 
           />
 
