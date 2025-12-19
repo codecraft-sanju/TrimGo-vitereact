@@ -22,7 +22,7 @@ import { BackgroundAurora, NoiseOverlay, Logo } from "./SharedUI";
 import AIConcierge from "./AIConcierge"; 
 
 /* ---------------------------------
-   HELPER: HAVERSINE DISTANCE FORMULA (Updated for Meters/KM)
+   HELPER: HAVERSINE DISTANCE FORMULA
 ---------------------------------- */
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
   if (!lat1 || !lon1 || !lat2 || !lon2) return null;
@@ -38,9 +38,9 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const d = R * c; 
   
   if (d < 1) {
-    return `${Math.round(d * 1000)} m`; // Returns meters if less than 1km
+    return `${Math.round(d * 1000)} m`; 
   }
-  return `${d.toFixed(1)} km`; // Returns km otherwise
+  return `${d.toFixed(1)} km`; 
 };
 
 const deg2rad = (deg) => {
@@ -136,7 +136,7 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm }) => {
               </div>
             </div>
             <div className="text-right">
-                <span className="text-xs font-bold bg-zinc-100 px-2 py-1 rounded text-zinc-600">{selectedServices.length} items selected</span>
+                <span className="text-xs font-bold bg-zinc-100 px-2 py-1 rounded text-zinc-600">{selectedServices.length} items</span>
             </div>
           </div>
           <button onClick={handleConfirm} disabled={selectedServices.length === 0} className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${selectedServices.length > 0 ? "bg-zinc-900 text-white shadow-lg shadow-zinc-900/20 hover:scale-[1.02]" : "bg-zinc-100 text-zinc-400 cursor-not-allowed"}`}>
@@ -163,12 +163,10 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
   const [loading, setLoading] = useState(true);
   const [activeBookingSalon, setActiveBookingSalon] = useState(null);
   
-  // User Location & Orientation
   const [userLocation, setUserLocation] = useState(null); 
-  const [heading, setHeading] = useState(0); // For triangle rotation
+  const [heading, setHeading] = useState(0); 
   const watchId = useRef(null); 
 
-  // --- 1. FUNCTION TO GET LIVE LOCATION & HEADING ---
   const startLocationTracking = () => {
     if (!navigator.geolocation) {
         alert("Geolocation is not supported by your browser.");
@@ -176,16 +174,13 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
         return;
     }
 
-    // --- HEADING / COMPASS LOGIC ---
     const handleOrientation = (e) => {
-        // iOS provides webkitCompassHeading, others provide alpha
         const compass = e.webkitCompassHeading || (360 - e.alpha);
         if (compass) {
             setHeading(compass);
         }
     };
 
-    // Permission request for iOS devices
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
             .then(response => {
@@ -210,7 +205,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
                 lat: position.coords.latitude,
                 lng: position.coords.longitude
             });
-            // Update heading from GPS if available and device orientation is not supported
             if (position.coords.heading !== null && position.coords.heading !== undefined) {
                 setHeading(position.coords.heading);
             }
@@ -219,10 +213,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
         (error) => {
             console.error("❌ Location Error:", error);
             if(error.code === 3) {
-                setSelectedCity("GPS Signal Weak");
-            } else if(error.code === 1) {
-                alert("Please allow location access for real-time tracking.");
-                setSelectedCity("Location Offline"); 
+                setSelectedCity("GPS Weak");
             } else {
                 setSelectedCity("Location Offline");
             }
@@ -235,7 +226,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
     );
   };
 
-  // --- 2. INITIAL FETCH & SOCKET ---
   useEffect(() => {
     startLocationTracking();
 
@@ -255,11 +245,9 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
       if (watchId.current !== null) {
         navigator.geolocation.clearWatch(watchId.current);
       }
-      window.removeEventListener('deviceorientation', () => {});
     };
   }, [user]);
 
-  // --- 3. FETCH SALONS ---
   const fetchSalons = async () => {
     try {
         setLoading(true);
@@ -282,7 +270,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
     return () => clearTimeout(timer);
   }, [searchTerm, filterType]);
 
-  // --- 4. CALCULATE DISTANCE & SORT ---
   const salonsWithDistance = useMemo(() => {
       return salons.map(salon => {
           let distStr = null;
@@ -295,7 +282,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
 
   const sortedSalons = useMemo(() => {
       let sorted = [...salonsWithDistance];
-
       sorted.sort((a, b) => b.isOnline - a.isOnline);
 
       if (sortBy === "distance") {
@@ -317,11 +303,9 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
       return sorted;
   }, [salonsWithDistance, sortBy]);
 
-
-  // --- HANDLERS ---
   const handleOpenBooking = (salon) => {
     if(!salon.isOnline) {
-        alert("This salon is currently offline and not accepting requests.");
+        alert("This salon is currently offline.");
         return;
     }
     setActiveBookingSalon(salon);
@@ -375,50 +359,46 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
 
       <header className="fixed top-0 left-0 w-full z-40 bg-white/80 backdrop-blur-xl border-b border-zinc-200/60">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <Logo />
             <div className="h-6 w-px bg-zinc-200 hidden sm:block"></div>
-            <div onClick={onProfileClick} className="flex items-center gap-3 cursor-pointer group">
+            <div onClick={onProfileClick} className="flex items-center gap-2 sm:gap-3 cursor-pointer group">
               <div className="relative">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 p-[2px] shadow-lg group-hover:shadow-indigo-500/20 transition-all duration-300">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 p-[2px] shadow-lg transition-all duration-300">
                   <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || "Guest"}`} alt={user?.name || "User"} className="w-full h-full object-cover" />
+                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || "Guest"}`} alt="User" className="w-full h-full object-cover" />
                   </div>
                 </div>
-                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
               </div>
-              <div className="hidden sm:flex flex-col">
-                <span className="text-sm font-bold text-zinc-900 group-hover:text-indigo-600 transition-colors">{user?.name || "Guest"}</span>
-                <span className="text-[10px] font-medium text-zinc-500">Free Plan</span>
+              <div className="flex flex-col">
+                <span className="text-xs sm:text-sm font-bold text-zinc-900 leading-none">{user?.name || "Guest"}</span>
+                <span className="text-[9px] sm:text-[10px] font-medium text-zinc-500 mt-0.5">Free Plan</span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            
+          <div className="flex items-center gap-2 sm:gap-4">
             <button 
                 onClick={startLocationTracking}
-                className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${userLocation ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-zinc-100 text-zinc-600 border-zinc-200 hover:bg-zinc-200'}`}
-                title="Click to re-sync tracking"
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[10px] sm:text-xs font-bold transition-all border ${userLocation ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-zinc-100 text-zinc-600 border-zinc-200'}`}
             >
-              {userLocation ? <Navigation size={14} className="animate-pulse" /> : <Crosshair size={14} />}
-              <span>{selectedCity}</span>
+              {userLocation ? <Navigation size={12} className="animate-pulse" /> : <Crosshair size={12} />}
+              <span className="max-w-[60px] sm:max-w-none truncate">{selectedCity}</span>
             </button>
-
-            <button onClick={onLogout} className="text-xs sm:text-sm font-bold px-4 py-2 rounded-full bg-zinc-900 text-white hover:scale-105 transition-transform">Log out</button>
+            <button onClick={onLogout} className="text-[10px] sm:text-xs font-bold px-3 py-2 rounded-full bg-zinc-900 text-white">Log out</button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 pt-24 pb-16 relative z-10">
-        <div className="mb-10">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-6">
+      <main className="max-w-6xl mx-auto px-4 pt-20 sm:pt-24 pb-16 relative z-10">
+        <div className="mb-8 sm:mb-10">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
             <div>
-              <p className="text-xs font-semibold text-zinc-500 mb-1 uppercase tracking-[0.16em]">Live Availability</p>
-              <h1 className="text-3xl md:text-4xl font-black text-zinc-900 tracking-tight">Find a salon near you.</h1>
+              <p className="text-[10px] sm:text-xs font-semibold text-zinc-500 mb-1 uppercase tracking-[0.16em]">Live Availability</p>
+              <h1 className="text-2xl sm:text-4xl font-black text-zinc-900 tracking-tight">Find a salon near you.</h1>
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+            <div className="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 scrollbar-hide">
               {["All", "Unisex", "Men Only", "Women Only"].map((type) => (
-                <button key={type} onClick={() => setFilterType(type)} className={`px-4 py-3 rounded-2xl font-bold whitespace-nowrap border transition-all text-xs md:text-sm ${filterType === type ? "bg-zinc-900 text-white border-zinc-900" : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50"}`}>{type}</button>
+                <button key={type} onClick={() => setFilterType(type)} className={`px-4 py-2.5 rounded-xl font-bold whitespace-nowrap border transition-all text-[11px] sm:text-sm ${filterType === type ? "bg-zinc-900 text-white border-zinc-900" : "bg-white text-zinc-600 border-zinc-200"}`}>{type}</button>
               ))}
             </div>
           </div>
@@ -426,75 +406,96 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
           <MapSalon 
             salons={sortedSalons} 
             userLocation={userLocation}
-            heading={heading} // Passing the rotation degree here
+            heading={heading} 
             onSelect={(s) => handleOpenBooking(s)} 
           />
 
           <div className="flex flex-col md:flex-row gap-4 mt-6">
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-x-0 -translate-y-1/2 text-zinc-400" size={20} />
-              <input type="text" placeholder="Search by salon name or area..." className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white border border-zinc-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-zinc-900" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+              <input type="text" placeholder="Search salons..." className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-white border border-zinc-200 shadow-sm focus:ring-2 focus:ring-zinc-900" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider whitespace-nowrap">Sort by:</span>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-hide">
+              <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider whitespace-nowrap">Sort:</span>
               {["distance", "waiting", "rating"].map((criteria) => (
-                <button key={criteria} onClick={() => setSortBy(criteria)} className={`text-xs px-3 py-1 rounded-full border ${sortBy === criteria ? "bg-zinc-900 text-white border-zinc-900" : "bg-transparent border-zinc-300 text-zinc-500"}`}>{criteria.charAt(0).toUpperCase() + criteria.slice(1)}</button>
+                <button key={criteria} onClick={() => setSortBy(criteria)} className={`text-[10px] px-3 py-1.5 rounded-full border whitespace-nowrap ${sortBy === criteria ? "bg-zinc-900 text-white border-zinc-900" : "bg-white border-zinc-200 text-zinc-500"}`}>{criteria.charAt(0).toUpperCase() + criteria.slice(1)}</button>
               ))}
             </div>
           </div>
         </div>
 
         {loading ? (
-            <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-zinc-900"></div></div>
+            <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-zinc-900"></div></div>
         ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {sortedSalons.map((salon) => (
-                <div key={salon._id} className="group relative rounded-2xl bg-white/80 backdrop-blur-sm border border-zinc-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/60 via-transparent to-sky-50/60 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="relative p-5 flex flex-col gap-4">
-                    <div className="flex items-start justify-between gap-3">
-                    <div>
-                        <h2 className="text-base md:text-lg font-bold text-zinc-900 flex items-center gap-2">
-                        {salon.salonName || "Unknown Salon"}
-                        {salon.isOnline ? <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-[10px] font-semibold text-white uppercase tracking-wide">OPEN</span> : <span className="px-2 py-0.5 rounded-full bg-red-500 text-[10px] font-semibold text-white uppercase tracking-wide">CLOSED</span>}
-                        </h2>
-                        
-                        <div className="flex items-center gap-2 text-xs text-zinc-500 mt-1">
-                            {salon.distance ? (
-                                <span className="flex items-center gap-1 text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-                                    <Navigation size={12} fill="currentColor" /> {salon.distance} away
-                                </span>
-                            ) : (
-                                <span className="flex items-center gap-1">
-                                    <MapPin size={12} /> {salon.address || "No address"}
-                                </span>
-                            )}
+                <div key={salon._id} className="group relative rounded-2xl bg-white border border-zinc-200 shadow-sm overflow-hidden flex flex-col">
+                <div className="p-4 sm:p-5 flex flex-col gap-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center flex-wrap gap-2 mb-1">
+                          <h2 className="text-base sm:text-lg font-bold text-zinc-900">{salon.salonName}</h2>
+                          {salon.isOnline ? 
+                            <span className="px-2 py-0.5 rounded-md bg-emerald-500 text-[9px] font-bold text-white">OPEN</span> : 
+                            <span className="px-2 py-0.5 rounded-md bg-red-500 text-[9px] font-bold text-white">CLOSED</span>
+                          }
                         </div>
+                        <div className="flex items-center gap-2 text-[11px] text-zinc-500">
+                            {salon.distance ? (
+                                <span className="flex items-center gap-1 text-emerald-600 font-bold"><Navigation size={10} fill="currentColor" /> {salon.distance} away</span>
+                            ) : (
+                                <span className="flex items-center gap-1"><MapPin size={10} /> {salon.address || "Unknown"}</span>
+                            )}
+                            <span className="w-1 h-1 bg-zinc-300 rounded-full"></span>
+                            <span className="font-semibold">{salon.salonType || "Unisex"}</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="flex items-center justify-end gap-1 text-sm font-bold text-zinc-900">
+                          <Star className="text-yellow-400 fill-yellow-400" size={14} />
+                          {salon.rating ? salon.rating.toFixed(1) : "New"}
+                        </div>
+                        <p className="text-[10px] text-zinc-400">{salon.reviewsCount || 0} reviews</p>
+                      </div>
+                    </div>
 
-                        <div className="mt-2 text-[10px] text-zinc-500 font-bold uppercase tracking-wider bg-zinc-100 inline-block px-2 py-0.5 rounded-md">{salon.salonType || "Unisex"}</div>
+                    <div className="grid grid-cols-3 gap-2 py-3 border-y border-zinc-50">
+                      <div className="flex flex-col items-center sm:items-start">
+                        <span className="text-[9px] uppercase text-zinc-400 font-bold tracking-tight">Waiting</span>
+                        <div className="flex items-baseline gap-0.5">
+                          <span className="text-xl sm:text-2xl font-black text-zinc-900">{salon.waiting || 0}</span>
+                          <span className="text-[9px] text-zinc-500">pax</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-center sm:items-start border-x border-zinc-100 px-2">
+                        <span className="text-[9px] uppercase text-zinc-400 font-bold tracking-tight">Est. Time</span>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <Clock size={12} className="text-zinc-400" />
+                          <span className="text-xs sm:text-sm font-bold text-zinc-900">{(salon.waiting || 0) * 15} min</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-center sm:items-end">
+                        <span className="text-[9px] uppercase text-zinc-400 font-bold tracking-tight">Team</span>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <Users size={12} className="text-zinc-400" />
+                          <span className="text-xs sm:text-sm font-bold text-zinc-900">{salon.staff?.length || 1} staff</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex flex-col items-end">
-                        <div className="flex items-center gap-1 text-sm font-semibold text-zinc-900"><Star className="text-yellow-400 fill-yellow-400" size={14} />{salon.rating ? salon.rating.toFixed(1) : "New"}</div>
-                        <p className="text-[11px] text-zinc-500">{salon.reviewsCount || 0}+ ratings</p>
-                    </div>
-                    </div>
-                    <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                        <div className="flex flex-col"><span className="text-[11px] uppercase text-zinc-500 font-semibold tracking-[0.16em]">Current waiting</span><div className="flex items-baseline gap-1"><span className="text-3xl font-black text-zinc-900">{salon.waiting || 0}</span><span className="text-xs text-zinc-500 font-medium">people</span></div></div>
-                        <div className="hidden sm:flex flex-col border-l border-dashed border-zinc-200 pl-4"><span className="text-[11px] uppercase text-zinc-500 font-semibold tracking-[0.16em]">Est. Wait</span><span className="text-sm font-semibold text-zinc-900">{(salon.waiting || 0) * 15} mins</span></div>
-                    </div>
-                    <div className="hidden md:flex flex-col items-end text-[11px] text-zinc-500">
-                        <div className="flex items-center gap-1"><Users size={14} /><span>Staff: {salon.staff?.length || 1}</span></div>
-                        <div className="flex items-center gap-1 mt-1"><Clock size={14} /><span>Live Updates</span></div>
-                    </div>
-                    </div>
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-zinc-100">
-                    <div className="flex items-center gap-2 text-xs text-emerald-700 font-semibold"><Sparkles size={14} /><span>{salon.tag || "Best in Town"}</span></div>
-                    <div className="flex gap-2">
-                        <button onClick={() => handleOpenBooking(salon)} disabled={!salon.isOnline} className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-white text-xs font-bold transition-transform flex items-center justify-center gap-1.5 ${salon.isOnline ? 'bg-zinc-900 hover:scale-105' : 'bg-zinc-300 cursor-not-allowed'}`}>
-                        {salon.isOnline ? "Join Queue" : "Offline"} <Ticket size={14} />
-                        </button>
-                    </div>
+
+                    <div className="flex items-center justify-between gap-3 pt-1">
+                      <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 font-bold bg-emerald-50/50 px-2 py-1 rounded-lg">
+                        <Sparkles size={12} />
+                        <span className="truncate max-w-[100px]">{salon.tag || "Top Rated"}</span>
+                      </div>
+                      <button 
+                        onClick={() => handleOpenBooking(salon)} 
+                        disabled={!salon.isOnline} 
+                        className={`px-5 py-2.5 rounded-xl text-white text-[11px] font-bold transition-all flex items-center gap-2 shadow-sm ${salon.isOnline ? 'bg-zinc-900 active:scale-95' : 'bg-zinc-300'}`}
+                      >
+                        {salon.isOnline ? "Join Queue" : "Offline"} 
+                        <Ticket size={14} />
+                      </button>
                     </div>
                 </div>
                 </div>
@@ -503,14 +504,14 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
         )}
 
         {sortedSalons.length === 0 && !loading && (
-          <div className="text-center py-20 opacity-50">
-            <Filter size={48} className="mx-auto mb-4" />
-            <p className="text-xl font-bold">No salons found</p>
-            <p>Try changing your search or filters.</p>
+          <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-zinc-200">
+            <Filter size={40} className="mx-auto mb-3 text-zinc-300" />
+            <p className="text-lg font-bold text-zinc-900">No salons found</p>
+            <p className="text-sm text-zinc-500">Try adjusting your filters or search.</p>
           </div>
         )}
 
-        <p className="mt-8 text-[11px] text-zinc-400 text-center">Connected to Live TrimGo Network</p>
+        <p className="mt-12 text-[10px] text-zinc-400 text-center uppercase tracking-widest font-medium">Live TrimGo Network • © 2025</p>
         <AIConcierge />
       </main>
     </div>
