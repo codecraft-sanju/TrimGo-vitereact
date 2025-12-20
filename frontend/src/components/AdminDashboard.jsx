@@ -142,7 +142,7 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
   // --- 1. SOCKET.IO CONNECTION ---
   useEffect(() => {
     // Connect to Backend Socket using environment variable
-   const socket = io(import.meta.env.VITE_BACKEND_URL || "https://trimgo-vitereact.onrender.com");
+   const socket = io(import.meta.env.VITE_BACKEND_URL);
 
     // Join Admin Room
     socket.emit("join_room", "admin_room");
