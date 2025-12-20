@@ -430,6 +430,7 @@ const AppContent = () => {
             <UserRegistration
               onBack={() => navigate("/")}
               onRegisterUser={handleUserLoginSuccess} 
+              onNavigateLogin={() => navigate("/user/login")}
             />
           </PublicRoute>
         } />

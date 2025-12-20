@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   User,
@@ -7,14 +6,15 @@ import {
   CheckCircle,
   ChevronLeft,
   Mail,
-  MapPin, // New Icon added
+  MapPin,
   AlertCircle,
+  LogIn, // New Icon (Optional, keeping it clean for now)
 } from "lucide-react";
 // 1. Import API Helper
 import api from "../utils/api";
 
 /* -------------------------------------------------------------------------- */
-/* UI COMPONENTS                                                              */
+/* UI COMPONENTS (No changes here)                                            */
 /* -------------------------------------------------------------------------- */
 
 const BackgroundAurora = () => (
@@ -64,7 +64,7 @@ const ShimmerButton = ({
 };
 
 /* -------------------------------------------------------------------------- */
-/* LAYOUT & HELPERS                                                           */
+/* LAYOUT & HELPERS (No changes here)                                         */
 /* -------------------------------------------------------------------------- */
 
 const AuthLayout = ({ children, title, subtitle, onBack, illustration }) => (
@@ -132,7 +132,8 @@ const InputGroup = ({
 /* MAIN COMPONENT                                                             */
 /* -------------------------------------------------------------------------- */
 
-const UserRegistration = ({ onBack, onSuccess, onRegisterUser }) => {
+// UPDATED: Added onNavigateLogin prop
+const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -140,10 +141,8 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
-  // NEW: State to track location permission status
-  const [locationStatus, setLocationStatus] = useState("pending"); // pending, granted, denied
+  const [locationStatus, setLocationStatus] = useState("pending");
 
-  // --- NEW: Function to manually trigger location permission ---
   const handleRequestLocation = () => {
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by your browser.");
@@ -166,18 +165,16 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser }) => {
     );
   };
 
-  // Attempt to request on load, but many browsers will block this without a click
   useEffect(() => {
     handleRequestLocation();
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); // Clear previous errors
+    setError("");
     setLoading(true);
 
     try {
-      // 3. Make the API Call to your Backend
       const { data } = await api.post("/auth/register", {
         name,
         email,
@@ -186,7 +183,6 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser }) => {
       });
 
       if (data.success) {
-        // Pass the real user data back to App.jsx
         if (onRegisterUser) {
           onRegisterUser(data.user);
         }
@@ -194,7 +190,6 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser }) => {
       }
     } catch (err) {
       console.error("Registration failed:", err);
-      // Handle error message from backend
       const msg =
         err.response?.data?.message ||
         "Registration failed. Please try again.";
@@ -242,7 +237,6 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser }) => {
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
         
-        {/* --- NEW: Interactive Location Status UI --- */}
         <div 
           onClick={handleRequestLocation}
           className={`group flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer ${
@@ -274,7 +268,6 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser }) => {
           {locationStatus === "granted" && <CheckCircle className="text-emerald-500" size={18} />}
         </div>
 
-        {/* Display Error Message if it exists */}
         {error && (
           <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-500 text-sm font-medium flex items-center gap-2">
             <AlertCircle size={16} />
@@ -325,6 +318,21 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser }) => {
         <ShimmerButton className="w-full py-4 mt-4" disabled={loading}>
           {loading ? "Creating Account..." : "Create Free Account"}
         </ShimmerButton>
+
+        {/* --- NEW: LOGIN REDIRECT LINK --- */}
+        <div className="pt-2 text-center">
+            <p className="text-zinc-500 text-sm">
+                Already have an account?{" "}
+                <button 
+                    type="button" 
+                    onClick={onNavigateLogin}
+                    className="font-bold text-zinc-900 hover:underline hover:text-black transition-colors"
+                >
+                    Log in here
+                </button>
+            </p>
+        </div>
+
       </form>
     </AuthLayout>
   );
