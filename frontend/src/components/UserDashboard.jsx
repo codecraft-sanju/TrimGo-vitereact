@@ -11,7 +11,8 @@ import {
   Check,
   Sparkles,
   Navigation, // Icon for location
-  Crosshair // Icon for Locate Me
+  Crosshair, // Icon for Locate Me
+  Menu // Menu icon
 } from "lucide-react";
 import { io } from "socket.io-client"; 
 import api from "../utils/api"; 
@@ -162,6 +163,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
   const [salons, setSalons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeBookingSalon, setActiveBookingSalon] = useState(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile menu state
   
   const [userLocation, setUserLocation] = useState(null); 
   const [heading, setHeading] = useState(0); 
@@ -357,44 +359,107 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
         />
       )}
 
-      <header className="fixed top-0 left-0 w-full z-40 bg-white/80 backdrop-blur-xl border-b border-zinc-200/60">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3 sm:gap-4">
+      {/* ---------------------------------
+          UPDATED RESPONSIVE HEADER WITH ADVANCED DROPDOWN
+      ---------------------------------- */}
+      <header className="fixed top-0 left-0 w-full z-40 bg-white/80 backdrop-blur-xl border-b border-zinc-200/60 transition-all duration-300">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between relative">
+          
+          {/* LEFT SIDE: LOGO + DESKTOP PROFILE */}
+          <div className="flex items-center gap-3">
             <Logo />
-            <div className="h-6 w-px bg-zinc-200 hidden sm:block"></div>
-            <div onClick={onProfileClick} className="flex items-center gap-2 sm:gap-3 cursor-pointer group">
+            <div className="h-6 w-px bg-zinc-200 hidden md:block"></div>
+            
+            {/* DESKTOP ONLY: FULL PROFILE VIEW */}
+            <div onClick={onProfileClick} className="hidden md:flex items-center gap-3 cursor-pointer group">
               <div className="relative">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 p-[2px] shadow-lg transition-all duration-300">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 p-[2px] shadow-lg transition-all duration-300">
                   <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
                     <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || "Guest"}`} alt="User" className="w-full h-full object-cover" />
                   </div>
                 </div>
               </div>
               <div className="flex flex-col">
-                <span className="text-xs sm:text-sm font-bold text-zinc-900 leading-none">{user?.name || "Guest"}</span>
-                <span className="text-[9px] sm:text-[10px] font-medium text-zinc-500 mt-0.5">Free Plan</span>
+                <span className="text-sm font-bold text-zinc-900 leading-none">{user?.name || "Guest"}</span>
+                <span className="text-[10px] font-medium text-zinc-500 mt-0.5">Free Plan</span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 sm:gap-4">
-            <button 
-                onClick={startLocationTracking}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[10px] sm:text-xs font-bold transition-all border ${userLocation ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-zinc-100 text-zinc-600 border-zinc-200'}`}
-            >
-              {userLocation ? <Navigation size={12} className="animate-pulse" /> : <Crosshair size={12} />}
-              <span className="max-w-[60px] sm:max-w-none truncate">{selectedCity}</span>
-            </button>
-            <button onClick={onLogout} className="text-[10px] sm:text-xs font-bold px-3 py-2 rounded-full bg-zinc-900 text-white">Log out</button>
+
+          {/* RIGHT SIDE: ACTIONS */}
+          <div className="flex items-center gap-4">
+            
+            {/* DESKTOP ONLY: NAV ACTIONS */}
+            <div className="hidden md:flex items-center gap-4">
+              <button 
+                  onClick={startLocationTracking}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${userLocation ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-zinc-100 text-zinc-600 border-zinc-200'}`}
+              >
+                {userLocation ? <Navigation size={12} className="animate-pulse" /> : <Crosshair size={12} />}
+                <span>{selectedCity}</span>
+              </button>
+              <button onClick={onLogout} className="text-xs font-bold px-4 py-2 rounded-full bg-zinc-900 text-white hover:bg-zinc-800 transition-colors">Log out</button>
+            </div>
+
+            {/* MOBILE ONLY: PROFILE PHOTO & MENU TOGGLE */}
+            <div className="md:hidden flex items-center gap-3">
+              {/* Profile Photo - Always Visible */}
+              <div onClick={onProfileClick} className="relative cursor-pointer active:scale-95 transition-transform">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 p-[1.5px] shadow-sm">
+                  <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || "Guest"}`} alt="User" className="w-full h-full object-cover" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Hamburger Menu Button */}
+              <button 
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
+                className={`p-2 rounded-lg transition-all duration-200 ${isMobileMenuOpen ? 'bg-zinc-100 text-zinc-900' : 'bg-transparent text-zinc-700 hover:bg-zinc-50'}`}
+              >
+                {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
+            </div>
           </div>
+
+          {/* MOBILE DROPDOWN MENU (Floating, Half-width, Animated)
+            Positioned absolutely relative to the header container
+          */}
+          <div className={`
+             md:hidden
+             absolute top-[calc(100%+8px)] right-4 w-60
+             bg-white/95 backdrop-blur-2xl border border-zinc-100
+             rounded-2xl shadow-2xl shadow-zinc-900/10 p-2 flex flex-col gap-2
+             origin-top-right transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1)
+             ${isMobileMenuOpen ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-90 -translate-y-4 invisible pointer-events-none'}
+          `}>
+             {/* Mobile Location Button */}
+             <button 
+                onClick={() => { startLocationTracking(); setIsMobileMenuOpen(false); }}
+                className={`w-full flex items-center justify-start gap-3 px-4 py-3 rounded-xl font-bold text-sm border transition-all ${userLocation ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-zinc-50 text-zinc-600 border-zinc-100 hover:bg-zinc-100'}`}
+             >
+                {userLocation ? <Navigation size={16} className="animate-pulse" /> : <Crosshair size={16} />}
+                <span className="truncate">{selectedCity}</span>
+             </button>
+
+             {/* Mobile Logout */}
+             <button 
+                onClick={onLogout} 
+                className="w-full flex items-center justify-start gap-3 px-4 py-3 rounded-xl bg-zinc-900 text-white font-bold text-sm shadow-md shadow-zinc-900/10 active:scale-[0.98] transition-transform"
+             >
+                Log out
+             </button>
+          </div>
+
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 pt-20 sm:pt-24 pb-16 relative z-10">
+      <main className="max-w-6xl mx-auto px-4 pt-24 sm:pt-24 pb-16 relative z-10">
         <div className="mb-8 sm:mb-10">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
             <div>
               <p className="text-[10px] sm:text-xs font-semibold text-zinc-500 mb-1 uppercase tracking-[0.16em]">Live Availability</p>
-              <h1 className="text-2xl sm:text-4xl font-black text-zinc-900 tracking-tight">Find a salon near you.</h1>
+              <h1 className="text-3xl sm:text-4xl font-black text-zinc-900 tracking-tight">Find a salon near you.</h1>
             </div>
             <div className="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 scrollbar-hide">
               {["All", "Unisex", "Men Only", "Women Only"].map((type) => (
