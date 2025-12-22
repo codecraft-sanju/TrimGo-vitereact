@@ -44,7 +44,7 @@ const useOnScreen = (options) => {
    UI HELPER COMPONENTS 
 ---------------------------------- */
 
-// 0. Premium Advanced Preloader (NEW)
+// 0. Premium Advanced Preloader
 const PremiumPreloader = () => {
   const [progress, setProgress] = useState(0);
   const [messageIndex, setMessageIndex] = useState(0);
@@ -59,7 +59,6 @@ const PremiumPreloader = () => {
   ];
 
   useEffect(() => {
-    // Progress bar logic
     const timer = setInterval(() => {
       setProgress((oldProgress) => {
         if (oldProgress === 100) {
@@ -71,7 +70,6 @@ const PremiumPreloader = () => {
       });
     }, 200);
 
-    // Message cycling logic
     const msgTimer = setInterval(() => {
       setMessageIndex((prev) => (prev + 1) % messages.length);
     }, 800);
@@ -84,7 +82,6 @@ const PremiumPreloader = () => {
 
   return (
     <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-zinc-50 overflow-hidden">
-      {/* Background Ambience */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-[30%] -left-[10%] w-[70%] h-[70%] rounded-full bg-blue-400/10 blur-[120px] animate-pulse"></div>
         <div className="absolute -bottom-[30%] -right-[10%] w-[70%] h-[70%] rounded-full bg-emerald-400/10 blur-[120px] animate-pulse"></div>
@@ -92,7 +89,6 @@ const PremiumPreloader = () => {
       </div>
 
       <div className="relative z-10 flex flex-col items-center">
-        {/* Animated Icon */}
         <div className="relative mb-8 group">
           <div className="absolute inset-0 bg-gradient-to-tr from-blue-500 to-emerald-500 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500 animate-pulse"></div>
           <div className="relative w-24 h-24 bg-white rounded-3xl shadow-2xl border border-zinc-100 flex items-center justify-center overflow-hidden">
@@ -105,19 +101,16 @@ const PremiumPreloader = () => {
           </div>
         </div>
 
-        {/* Brand Name with Shimmer */}
         <h1 className="text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-zinc-900 via-zinc-600 to-zinc-900 bg-[length:200%_auto] animate-[shimmer_3s_linear_infinite] mb-2">
           TrimGo
         </h1>
 
-        {/* Dynamic Loading Text */}
         <div className="h-6 overflow-hidden mb-8">
           <p className="text-zinc-400 text-sm font-medium tracking-wide animate-[slideUpFade_0.5s_ease-out] key={messageIndex}">
             {messages[messageIndex]}
           </p>
         </div>
 
-        {/* Premium Progress Bar */}
         <div className="w-64 h-1.5 bg-zinc-200 rounded-full overflow-hidden relative">
           <div 
             className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-300 ease-out rounded-full"
@@ -143,6 +136,109 @@ const PremiumPreloader = () => {
         }
       `}</style>
     </div>
+  );
+};
+
+// NEW: Custom Magnetic Cursor 🖱️✨
+const CustomCursor = () => {
+  const cursorRef = useRef(null);
+  const followerRef = useRef(null);
+
+  useEffect(() => {
+    // Hide default cursor only if not touch device
+    if (matchMedia('(pointer: coarse)').matches) return;
+
+    const cursor = cursorRef.current;
+    const follower = followerRef.current;
+
+    let posX = 0, posY = 0;
+    let mouseX = 0, mouseY = 0;
+
+    const moveCursor = (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+
+      // Instant movement for the dot
+      if (cursor) {
+        cursor.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0)`;
+      }
+
+      // Check if hovering over clickable elements
+      const target = e.target;
+      const isClickable = target.closest('a, button, input, textarea, .cursor-pointer');
+
+      if (follower) {
+        if (isClickable) {
+          follower.classList.add('is-hovering');
+        } else {
+          follower.classList.remove('is-hovering');
+        }
+      }
+    };
+
+    window.addEventListener('mousemove', moveCursor);
+
+    // Smooth physics loop for the follower ring
+    const loop = () => {
+      if (follower) {
+        // Lerp (Linear Interpolation) for smooth delay
+        posX += (mouseX - posX) * 0.1;
+        posY += (mouseY - posY) * 0.1;
+        follower.style.transform = `translate3d(${posX - 12}px, ${posY - 12}px, 0)`; // -12 to center the 24px ring
+      }
+      requestAnimationFrame(loop);
+    };
+    loop();
+
+    return () => {
+      window.removeEventListener('mousemove', moveCursor);
+    };
+  }, []);
+
+  // Don't render on touch devices
+  if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+    return null;
+  }
+
+  return (
+    <>
+      <style>{`
+        .cursor-dot, .cursor-follower {
+          position: fixed;
+          top: 0;
+          left: 0;
+          pointer-events: none;
+          z-index: 9999;
+          border-radius: 50%;
+        }
+        .cursor-dot {
+          width: 8px;
+          height: 8px;
+          background-color: #18181b; /* Zinc-900 */
+          margin-top: -4px;
+          margin-left: -4px;
+        }
+        .cursor-follower {
+          width: 32px;
+          height: 32px;
+          background-color: rgba(24, 24, 27, 0.1);
+          border: 1px solid rgba(24, 24, 27, 0.2);
+          transition: width 0.3s, height 0.3s, background-color 0.3s;
+        }
+        /* Hover Effect */
+        .cursor-follower.is-hovering {
+          width: 64px;
+          height: 64px;
+          background-color: rgba(59, 130, 246, 0.1); /* Blue tint */
+          border-color: rgba(59, 130, 246, 0.3);
+          transform: translate3d(calc(var(--x) - 32px), calc(var(--y) - 32px), 0) !important;
+          margin-left: -16px; /* Adjustment for size change */
+          margin-top: -16px;
+        }
+      `}</style>
+      <div ref={cursorRef} className="cursor-dot hidden md:block"></div>
+      <div ref={followerRef} className="cursor-follower hidden md:block"></div>
+    </>
   );
 };
 
@@ -271,10 +367,12 @@ const FeatureCard = ({ icon: Icon, title, desc, delay, colSpan = "col-span-1" })
   );
 };
 
-// 5. Landing Page
+// 5. Landing Page (UPDATED WITH CURSOR)
 const LandingPage = ({ onNavigateUser, onNavigateSalon, onNavigateAdmin, onNavigateLogin }) => {
   return (
-    <div className="min-h-screen w-full font-sans selection:bg-zinc-900 selection:text-white overflow-x-hidden bg-zinc-50">
+    // 'cursor-none' class hides the default cursor
+    <div className="min-h-screen w-full font-sans selection:bg-zinc-900 selection:text-white overflow-x-hidden bg-zinc-50 cursor-none">
+      <CustomCursor /> {/* Added Custom Cursor Here */}
       <BackgroundAurora />
       <NoiseOverlay />
       <Navbar onNavigateUser={onNavigateUser} onNavigateLogin={onNavigateLogin} />
@@ -284,7 +382,6 @@ const LandingPage = ({ onNavigateUser, onNavigateSalon, onNavigateAdmin, onNavig
       {/* Dashboard Section */}
       <div id="advanced"><AdvancedDashboardSection /></div>
       
-      {/* CHANGED: Increased pt-8 to pt-32 for better gap */}
       <section id="features" className="pt-32 pb-32 px-6 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FeatureCard icon={Zap} title="Real-time Tracking" desc="Watch the queue move in real-time. We calculate wait times using AI based on service type and barber speed." delay={0} colSpan="md:col-span-2" />
@@ -305,7 +402,7 @@ const LandingPage = ({ onNavigateUser, onNavigateSalon, onNavigateAdmin, onNavig
 ---------------------------------- */
 
 const ProtectedRoute = ({ user, authLoading, children }) => {
-  if (authLoading) return null; // Wait for auth check to complete
+  if (authLoading) return null; 
   if (!user) {
     return <Navigate to="/user/login" replace />;
   }
@@ -313,7 +410,7 @@ const ProtectedRoute = ({ user, authLoading, children }) => {
 };
 
 const PublicRoute = ({ user, salon, authLoading, children }) => {
-  if (authLoading) return null; // Wait for auth check to complete
+  if (authLoading) return null; 
   if (user) return <Navigate to="/dashboard/user" replace />;
   if (salon) return <Navigate to="/dashboard/salon" replace />;
   return children;
@@ -351,18 +448,16 @@ const AppContent = () => {
   // AUTH STATES
   const [currentUser, setCurrentUser] = useState(null);
   const [currentSalon, setCurrentSalon] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true); // START AS TRUE
+  const [authLoading, setAuthLoading] = useState(true); 
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
 
-  // CHECK AUTH ON APP LOAD - FIXED FOR RELOAD
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Parallel check for both user and salon
         const [userRes, salonRes] = await Promise.allSettled([
           api.get("/auth/me"),
           api.get("/salon/me")
@@ -370,7 +465,6 @@ const AppContent = () => {
 
         if (userRes.status === "fulfilled" && userRes.value.data.success) {
           setCurrentUser(userRes.value.data.user);
-          // Only fetch ticket if user exists
           await fetchActiveTicket();
         }
 
@@ -378,7 +472,6 @@ const AppContent = () => {
           setCurrentSalon(salonRes.value.data.salon);
         }
         
-        // Fetch salons for public view
         const salonListRes = await api.get("/salon/all");
         if(salonListRes.data.success) {
           setSalons(salonListRes.data.salons);
@@ -387,8 +480,6 @@ const AppContent = () => {
       } catch (err) {
         console.log("Auth session check completed with no active session.");
       } finally {
-        // Add a small artificial delay so the premium loader is visible for at least 2.5s
-        // This makes the "premium" feel purposeful rather than a glitch
         setTimeout(() => {
             setAuthLoading(false);
         }, 2000);
@@ -489,7 +580,6 @@ const AppContent = () => {
 
   const isDashboard = location.pathname.includes('dashboard') || location.pathname.includes('admin');
 
-  // PREVENT REDIRECTS DURING LOADING - REPLACED WITH PREMIUM LOADER
   if (authLoading) return <PremiumPreloader />;
 
   return (
