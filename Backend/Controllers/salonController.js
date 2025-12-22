@@ -50,6 +50,10 @@ export const registerSalon = async (req, res) => {
       staff: []
     });
 
+    // 🔥 NEW ADDITION: Notify all users via Socket.io
+    // Jaise hi save hua, frontend ko signal bhejo ki "Naya Salon aaya hai"
+    req.io.emit("salon_registered", salon);
+
     const token = createToken(salon._id);
     res.cookie("salon_token", token, cookieOptions);
 

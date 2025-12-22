@@ -240,6 +240,11 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
         ));
     });
 
+    // 🔥 Added: Listener for new salons
+    socket.on("salon_registered", (newSalon) => {
+        setSalons((prevSalons) => [newSalon, ...prevSalons]);
+    });
+
     fetchSalons();
 
     return () => {
