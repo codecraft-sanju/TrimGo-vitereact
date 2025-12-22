@@ -178,12 +178,12 @@ const LandingPage = ({ onNavigateUser, onNavigateSalon, onNavigateAdmin, onNavig
       <Navbar onNavigateUser={onNavigateUser} onNavigateLogin={onNavigateLogin} />
       <HeroSection onNavigateUser={onNavigateUser} onNavigateSalon={onNavigateSalon} />
       <InfiniteMarquee />
+      
+      {/* Dashboard Section */}
       <div id="advanced"><AdvancedDashboardSection /></div>
-      <section id="features" className="pt-8 pb-32 px-6 max-w-7xl mx-auto">
-        <div className="text-center mb-20">
-          <h2 className="text-4xl md:text-5xl font-black text-zinc-900 mb-6">Built for the Modern Era.</h2>
-          <p className="text-zinc-500 text-xl max-w-2xl mx-auto">We didn't just digitize the queue. We reinvented the entire salon experience for both customers and businesses.</p>
-        </div>
+      
+      {/* CHANGED: Increased pt-8 to pt-32 for better gap */}
+      <section id="features" className="pt-32 pb-32 px-6 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FeatureCard icon={Zap} title="Real-time Tracking" desc="Watch the queue move in real-time. We calculate wait times using AI based on service type and barber speed." delay={0} colSpan="md:col-span-2" />
           <FeatureCard icon={MapPin} title="Geo-Discovery" desc="Find the best rated salons near you with filters for price, amenities, and wait times." delay={100} />
@@ -191,6 +191,7 @@ const LandingPage = ({ onNavigateUser, onNavigateSalon, onNavigateAdmin, onNavig
           <FeatureCard icon={ShieldCheck} title="Verified Reviews" desc="No fake reviews. Only customers who have completed a service can leave feedback." delay={300} colSpan="md:col-span-2" />
         </div>
       </section>
+      
       <div className="border-t border-zinc-200"><Testimonials /></div>
       <Footer onNavigateAdmin={onNavigateAdmin} />
     </div>

@@ -112,7 +112,6 @@ const Navbar = ({ onNavigateUser, onNavigateLogin }) => {
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 260, damping: 20 }}
-        // Reduced padding here: py-2 sm:py-3 (was py-3 sm:py-4)
         className="fixed top-4 sm:top-6 left-1/2 -translate-x-1/2 w-[92%] sm:w-[95%] max-w-6xl z-50 bg-white/70 backdrop-blur-xl backdrop-saturate-150 border border-white/50 shadow-lg shadow-zinc-200/20 rounded-full px-4 sm:px-6 py-2 sm:py-3 flex justify-between items-center"
       >
         <Logo />
@@ -217,7 +216,8 @@ const Navbar = ({ onNavigateUser, onNavigateLogin }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-white/90 backdrop-blur-xl md:hidden flex flex-col pt-32 px-6"
+            // Changed pt-32 to pt-24 to give more space for image
+            className="fixed inset-0 z-40 bg-white/95 backdrop-blur-xl md:hidden flex flex-col pt-24 px-6 overflow-y-auto"
           >
              <motion.div 
                 className="flex flex-col gap-6"
@@ -228,6 +228,23 @@ const Navbar = ({ onNavigateUser, onNavigateLogin }) => {
                 initial="hidden"
                 animate="show"
              >
+                {/* --- NEW: Salon Shop Image Section --- */}
+                <motion.div 
+                    variants={{ hidden: { y: 20, opacity: 0 }, show: { y: 0, opacity: 1 }}}
+                    className="w-full h-48 rounded-3xl overflow-hidden shadow-2xl relative group shrink-0"
+                >
+                    <img 
+                        src="/salonshopnavbar.jpg" // Ensure this file is in your public folder
+                        alt="Salon Interior" 
+                        className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
+                    />
+                    {/* Optional: Dark Overlay for text legibility if needed */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-5">
+                         <span className="text-white font-bold text-lg">Premium Salon Experience</span>
+                    </div>
+                </motion.div>
+                {/* ------------------------------------- */}
+
                 {navLinks.map((item) => (
                     <motion.a 
                         key={item.name}
@@ -253,7 +270,7 @@ const Navbar = ({ onNavigateUser, onNavigateLogin }) => {
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.4 }}
-                className="mt-auto mb-10 w-full"
+                className="mt-auto py-10 w-full"
              >
                 <button 
                     onClick={() => {
