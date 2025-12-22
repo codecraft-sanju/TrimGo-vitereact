@@ -8,10 +8,29 @@ import {
   Mail,
   MapPin,
   AlertCircle,
-  LogIn, // New Icon (Optional, keeping it clean for now)
+  LogIn,
+  // Added Eye and EyeOff icons
+  Eye,
+  EyeOff,
 } from "lucide-react";
 // 1. Import API Helper
 import api from "../utils/api";
+
+/* -------------------------------------------------------------------------- */
+/* CUSTOM STYLES & ANIMATIONS                                                 */
+/* -------------------------------------------------------------------------- */
+
+const AnimationStyles = () => (
+  <style>{`
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in-up {
+      animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  `}</style>
+);
 
 /* -------------------------------------------------------------------------- */
 /* UI COMPONENTS (No changes here)                                            */
@@ -64,32 +83,51 @@ const ShimmerButton = ({
 };
 
 /* -------------------------------------------------------------------------- */
-/* LAYOUT & HELPERS (No changes here)                                         */
+/* LAYOUT & HELPERS (Updated for Best Responsive Layout)                        */
 /* -------------------------------------------------------------------------- */
 
 const AuthLayout = ({ children, title, subtitle, onBack, illustration }) => (
-  <div className="min-h-screen w-full bg-zinc-50 flex items-center justify-center p-4 relative font-sans overflow-hidden">
+  <div className="min-h-[100dvh] w-full bg-zinc-50 flex items-center justify-center p-4 sm:p-6 md:p-8 relative font-sans overflow-x-hidden">
+    <AnimationStyles />
     <BackgroundAurora />
     <NoiseOverlay />
 
+    {/* DESKTOP NAV: Floating Top Left (Hidden on Mobile) */}
     <button
       onClick={onBack}
-      className="absolute top-8 left-8 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 transition z-20 font-bold bg-white/50 px-4 py-2 rounded-full backdrop-blur-sm border border-white/50"
+      className="hidden md:flex absolute top-8 left-8 items-center gap-2 text-zinc-500 hover:text-zinc-900 transition-all z-20 font-bold bg-white/50 hover:bg-white px-4 py-2 rounded-full backdrop-blur-sm border border-white/50 hover:border-zinc-200 shadow-sm"
     >
       <ChevronLeft size={20} /> Home
     </button>
 
-    <div className="w-full max-w-6xl bg-white/80 backdrop-blur-xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row relative z-10 border border-white/60">
-      <div className="w-full md:w-1/2 p-8 md:p-16 flex flex-col justify-center">
-        <div className="mb-10">
-          <h2 className="text-4xl font-black text-zinc-900 mb-3 tracking-tight">
+    {/* MAIN CARD CONTAINER - Added Animation */}
+    <div className="w-full max-w-6xl bg-white/80 backdrop-blur-xl rounded-[2rem] md:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row relative z-10 border border-white/60 animate-fade-in-up">
+      
+      {/* LEFT SIDE: Form Area */}
+      <div className="w-full md:w-1/2 p-6 sm:p-10 md:p-16 flex flex-col justify-center">
+        
+        {/* MOBILE NAV: Inline Top Left (Hidden on Desktop) */}
+        <div className="md:hidden flex justify-start mb-6">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-900 transition-colors font-bold text-sm bg-zinc-100/80 px-3 py-1.5 rounded-full"
+          >
+            <ChevronLeft size={16} /> Back
+          </button>
+        </div>
+
+        <div className="mb-8 md:mb-10">
+          <h2 className="text-3xl md:text-4xl font-black text-zinc-900 mb-2 md:mb-3 tracking-tight">
             {title}
           </h2>
-          <p className="text-zinc-500 font-medium">{subtitle}</p>
+          <p className="text-zinc-500 font-medium text-sm md:text-base">
+            {subtitle}
+          </p>
         </div>
         {children}
       </div>
 
+      {/* RIGHT SIDE: Illustration (Hidden on Mobile) */}
       <div className="hidden md:flex w-1/2 bg-zinc-900 relative p-12 flex-col justify-between overflow-hidden">
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
         {illustration}
@@ -98,6 +136,7 @@ const AuthLayout = ({ children, title, subtitle, onBack, illustration }) => (
   </div>
 );
 
+// --- MODIFIED INPUT GROUP FOR PASSWORD TOGGLE ---
 const InputGroup = ({
   icon: Icon,
   type,
@@ -106,33 +145,55 @@ const InputGroup = ({
   name,
   value,
   onChange,
-}) => (
-  <div className="space-y-1.5">
-    <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1">
-      {label}
-    </label>
-    <div className="relative group">
-      <Icon
-        className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-zinc-900 transition-colors"
-        size={20}
-      />
-      <input
-        name={name}
-        value={value}
-        onChange={onChange}
-        type={type}
-        placeholder={placeholder}
-        className="w-full bg-zinc-5 border border-zinc-200 rounded-xl py-4 pl-12 pr-4 text-zinc-900 font-medium focus:outline-none focus:ring-4 focus:ring-zinc-100 focus:border-zinc-900 transition-all placeholder:text-zinc-400"
-      />
+}) => {
+  // State to toggle password visibility
+  const [showPassword, setShowPassword] = useState(false);
+  
+  // Check if this input is meant to be a password field
+  const isPasswordType = type === "password";
+  
+  // Dynamic type: if showing password, becomes 'text', else stays as 'password' (or original type)
+  const inputType = isPasswordType ? (showPassword ? "text" : "password") : type;
+
+  return (
+    <div className="space-y-1.5">
+      <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1">
+        {label}
+      </label>
+      <div className="relative group">
+        <Icon
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-zinc-900 transition-colors"
+          size={20}
+        />
+        <input
+          name={name}
+          value={value}
+          onChange={onChange}
+          type={inputType}
+          placeholder={placeholder}
+          // Added pr-12 (padding-right) to make room for the eye icon so text doesn't overlap
+          className={`w-full bg-zinc-50 border border-zinc-200 rounded-xl py-4 pl-12 ${isPasswordType ? 'pr-12' : 'pr-4'} text-zinc-900 font-medium focus:outline-none focus:ring-4 focus:ring-zinc-100 focus:border-zinc-900 transition-all placeholder:text-zinc-400 text-sm md:text-base`}
+        />
+        
+        {/* Toggle Button - Only renders if type is password */}
+        {isPasswordType && (
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 focus:outline-none transition-colors"
+          >
+            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 /* -------------------------------------------------------------------------- */
 /* MAIN COMPONENT                                                             */
 /* -------------------------------------------------------------------------- */
 
-// UPDATED: Added onNavigateLogin prop
 const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -235,11 +296,12 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }
         </>
       }
     >
-      <form className="space-y-5" onSubmit={handleSubmit}>
+      <form className="space-y-4 md:space-y-5" onSubmit={handleSubmit}>
         
+        {/* Location Button */}
         <div 
           onClick={handleRequestLocation}
-          className={`group flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer ${
+          className={`group flex items-center justify-between p-3 md:p-4 rounded-xl border transition-all cursor-pointer ${
             locationStatus === "granted" 
             ? "bg-emerald-50 border-emerald-100" 
             : "bg-zinc-50 border-zinc-200 hover:border-zinc-300"
@@ -257,19 +319,19 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }
               }`}>
                 {locationStatus === "granted" ? "Location Verified" : "Enable Location"}
               </p>
-              <p className="text-[10px] text-zinc-400">Required for live queue tracking</p>
+              <p className="text-[10px] text-zinc-400 leading-tight">Required for live queue tracking</p>
             </div>
           </div>
           {locationStatus !== "granted" && (
             <span className="text-[10px] font-bold px-2 py-1 rounded bg-white shadow-sm group-hover:bg-zinc-900 group-hover:text-white transition-colors">
-              Click to Allow
+              Allow
             </span>
           )}
           {locationStatus === "granted" && <CheckCircle className="text-emerald-500" size={18} />}
         </div>
 
         {error && (
-          <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-500 text-sm font-medium flex items-center gap-2">
+          <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-500 text-sm font-medium flex items-center gap-2 animate-pulse">
             <AlertCircle size={16} />
             {error}
           </div>
@@ -278,7 +340,7 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }
         <InputGroup
           icon={User}
           type="text"
-          placeholder="Sanjay Choudhary"
+          placeholder="enter your full name"
           label="Full Name"
           name="name"
           value={name}
@@ -288,7 +350,7 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }
         <InputGroup
           icon={Mail}
           type="email"
-          placeholder="you@example.com"
+          placeholder="you@gmail.com"
           label="Email"
           name="email"
           value={email}
@@ -298,7 +360,7 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }
         <InputGroup
           icon={Phone}
           type="tel"
-          placeholder="+91 98765 43210"
+          placeholder="enter your contact no."
           label="Mobile Number"
           name="phone"
           value={phone}
@@ -319,7 +381,6 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }
           {loading ? "Creating Account..." : "Create Free Account"}
         </ShimmerButton>
 
-        {/* --- NEW: LOGIN REDIRECT LINK --- */}
         <div className="pt-2 text-center">
             <p className="text-zinc-500 text-sm">
                 Already have an account?{" "}
