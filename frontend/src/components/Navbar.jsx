@@ -4,7 +4,7 @@ import {
   BarChart3, Users, Clock 
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Toaster, toast } from "react-hot-toast"; // 1. Import Toast
+import { Toaster, toast } from "react-hot-toast";
 
 // --- Sub-Component: Logo ---
 const Logo = ({ dark = false }) => (
@@ -85,13 +85,13 @@ const Navbar = ({ onNavigateUser, onNavigateLogin }) => {
     { name: "Stories", href: "#testimonials", sub: "Success stories" },
   ];
 
-  // 2. Custom Toast Handler
+  // Custom Toast Handler
   const handleGetApp = () => {
     toast("TrimGo App Coming Soon!", {
       icon: '🚀',
       style: {
-        borderRadius: '100px', // Pill shape matching your buttons
-        background: '#18181b', // Zinc-900 (Dark background)
+        borderRadius: '100px',
+        background: '#18181b',
         color: '#fff',
         padding: '12px 24px',
         fontWeight: 'bold',
@@ -100,13 +100,11 @@ const Navbar = ({ onNavigateUser, onNavigateLogin }) => {
       },
       duration: 3000,
     });
-    // Optional: Call original handler if needed
     if (onNavigateUser) onNavigateUser();
   };
 
   return (
     <>
-      {/* 3. Toaster Component Added Here */}
       <Toaster position="bottom-center" reverseOrder={false} />
 
       {/* --- DESKTOP --- */}
@@ -114,7 +112,8 @@ const Navbar = ({ onNavigateUser, onNavigateLogin }) => {
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 260, damping: 20 }}
-        className="fixed top-4 sm:top-6 left-1/2 -translate-x-1/2 w-[92%] sm:w-[95%] max-w-6xl z-50 bg-white/70 backdrop-blur-xl backdrop-saturate-150 border border-white/50 shadow-lg shadow-zinc-200/20 rounded-full px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center"
+        // Reduced padding here: py-2 sm:py-3 (was py-3 sm:py-4)
+        className="fixed top-4 sm:top-6 left-1/2 -translate-x-1/2 w-[92%] sm:w-[95%] max-w-6xl z-50 bg-white/70 backdrop-blur-xl backdrop-saturate-150 border border-white/50 shadow-lg shadow-zinc-200/20 rounded-full px-4 sm:px-6 py-2 sm:py-3 flex justify-between items-center"
       >
         <Logo />
         
@@ -184,7 +183,7 @@ const Navbar = ({ onNavigateUser, onNavigateLogin }) => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={handleGetApp} // 4. Updated Handler
+              onClick={handleGetApp}
               className="px-6 py-2.5 rounded-full bg-zinc-900 text-white text-sm font-bold shadow-xl shadow-zinc-900/10 hover:shadow-zinc-900/20 transition-all"
             >
               Get App
@@ -259,7 +258,7 @@ const Navbar = ({ onNavigateUser, onNavigateLogin }) => {
                 <button 
                     onClick={() => {
                         setIsMenuOpen(false);
-                        handleGetApp(); // 5. Updated Handler for Mobile too
+                        handleGetApp();
                     }}
                     className="w-full py-4 rounded-2xl bg-zinc-900 text-white font-bold text-lg shadow-xl shadow-zinc-900/20 flex items-center justify-center gap-2"
                 >
