@@ -3,12 +3,12 @@ import Salon from "../Models/Salon.js";
 import User from "../Models/User.js";
 
 /* -------------------------------------------------------------------------- */
-/* USER ACTION: JOIN QUEUE                                                   */
+/* USER ACTION: JOIN QUEUE                                                    */
 /* -------------------------------------------------------------------------- */
 export const joinQueue = async (req, res) => {
   try {
     const { salonId, services, totalPrice, totalTime } = req.body;
-    const userId = req.user._id; // Auth Middleware se aayega
+    const userId = req.user._id; 
 
     // 1. Check if user is already in a queue (active ticket)
     const existingTicket = await Ticket.findOne({
@@ -30,7 +30,7 @@ export const joinQueue = async (req, res) => {
       services,
       totalPrice,
       totalTime,
-      status: "pending", // Shuru mein pending rahega
+      status: "pending", 
     });
 
     // 3. Populate User Data for Salon Dashboard
@@ -38,7 +38,6 @@ export const joinQueue = async (req, res) => {
       .populate("userId", "name phone email");
 
     // 🔥 SOCKET EMIT: Salon ke Dashboard par turant request dikhao
-    // Room Name: "salon_{salonId}"
     req.io.to(`salon_${salonId}`).emit("new_request", fullTicket);
 
     res.status(201).json({ success: true, ticket });
@@ -49,7 +48,7 @@ export const joinQueue = async (req, res) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/* SALON ACTION: ACCEPT REQUEST                                              */
+/* SALON ACTION: ACCEPT REQUEST (DYNAMIC TIME UPDATE HERE)                    */
 /* -------------------------------------------------------------------------- */
 export const acceptRequest = async (req, res) => {
   try {
@@ -67,7 +66,7 @@ export const acceptRequest = async (req, res) => {
       ticketId,
       {
         status: "waiting",
-        queueNumber: waitingCount + 1, // Assign token number
+        queueNumber: waitingCount + 1, 
       },
       { new: true }
     ).populate("salonId", "salonName address");
@@ -75,11 +74,28 @@ export const acceptRequest = async (req, res) => {
     if (!ticket) return res.status(404).json({ message: "Ticket not found" });
 
     // 🔥 SOCKET EMIT: User ko batao ki request accept ho gayi
-    // Room Name: "user_{userId}"
     req.io.to(`user_${ticket.userId._id}`).emit("request_accepted", ticket);
     
-    // 🔥 SOCKET EMIT: Salon Dashboard refresh karo (Requests -> Waiting move)
+    // 🔥 SOCKET EMIT: Salon Dashboard refresh karo
     req.io.to(`salon_${salonId}`).emit("queue_updated");
+
+    // 🔥 NEW: Calculate Dynamic Time for Broadcast
+    // Active tickets nikalo (Waiting + Serving)
+    const activeTickets = await Ticket.find({
+        salonId,
+        status: { $in: ["waiting", "serving"] }
+    }).select("totalTime");
+
+    const currentWaitingCount = activeTickets.length;
+    // Saare tickets ka time jod lo (Sum)
+    const currentEstTime = activeTickets.reduce((sum, t) => sum + (t.totalTime || 0), 0);
+
+    // Broadcast both Count AND Time
+    req.io.emit("queue_update_broadcast", { 
+        salonId, 
+        waitingCount: currentWaitingCount,
+        estTime: currentEstTime // 🔥 Real-time calculated time
+    });
 
     res.status(200).json({ success: true, ticket });
   } catch (err) {
@@ -88,7 +104,7 @@ export const acceptRequest = async (req, res) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/* SALON ACTION: START SERVICE (ASSIGN CHAIR)                                */
+/* SALON ACTION: START SERVICE (ASSIGN CHAIR)                                 */
 /* -------------------------------------------------------------------------- */
 export const startService = async (req, res) => {
   try {
@@ -123,7 +139,7 @@ export const startService = async (req, res) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/* SALON ACTION: COMPLETE SERVICE                                            */
+/* SALON ACTION: COMPLETE SERVICE (DYNAMIC TIME UPDATE HERE)                  */
 /* -------------------------------------------------------------------------- */
 export const completeService = async (req, res) => {
   try {
@@ -137,20 +153,34 @@ export const completeService = async (req, res) => {
       { new: true }
     );
 
-    // 2. Update Salon Revenue (Virtual Calculation or Field Update)
-    // Optional: Aap Salon Model me totalRevenue field bada sakte hain yahan
+    // 2. Update Salon Revenue
     await Salon.findByIdAndUpdate(salonId, {
-        $inc: { revenue: ticket.totalPrice, reviewsCount: 1 } // Increment revenue
+        $inc: { revenue: ticket.totalPrice, reviewsCount: 1 } 
     });
 
     // 🔥 SOCKET EMIT: User ko Rate karne ke liye bolo
     req.io.to(`user_${ticket.userId}`).emit("service_completed", ticket);
 
-    // 🔥 SOCKET EMIT: Salon Dashboard refresh (Serving -> Completed)
+    // 🔥 SOCKET EMIT: Salon Dashboard refresh
     req.io.to(`salon_${salonId}`).emit("queue_updated");
     
-    // 🔥 SOCKET EMIT: Admin Dashboard (Live Revenue Update)
+    // 🔥 SOCKET EMIT: Admin Dashboard
     req.io.to("admin_room").emit("admin_stats_update");
+
+    // 🔥 NEW: Calculate Dynamic Time for Broadcast (Kam ho gaya hoga time)
+    const activeTickets = await Ticket.find({
+        salonId,
+        status: { $in: ["waiting", "serving"] }
+    }).select("totalTime");
+
+    const currentWaitingCount = activeTickets.length;
+    const currentEstTime = activeTickets.reduce((sum, t) => sum + (t.totalTime || 0), 0);
+
+    req.io.emit("queue_update_broadcast", { 
+        salonId, 
+        waitingCount: currentWaitingCount,
+        estTime: currentEstTime // 🔥 Updated time broadcast
+    });
 
     res.status(200).json({ success: true, message: "Service Completed" });
   } catch (err) {
@@ -159,7 +189,7 @@ export const completeService = async (req, res) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/* USER HELPER: GET MY ACTIVE TICKET (For Dashboard Load)                    */
+/* USER HELPER: GET MY ACTIVE TICKET (For Dashboard Load)                     */
 /* -------------------------------------------------------------------------- */
 export const getMyTicket = async (req, res) => {
   try {
@@ -175,7 +205,7 @@ export const getMyTicket = async (req, res) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/* SALON HELPER: GET DASHBOARD DATA (Initial Load)                           */
+/* SALON HELPER: GET DASHBOARD DATA (Initial Load)                            */
 /* -------------------------------------------------------------------------- */
 export const getSalonData = async (req, res) => {
     try {

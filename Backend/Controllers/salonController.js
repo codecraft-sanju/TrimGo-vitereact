@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import Salon from "../Models/Salon.js";
+import Ticket from "../Models/Ticket.js"; 
 
 const createToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -15,7 +16,7 @@ const cookieOptions = {
 };
 
 /* -------------------------------------------------------------------------- */
-/* AUTHENTICATION CONTROLLERS (Register/Login/Logout)                        */
+/* AUTHENTICATION CONTROLLERS (Register/Login/Logout)                         */
 /* -------------------------------------------------------------------------- */
 
 export const registerSalon = async (req, res) => {
@@ -43,15 +44,12 @@ export const registerSalon = async (req, res) => {
       salonType: type || "Unisex",
       latitude,
       longitude,
-      // Defaults:
       isOnline: true,
       verified: false,
       services: [],
       staff: []
     });
 
-    // 🔥 NEW ADDITION: Notify all users via Socket.io
-    // Jaise hi save hua, frontend ko signal bhejo ki "Naya Salon aaya hai"
     req.io.emit("salon_registered", salon);
 
     const token = createToken(salon._id);
@@ -94,22 +92,18 @@ export const logoutSalon = (req, res) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/* PUBLIC API: GET ALL SALONS (For User Map & List)                          */
+/* PUBLIC API: GET ALL SALONS (DYNAMIC TIME CALCULATION ADDED)                */
 /* -------------------------------------------------------------------------- */
 export const getAllSalons = async (req, res) => {
   try {
     const { type, search } = req.query;
     
-    // Default Filter: Show only verified salons (optional)
-    // Abhi development ke liye verified check hata sakte hain agar chahiye
     let query = {}; 
 
-    // Filter by Type (Unisex/Men/Women)
     if (type && type !== "All") {
         query.salonType = type;
     }
 
-    // Search by Name or Area
     if (search) {
       query.$or = [
         { salonName: { $regex: search, $options: "i" } },
@@ -117,18 +111,44 @@ export const getAllSalons = async (req, res) => {
       ];
     }
     
-    // Fetch and Sort
-    // Logic: Online salons pehle, fir Rating ke hisaab se
+    // 1. Fetch Salons
     const salons = await Salon.find(query)
       .select("-password")
-      .sort({ isOnline: -1, rating: -1 });
+      .sort({ isOnline: -1, rating: -1 })
+      .lean(); 
+
+    // 🔥 2. DYNAMIC CALCULATION LOOP
+    const salonsWithData = await Promise.all(salons.map(async (salon) => {
+        
+        // Active tickets dhundo (Waiting + Serving)
+        // Sirf 'totalTime' field laao taaki database fast rahe
+        const activeTickets = await Ticket.find({
+            salonId: salon._id,
+            status: { $in: ["waiting", "serving"] } 
+        }).select("totalTime");
+
+        // A. Waiting Count (Kitne log hain)
+        const waitingCount = activeTickets.length;
+
+        // B. Total Estimated Time (Sabka time jodkar)
+        // Reduce function use karke saare tickets ka time sum kar rahe hain
+        const totalEstTime = activeTickets.reduce((sum, ticket) => sum + (ticket.totalTime || 0), 0);
+
+        // Salon object mein dono cheezein add kar do
+        return { 
+            ...salon, 
+            waiting: waitingCount, 
+            estTime: totalEstTime // 🔥 Ab ye Real Time (mins) frontend par jayega
+        };
+    }));
 
     res.status(200).json({ 
         success: true, 
-        count: salons.length, 
-        salons 
+        count: salonsWithData.length, 
+        salons: salonsWithData 
     });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ success: false, message: "Error fetching salons" });
   }
 };
@@ -137,16 +157,13 @@ export const getAllSalons = async (req, res) => {
 export const updateSalonProfile = async (req, res) => {
   try {
     const salonId = req.salon._id;
-    const updates = req.body; // Expects: { isOnline, services, staff, etc. }
+    const updates = req.body; 
 
-    // Update in Database
     const updatedSalon = await Salon.findByIdAndUpdate(salonId, updates, {
       new: true,
       runValidators: true,
     });
     
-    // 🔥 SOCKET EMIT: Global Map Update
-    // Agar salon online/offline hota hai, toh sab users ko map par update dikhega
     if (updates.isOnline !== undefined) {
         req.io.emit("salon_updated", { 
             id: salonId, 

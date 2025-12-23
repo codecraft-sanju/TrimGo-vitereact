@@ -10,9 +10,9 @@ import {
   Search,
   Check,
   Sparkles,
-  Navigation, // Icon for location
-  Crosshair, // Icon for Locate Me
-  Menu // Menu icon
+  Navigation, 
+  Crosshair, 
+  Menu 
 } from "lucide-react";
 import { io } from "socket.io-client"; 
 import api from "../utils/api"; 
@@ -28,7 +28,7 @@ import AIConcierge from "./AIConcierge";
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
   if (!lat1 || !lon1 || !lat2 || !lon2) return null;
 
-  const R = 6371; // Radius of earth in km
+  const R = 6371; 
   const dLat = deg2rad(lat2 - lat1);
   const dLon = deg2rad(lon2 - lon1);
   const a =
@@ -163,7 +163,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
   const [salons, setSalons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeBookingSalon, setActiveBookingSalon] = useState(null);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile menu state
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); 
   
   const [userLocation, setUserLocation] = useState(null); 
   const [heading, setHeading] = useState(0); 
@@ -240,9 +240,25 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
         ));
     });
 
-    // 🔥 Added: Listener for new salons
     socket.on("salon_registered", (newSalon) => {
         setSalons((prevSalons) => [newSalon, ...prevSalons]);
+    });
+
+    // 🔥 3. NEW: Listen for Queue Updates (Real-time Waiting Count + Est Time)
+    // Ab backend 'estTime' bhi bhej raha hai
+    socket.on("queue_update_broadcast", ({ salonId, waitingCount, estTime }) => {
+        setSalons((prevSalons) => 
+            prevSalons.map((salon) => {
+                if (salon._id === salonId) {
+                    return { 
+                        ...salon, 
+                        waiting: waitingCount, 
+                        estTime: estTime // Update dynamic time
+                    }; 
+                }
+                return salon;
+            })
+        );
     });
 
     fetchSalons();
@@ -364,18 +380,14 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
         />
       )}
 
-      {/* ---------------------------------
-          UPDATED RESPONSIVE HEADER WITH ADVANCED DROPDOWN
-      ---------------------------------- */}
+      {/* HEADER */}
       <header className="fixed top-0 left-0 w-full z-40 bg-white/80 backdrop-blur-xl border-b border-zinc-200/60 transition-all duration-300">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between relative">
           
-          {/* LEFT SIDE: LOGO + DESKTOP PROFILE */}
           <div className="flex items-center gap-3">
             <Logo />
             <div className="h-6 w-px bg-zinc-200 hidden md:block"></div>
             
-            {/* DESKTOP ONLY: FULL PROFILE VIEW */}
             <div onClick={onProfileClick} className="hidden md:flex items-center gap-3 cursor-pointer group">
               <div className="relative">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 p-[2px] shadow-lg transition-all duration-300">
@@ -391,10 +403,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
             </div>
           </div>
 
-          {/* RIGHT SIDE: ACTIONS */}
           <div className="flex items-center gap-4">
-            
-            {/* DESKTOP ONLY: NAV ACTIONS */}
             <div className="hidden md:flex items-center gap-4">
               <button 
                   onClick={startLocationTracking}
@@ -406,9 +415,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
               <button onClick={onLogout} className="text-xs font-bold px-4 py-2 rounded-full bg-zinc-900 text-white hover:bg-zinc-800 transition-colors">Log out</button>
             </div>
 
-            {/* MOBILE ONLY: PROFILE PHOTO & MENU TOGGLE */}
             <div className="md:hidden flex items-center gap-3">
-              {/* Profile Photo - Always Visible */}
               <div onClick={onProfileClick} className="relative cursor-pointer active:scale-95 transition-transform">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 p-[1.5px] shadow-sm">
                   <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
@@ -417,7 +424,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
                 </div>
               </div>
 
-              {/* Hamburger Menu Button */}
               <button 
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
                 className={`p-2 rounded-lg transition-all duration-200 ${isMobileMenuOpen ? 'bg-zinc-100 text-zinc-900' : 'bg-transparent text-zinc-700 hover:bg-zinc-50'}`}
@@ -427,33 +433,28 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
             </div>
           </div>
 
-          {/* MOBILE DROPDOWN MENU (Floating, Half-width, Animated)
-            Positioned absolutely relative to the header container
-          */}
           <div className={`
-             md:hidden
-             absolute top-[calc(100%+8px)] right-4 w-60
-             bg-white/95 backdrop-blur-2xl border border-zinc-100
-             rounded-2xl shadow-2xl shadow-zinc-900/10 p-2 flex flex-col gap-2
-             origin-top-right transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1)
-             ${isMobileMenuOpen ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-90 -translate-y-4 invisible pointer-events-none'}
+              md:hidden
+              absolute top-[calc(100%+8px)] right-4 w-60
+              bg-white/95 backdrop-blur-2xl border border-zinc-100
+              rounded-2xl shadow-2xl shadow-zinc-900/10 p-2 flex flex-col gap-2
+              origin-top-right transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1)
+              ${isMobileMenuOpen ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-90 -translate-y-4 invisible pointer-events-none'}
           `}>
-             {/* Mobile Location Button */}
-             <button 
+              <button 
                 onClick={() => { startLocationTracking(); setIsMobileMenuOpen(false); }}
                 className={`w-full flex items-center justify-start gap-3 px-4 py-3 rounded-xl font-bold text-sm border transition-all ${userLocation ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-zinc-50 text-zinc-600 border-zinc-100 hover:bg-zinc-100'}`}
-             >
+              >
                 {userLocation ? <Navigation size={16} className="animate-pulse" /> : <Crosshair size={16} />}
                 <span className="truncate">{selectedCity}</span>
-             </button>
+              </button>
 
-             {/* Mobile Logout */}
-             <button 
+              <button 
                 onClick={onLogout} 
                 className="w-full flex items-center justify-start gap-3 px-4 py-3 rounded-xl bg-zinc-900 text-white font-bold text-sm shadow-md shadow-zinc-900/10 active:scale-[0.98] transition-transform"
-             >
+              >
                 Log out
-             </button>
+              </button>
           </div>
 
         </div>
@@ -541,7 +542,10 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
                         <span className="text-[9px] uppercase text-zinc-400 font-bold tracking-tight">Est. Time</span>
                         <div className="flex items-center gap-1 mt-0.5">
                           <Clock size={12} className="text-zinc-400" />
-                          <span className="text-xs sm:text-sm font-bold text-zinc-900">{(salon.waiting || 0) * 15} min</span>
+                          {/* 🔥 UPDATED: Now showing Real Dynamic Time */}
+                          <span className="text-xs sm:text-sm font-bold text-zinc-900">
+                            {salon.estTime || 0} min
+                          </span>
                         </div>
                       </div>
                       <div className="flex flex-col items-center sm:items-end">

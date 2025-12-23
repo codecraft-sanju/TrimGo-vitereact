@@ -191,6 +191,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
   }, [salon]);
 
   // --- API CALLS ---
+ // --- API CALLS ---
   const fetchDashboardData = async () => {
     try {
         const { data } = await api.get("/queue/salon-dashboard");
@@ -198,8 +199,43 @@ const SalonDashboard = ({ salon, onLogout }) => {
             setRequests(data.requests);
             setActiveQueue(data.waiting);
             setStats(data.stats);
+
+            // 🔥 FIX: Serving data ko wapas Chairs par map karna
+            const servingTickets = data.serving || [];
+
+            // 1. Naya Chairs array banao (Default state se shuru karo)
+            const mappedChairs = Array.from({ length: 4 }, (_, i) => {
+                const chairId = i + 1;
+                // Check karo ki database me is Chair ID par koi ticket hai kya?
+                const activeTicket = servingTickets.find(t => t.chairId === chairId);
+
+                if (activeTicket) {
+                    // Agar ticket mila, toh chair ko 'occupied' set karo
+                    return {
+                        id: chairId,
+                        name: `Chair ${chairId}`,
+                        status: 'occupied',
+                        currentCustomer: activeTicket,
+                        assignedStaff: activeTicket.assignedStaff
+                    };
+                } else {
+                    // Agar nahi mila, toh 'empty' rehne do
+                    return {
+                        id: chairId,
+                        name: `Chair ${chairId}`,
+                        status: 'empty',
+                        currentCustomer: null,
+                        assignedStaff: null
+                    };
+                }
+            });
+
+            // 2. State update karo
+            setChairs(mappedChairs);
         }
-    } catch (error) { console.error("Dashboard Sync Error", error); }
+    } catch (error) { 
+        console.error("Dashboard Sync Error", error); 
+    }
   };
 
   const fetchSalonProfile = async () => {
