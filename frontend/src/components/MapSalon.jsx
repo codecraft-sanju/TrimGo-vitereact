@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import { Clock, Users, MapPin, Navigation } from "lucide-react";
+import { Clock, Users, MapPin, Navigation, Scissors, Sparkles } from "lucide-react"; // Added Scissors, Sparkles
 import "leaflet/dist/leaflet.css";
 import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 import L from "leaflet";
@@ -33,10 +33,9 @@ const getUserIcon = (heading) => L.divIcon({
   iconAnchor: [10, 10]
 });
 
-// --- HELPER: Distance Calculation (Haversine Formula) ---
-// Iska use karke hum check karenge ki user kitna move hua hai
+// --- HELPER: Distance Calculation ---
 const getDistanceFromLatLonInMeters = (lat1, lon1, lat2, lon2) => {
-  const R = 6371e3; // Earth radius in meters
+  const R = 6371e3; 
   const φ1 = lat1 * Math.PI / 180;
   const φ2 = lat2 * Math.PI / 180;
   const Δφ = (lat2 - lat1) * Math.PI / 180;
@@ -50,73 +49,43 @@ const getDistanceFromLatLonInMeters = (lat1, lon1, lat2, lon2) => {
   return R * c;
 };
 
-// --- IMPROVED ROUTING MACHINE COMPONENT ---
+// --- ROUTING MACHINE COMPONENT ---
 const RoutingMachine = ({ userLocation, destination }) => {
   const map = useMap();
   const routingControlRef = useRef(null);
-  
-  // Ref to store last routed positions
-  const lastRoutedRef = useRef({ 
-      userLat: null, 
-      userLng: null, 
-      destLat: null, 
-      destLng: null 
-  });
+  const lastRoutedRef = useRef({ userLat: null, userLng: null, destLat: null, destLng: null });
 
   useEffect(() => {
-    // 1. Basic Validation
     if (!map || !userLocation || !destination) return;
 
-    // --- OPTIMIZATION START: Check difference ---
     const prev = lastRoutedRef.current;
-    
-    // Check 1: Kya destination badal gaya hai?
     const destChanged = prev.destLat !== destination.lat || prev.destLng !== destination.lng;
-
-    // Check 2: User kitne meters move hua hai pichli calculation se?
+    
     let distMoved = 0;
     if (prev.userLat) {
-        distMoved = getDistanceFromLatLonInMeters(
-            prev.userLat, prev.userLng,
-            userLocation.lat, userLocation.lng
-        );
+        distMoved = getDistanceFromLatLonInMeters(prev.userLat, prev.userLng, userLocation.lat, userLocation.lng);
     }
 
-    // 🔥 MAIN LOGIC: Agar destination same hai AUR user 80 meters se kam hila hai
-    // toh hum naya route calculate NAHI karenge. (Flickering Fixed)
-    if (!destChanged && distMoved < 80 && routingControlRef.current) {
-        return; 
-    }
+    if (!destChanged && distMoved < 80 && routingControlRef.current) return; 
 
-    // Update the ref with current values
     lastRoutedRef.current = {
         userLat: userLocation.lat,
         userLng: userLocation.lng,
         destLat: destination.lat,
         destLng: destination.lng
     };
-    // --- OPTIMIZATION END ---
 
-    // 2. CLEANUP: Sirf tab remove karo jab naya bana rahe ho
     if (routingControlRef.current) {
-      try {
-        map.removeControl(routingControlRef.current);
-      } catch (error) {
-        console.warn("Cleanup error:", error);
-      }
+      try { map.removeControl(routingControlRef.current); } catch (error) { console.warn("Cleanup error:", error); }
       routingControlRef.current = null;
     }
 
-    // 3. CREATE NEW ROUTE
     const routingControl = L.Routing.control({
       waypoints: [
         L.latLng(userLocation.lat, userLocation.lng),
         L.latLng(destination.lat, destination.lng)
       ],
-      lineOptions: {
-        styles: [{ color: "#2563eb", weight: 6, opacity: 0.8 }] 
-      },
-      // Using driving profile (faster calculation)
+      lineOptions: { styles: [{ color: "#2563eb", weight: 6, opacity: 0.8 }] },
       router: L.Routing.osrmv1({
         serviceUrl: 'https://router.project-osrm.org/route/v1',
         profile: 'driving', 
@@ -129,40 +98,27 @@ const RoutingMachine = ({ userLocation, destination }) => {
       containerClassName: 'routing-container-hidden', 
     });
 
-    // 4. Handle Errors
-    routingControl.on('routingerror', function(e) {
-      console.log('Routing failed:', e);
-    });
-
-    // 5. ADD TO MAP
     routingControl.addTo(map);
     routingControlRef.current = routingControl;
 
-    // 6. CSS Injection (Hide Instructions Box)
     const styleId = 'leaflet-routing-hide-style';
     if (!document.getElementById(styleId)) {
         const style = document.createElement('style');
         style.id = styleId;
         style.innerHTML = `
-            .leaflet-routing-container, 
-            .leaflet-routing-alternatives-container { 
-                display: none !important; 
-                visibility: hidden !important;
-                opacity: 0 !important;
-                pointer-events: none !important;
+            .leaflet-routing-container, .leaflet-routing-alternatives-container { 
+                display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important;
             }
         `;
         document.head.appendChild(style);
     }
-
-    // Cleanup logic handled at start of next effect to prevent flash
     return () => {};
   }, [map, userLocation, destination]);
 
   return null;
 };
 
-// Helper to auto-center map
+// --- MAP AUTO CENTER ---
 const MapAutoCenter = ({ center, isRouting }) => {
   const map = useMap();
   const hasCentered = useRef(false);
@@ -176,99 +132,186 @@ const MapAutoCenter = ({ center, isRouting }) => {
   return null;
 };
 
+// --- 🔥 PREMIUM MAP LOADER (ADAPTED FROM APP.JSX) 🔥 ---
+const MapPremiumLoader = () => {
+  const [progress, setProgress] = useState(0);
+  const [messageIndex, setMessageIndex] = useState(0);
+  
+  const messages = [
+    "Locating you...",
+    "Scanning nearby salons...",
+    "Calculating distances...",
+    "Checking wait times...",
+    "Optimizing routes...",
+  ];
+
+  useEffect(() => {
+    // Progress Bar Animation
+    const timer = setInterval(() => {
+      setProgress((oldProgress) => {
+        if (oldProgress >= 100) {
+          clearInterval(timer);
+          return 100;
+        }
+        const diff = Math.random() * 15; // Faster loading for map
+        return Math.min(oldProgress + diff, 100);
+      });
+    }, 150);
+
+    // Message Cycling
+    const msgTimer = setInterval(() => {
+      setMessageIndex((prev) => (prev + 1) % messages.length);
+    }, 1000);
+
+    return () => {
+      clearInterval(timer);
+      clearInterval(msgTimer);
+    };
+  }, []);
+
+  return (
+    <div className="absolute inset-0 z-[50] flex flex-col items-center justify-center bg-zinc-900 overflow-hidden rounded-3xl">
+      {/* Background Ambience */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-[30%] -left-[10%] w-[70%] h-[70%] rounded-full bg-blue-500/10 blur-[80px] animate-pulse"></div>
+        <div className="absolute -bottom-[30%] -right-[10%] w-[70%] h-[70%] rounded-full bg-emerald-500/10 blur-[80px] animate-pulse"></div>
+        {/* Simple Noise Overlay using CSS pattern */}
+        <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
+      </div>
+
+      <div className="relative z-10 flex flex-col items-center">
+        {/* Glowing Icon Container */}
+        <div className="relative mb-6 group">
+          <div className="absolute inset-0 bg-gradient-to-tr from-blue-500 to-emerald-500 rounded-full blur-xl opacity-20 animate-pulse"></div>
+          <div className="relative w-20 h-20 bg-zinc-800 rounded-2xl shadow-2xl border border-zinc-700/50 flex items-center justify-center overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-zinc-900 opacity-50"></div>
+            <Scissors 
+              size={32} 
+              className="text-white relative z-10 animate-[spin_4s_linear_infinite_reverse]" 
+              strokeWidth={1.5}
+            />
+          </div>
+        </div>
+
+        {/* Text Animation */}
+        <h2 className="text-xl font-black tracking-tight text-white mb-2">
+           Map View
+        </h2>
+
+        <div className="h-5 overflow-hidden mb-6 text-center">
+          <p className="text-zinc-400 text-xs font-medium tracking-wide animate-pulse key={messageIndex}">
+            {messages[messageIndex]}
+          </p>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="w-48 h-1 bg-zinc-800 rounded-full overflow-hidden relative">
+          <div 
+            className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-300 ease-out rounded-full"
+            style={{ width: `${progress}%` }}
+          >
+            <div className="absolute top-0 right-0 h-full w-10 bg-gradient-to-r from-transparent to-white/50 blur-[1px]"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- MAIN MAP COMPONENT ---
 const MapSalon = ({ salons, onSelect, userLocation, heading, routeDestination, onRouteClick }) => {
   const defaultCenter = [26.2389, 73.0243];
 
   return (
     <div className="w-full h-[450px] bg-zinc-900 rounded-3xl overflow-hidden relative border border-zinc-200 shadow-2xl z-0 group">
-      <MapContainer
-        center={defaultCenter}
-        zoom={13}
-        scrollWheelZoom={false}
-        style={{ height: "100%", width: "100%" }}
-        className="z-0"
-      >
-        <TileLayer
-          attribution='&copy; OpenStreetMap &copy; CARTO'
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-        />
+      
+      {/* 🔥 CONDITION: Show Premium Loader if User Location is missing */}
+      {!userLocation ? (
+        <MapPremiumLoader />
+      ) : (
+        /* Actual Map Renders Here */
+        <MapContainer
+          center={[userLocation.lat, userLocation.lng]} 
+          zoom={13}
+          scrollWheelZoom={false}
+          style={{ height: "100%", width: "100%" }}
+          className="z-0 animate-in fade-in duration-700"
+        >
+          <TileLayer
+            attribution='&copy; OpenStreetMap &copy; CARTO'
+            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          />
 
-        {/* ROUTING LOGIC */}
-        <RoutingMachine userLocation={userLocation} destination={routeDestination} />
+          <RoutingMachine userLocation={userLocation} destination={routeDestination} />
 
-        {/* USER LOCATION */}
-        {userLocation && (
-          <>
-            <Marker 
-              position={[userLocation.lat, userLocation.lng]} 
-              icon={getUserIcon(heading)} 
-              interactive={false}
-            >
-              <Popup>Aap Yahan Hain</Popup>
-            </Marker>
-            <MapAutoCenter center={userLocation} isRouting={!!routeDestination} />
-          </>
-        )}
+          {/* User Marker */}
+          <Marker 
+            position={[userLocation.lat, userLocation.lng]} 
+            icon={getUserIcon(heading)} 
+            interactive={false}
+          >
+            <Popup>Aap Yahan Hain</Popup>
+          </Marker>
+          <MapAutoCenter center={userLocation} isRouting={!!routeDestination} />
 
-        {/* SALON MARKERS */}
-        {salons.map((salon) => (
-          salon.latitude && salon.longitude && (
-            <Marker 
-              key={salon._id} 
-              position={[salon.latitude, salon.longitude]}
-            >
-              <Popup className="custom-popup">
-                <div className="p-1 min-w-[180px]">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                        <h3 className="font-bold text-sm text-zinc-900 line-clamp-1">{salon.salonName}</h3>
-                        <p className="text-[10px] text-zinc-500 flex items-center gap-1">
-                            <MapPin size={10} /> {salon.area || "City Center"}
-                        </p>
+          {/* Salon Markers */}
+          {salons.map((salon) => (
+            salon.latitude && salon.longitude && (
+              <Marker 
+                key={salon._id} 
+                position={[salon.latitude, salon.longitude]}
+              >
+                <Popup className="custom-popup">
+                  <div className="p-1 min-w-[180px]">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                          <h3 className="font-bold text-sm text-zinc-900 line-clamp-1">{salon.salonName}</h3>
+                          <p className="text-[10px] text-zinc-500 flex items-center gap-1">
+                              <MapPin size={10} /> {salon.area || "City Center"}
+                          </p>
+                      </div>
+                      <button 
+                          onClick={() => onRouteClick(salon)}
+                          className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center hover:bg-blue-200 transition-colors"
+                          title="Show Route"
+                      >
+                          <Navigation size={12} fill="currentColor" />
+                      </button>
                     </div>
-                    {/* Route Button */}
-                    <button 
-                        onClick={() => onRouteClick(salon)}
-                        className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center hover:bg-blue-200 transition-colors"
-                        title="Show Route"
+
+                    <div className="grid grid-cols-2 gap-2 mb-3 bg-zinc-50 p-2 rounded-lg border border-zinc-100">
+                      <div className="flex flex-col items-center">
+                          <span className="text-[10px] text-zinc-400 font-bold uppercase">Waiting</span>
+                          <div className="flex items-center gap-1 font-bold text-zinc-900">
+                              <Users size={12} className="text-blue-500"/> {salon.waiting || 0}
+                          </div>
+                      </div>
+                      <div className="flex flex-col items-center border-l border-zinc-200">
+                          <span className="text-[10px] text-zinc-400 font-bold uppercase">ETA</span>
+                          <div className="flex items-center gap-1 font-bold text-zinc-900">
+                              <Clock size={12} className="text-emerald-500"/> {salon.estTime || 15}m
+                          </div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => onSelect(salon)}
+                      disabled={!salon.isOnline}
+                      className={`w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-colors ${
+                          salon.isOnline 
+                          ? 'bg-zinc-900 text-white hover:bg-black' 
+                          : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                      }`}
                     >
-                        <Navigation size={12} fill="currentColor" />
+                      {salon.isOnline ? "Book Now" : "Closed"}
                     </button>
                   </div>
-
-                  {/* Stats Grid */}
-                  <div className="grid grid-cols-2 gap-2 mb-3 bg-zinc-50 p-2 rounded-lg border border-zinc-100">
-                    <div className="flex flex-col items-center">
-                        <span className="text-[10px] text-zinc-400 font-bold uppercase">Waiting</span>
-                        <div className="flex items-center gap-1 font-bold text-zinc-900">
-                            <Users size={12} className="text-blue-500"/> {salon.waiting || 0}
-                        </div>
-                    </div>
-                    <div className="flex flex-col items-center border-l border-zinc-200">
-                        <span className="text-[10px] text-zinc-400 font-bold uppercase">ETA</span>
-                        <div className="flex items-center gap-1 font-bold text-zinc-900">
-                            <Clock size={12} className="text-emerald-500"/> {salon.estTime || 15}m
-                        </div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => onSelect(salon)}
-                    disabled={!salon.isOnline}
-                    className={`w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-colors ${
-                        salon.isOnline 
-                        ? 'bg-zinc-900 text-white hover:bg-black' 
-                        : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
-                    }`}
-                  >
-                    {salon.isOnline ? "Book Now" : "Closed"}
-                  </button>
-                </div>
-              </Popup>
-            </Marker>
-          )
-        ))}
-      </MapContainer>
+                </Popup>
+              </Marker>
+            )
+          ))}
+        </MapContainer>
+      )}
     </div>
   );
 };
