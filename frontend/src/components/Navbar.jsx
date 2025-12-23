@@ -100,7 +100,7 @@ const Navbar = ({ onNavigateUser, onNavigateLogin }) => {
       },
       duration: 3000,
     });
-    if (onNavigateUser) onNavigateUser();
+    
   };
 
   return (

@@ -1,12 +1,12 @@
-
 import React, { useState } from "react";
 import {
   User, MapPin, Calendar, CreditCard, Settings, LogOut, Camera,
   Edit3, Star, Clock, ChevronRight, Shield, Bell, Smartphone,
-  History, Wallet, Zap, Crown, Grid, CheckCircle, X, Mail, Phone // Added Mail & Phone
+  History, Wallet, Zap, Crown, Grid, CheckCircle, X, Mail, Phone,
+  AlertTriangle, Info 
 } from "lucide-react";
 
-// --- MOCK DATA (Dummy Data) ---
+// --- MOCK DATA (KEPT FOR UI REFERENCE) ---
 const MOCK_BOOKINGS = [
   { id: 1, salon: "Urban Cut Pro", service: "Haircut & Beard", date: "2 Dec, 2025", price: 350, status: "Completed", rating: 5 },
   { id: 2, salon: "The Royal Cut", service: "Head Massage", date: "28 Nov, 2025", price: 200, status: "Completed", rating: 4 },
@@ -48,11 +48,10 @@ const SectionTitle = ({ title, sub }) => (
 );
 
 // --- MAIN COMPONENT ---
-
 export const UserProfile = ({ user, onBack, onLogout }) => {
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Dynamic Settings List based on User Data
+  // Dynamic Settings List based on User Data (Real Data Mixed)
   const settingsList = [
     { icon: User, label: "Full Name", sub: user?.name || "Guest User" },
     { icon: Mail, label: "Email Address", sub: user?.email || "No email linked" },
@@ -76,29 +75,50 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
         </button>
       </div>
 
-      <div className="relative z-10 max-w-5xl mx-auto px-6 mt-4">
+      <div className="relative z-10 max-w-5xl mx-auto px-6 mt-2">
         
+        {/* --- 🔥 UI REFERENCE BANNER --- */}
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 flex items-start gap-4 shadow-sm animate-in slide-in-from-top-4 duration-500">
+           <div className="p-2 bg-amber-100 text-amber-600 rounded-lg shrink-0">
+              <AlertTriangle size={20} />
+           </div>
+           <div>
+              <h4 className="text-sm font-bold text-amber-900">UI Demonstration Mode</h4>
+              <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+                 You are viewing the <strong>Frontend Prototype</strong>. While your name and email are real, the 
+                 <span className="font-bold"> Booking History</span> and <span className="font-bold">Wallet Balances</span> below are currently 
+                 <span className="underline">mock data</span> kept for design reference. Real integration is coming soon.
+              </p>
+           </div>
+        </div>
+
         {/* --- HERO PROFILE CARD --- */}
         <div className="relative rounded-[2.5rem] bg-white/80 border border-white/60 shadow-xl shadow-zinc-200/50 overflow-hidden backdrop-blur-xl">
-          {/* Cover Photo Gradient */}
-          <div className="h-48 w-full bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 relative">
-             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay"></div>
-             <button className="absolute top-4 right-4 bg-white/20 text-white p-2 rounded-full hover:bg-white/30 transition backdrop-blur-md">
+          
+          {/* 🔥 UPDATED: Cover Photo with Premium Unsplash Image */}
+          <div className="h-48 w-full relative group overflow-hidden">
+             <img 
+                src="https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2070&auto=format&fit=crop" 
+                alt="Profile Cover" 
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+             />
+             {/* Dark Gradient Overlay for Readability */}
+             <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/60 via-zinc-900/20 to-transparent"></div>
+             {/* Noise Texture */}
+             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
+             
+             <button className="absolute top-4 right-4 bg-white/20 text-white p-2 rounded-full hover:bg-white/30 transition backdrop-blur-md border border-white/20">
                <Camera size={18} />
              </button>
           </div>
 
           <div className="px-8 pb-8">
             <div className="flex flex-col md:flex-row items-start md:items-end -mt-16 gap-6">
-              {/* Avatar */}
+              {/* Avatar (Real Data) */}
               <div className="relative group">
                 <div className="w-32 h-32 rounded-[2rem] p-1.5 bg-white shadow-2xl">
                    <div className="w-full h-full rounded-[1.7rem] bg-zinc-100 flex items-center justify-center text-4xl font-bold text-zinc-900 relative overflow-hidden border border-zinc-200">
-                      {user?.avatar ? (
-                        <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-zinc-400">{user?.name?.charAt(0) || "U"}</span>
-                      )}
+                      <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || "Guest"}`} alt="User" className="w-full h-full object-cover" />
                    </div>
                 </div>
                 <button className="absolute bottom-0 right-0 w-8 h-8 bg-zinc-900 rounded-full flex items-center justify-center text-white border-4 border-white shadow-lg hover:scale-110 transition">
@@ -106,7 +126,7 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
                 </button>
               </div>
 
-              {/* User Info (UPDATED TO SHOW EMAIL/PHONE) */}
+              {/* User Info (Real Data) */}
               <div className="flex-1 mb-2">
                 <div className="flex items-center gap-3">
                   <h1 className="text-3xl font-black text-zinc-900 tracking-tight">{user?.name || "Guest"}</h1>
@@ -115,7 +135,6 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
                   </span>
                 </div>
                 
-                {/* Real Data Display */}
                 <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-zinc-500 font-medium">
                   <span className="flex items-center gap-1.5" title="Email">
                     <Mail size={14} className="text-zinc-400"/> 
@@ -144,8 +163,8 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
               </div>
             </div>
 
-            {/* --- QUICK STATS ROW (DUMMY) --- */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-8 border-t border-zinc-100">
+            {/* --- QUICK STATS ROW (DUMMY for Reference) --- */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-8 border-t border-zinc-100 opacity-75">
                <div className="text-center md:text-left">
                  <p className="text-2xl font-black text-zinc-900">12</p>
                  <p className="text-xs text-zinc-400 uppercase font-bold tracking-wider">Bookings</p>
@@ -217,7 +236,7 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
                   />
                   <StatCard 
                     icon={Wallet} 
-                    label="Wallet Balance" 
+                    label="Wallet Balance (Demo)" 
                     value="₹450.00" 
                     bg="bg-blue-100"
                     color="text-blue-600" 
@@ -226,7 +245,7 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
 
                 <div className="bg-white border border-zinc-200 shadow-xl shadow-zinc-200/40 rounded-3xl p-6">
                   <div className="flex justify-between items-center mb-6">
-                    <h3 className="font-bold text-zinc-900">Recent Activity</h3>
+                    <h3 className="font-bold text-zinc-900">Recent Activity (Mock)</h3>
                     <button className="text-xs text-zinc-500 font-bold hover:text-zinc-900 hover:underline">View All</button>
                   </div>
                   <div className="space-y-4">
@@ -253,7 +272,7 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
             {/* TAB: BOOKINGS */}
             {activeTab === "bookings" && (
               <div className="space-y-6">
-                <SectionTitle title="Booking History" sub="Manage your past and upcoming appointments." />
+                <SectionTitle title="Booking History (Mock)" sub="Manage your past and upcoming appointments." />
                 
                 <div className="space-y-4">
                   {MOCK_BOOKINGS.map((booking) => (
@@ -293,7 +312,7 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
             {/* TAB: WALLET */}
             {activeTab === "wallet" && (
               <div className="space-y-8">
-                 <SectionTitle title="Wallet & Payment Methods" sub="Manage your saved cards and TrimGo wallet." />
+                 <SectionTitle title="Wallet & Payment Methods" sub="Manage your saved cards and TrimGo wallet (Demo)." />
 
                  <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide">
                     {/* Add Card Button */}
@@ -341,7 +360,7 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
               </div>
             )}
 
-            {/* TAB: SETTINGS (UPDATED TO SHOW REAL DATA) */}
+            {/* TAB: SETTINGS (REAL DATA) */}
             {activeTab === "settings" && (
               <div className="space-y-6">
                  <SectionTitle title="Account Settings" sub="Control your profile configuration and preferences." />
