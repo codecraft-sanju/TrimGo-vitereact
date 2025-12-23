@@ -54,7 +54,8 @@ export const AdminLogin = ({ onBack, onLogin }) => {
             <ShieldCheck className="text-white" size={32} />
           </div>
           <h2 className="text-2xl font-black text-white">Founder Access</h2>
-          <p className="text-zinc-500 text-sm mt-1">Wolars Infosys Private Limited</p>
+          {/* CHANGED: Updated Branding */}
+          <p className="text-zinc-500 text-sm mt-1">TrimGo</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -118,7 +119,7 @@ const AdminMap = ({ salons }) => {
                                     <h3 className="font-bold text-sm">{salon.salonName}</h3>
                                     <p className="text-xs text-zinc-500 truncate">{salon.area}</p>
                                     <div className={`mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full inline-block ${salon.verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                        {salon.verified ? "Verified" : "Pending"}
+                                            {salon.verified ? "Verified" : "Pending"}
                                     </div>
                                 </div>
                             </Popup>
@@ -191,8 +192,10 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
     try {
         const { data } = await api.get("/salon/all");
         if(data.success) {
-            setLocalSalons(data.salons);
-            if(setSalons) setSalons(data.salons); 
+            // CHANGED: Sort salons by date (newest first)
+            const sortedSalons = data.salons.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            setLocalSalons(sortedSalons);
+            if(setSalons) setSalons(sortedSalons); 
         }
     } catch (error) {
         console.error("Salons Fetch Error", error);
@@ -204,7 +207,9 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
       setLoading(true);
       const { data } = await api.get("/auth/all");
       if (data.success) {
-        setUserList(data.users);
+        // CHANGED: Sort users by date (newest first)
+        const sortedUsers = data.users.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setUserList(sortedUsers);
       }
     } catch (error) {
       console.error("Failed to fetch users", error);
@@ -257,8 +262,9 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
       {/* 1. MOBILE HEADER (Visible only on small screens) */}
       <div className="md:hidden h-16 bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-800 flex items-center justify-between px-4 sticky top-0 z-50">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]">W</div>
-            <span className="font-bold text-lg tracking-tight">Wolars<span className="text-zinc-500">OS</span></span>
+            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]">T</div>
+            {/* CHANGED: Updated Branding */}
+            <span className="font-bold text-lg tracking-tight">TrimGo<span className="text-zinc-500">Admin</span></span>
           </div>
           <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 text-zinc-400 hover:text-white">
              <Menu size={24} />
@@ -305,8 +311,9 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
       {/* 3. DESKTOP SIDEBAR (Visible only on md+) */}
       <aside className="hidden md:flex w-64 border-r border-zinc-800 bg-zinc-900/30 flex-col backdrop-blur-xl z-20 h-screen sticky top-0">
         <div className="h-16 flex items-center px-6 border-b border-zinc-800">
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-white mr-3 shadow-[0_0_15px_rgba(79,70,229,0.4)]">W</div>
-          <span className="font-bold text-lg tracking-tight">Wolars<span className="text-zinc-500">OS</span></span>
+          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-white mr-3 shadow-[0_0_15px_rgba(79,70,229,0.4)]">T</div>
+          {/* CHANGED: Updated Branding */}
+          <span className="font-bold text-lg tracking-tight">TrimGo<span className="text-zinc-500">Admin</span></span>
         </div>
 
         <div className="p-4 space-y-1">
@@ -557,18 +564,18 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                                   </td>
                                   <td className="px-6 py-4">
                                     <div className="flex flex-col gap-1">
-                                       <div className="flex items-center gap-2 text-xs whitespace-nowrap">
+                                        <div className="flex items-center gap-2 text-xs whitespace-nowrap">
                                           <Mail size={12} className="text-zinc-600"/> {user.email}
-                                       </div>
-                                       <div className="flex items-center gap-2 text-xs whitespace-nowrap">
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs whitespace-nowrap">
                                           <Phone size={12} className="text-zinc-600"/> {user.phone}
-                                       </div>
+                                        </div>
                                     </div>
                                   </td>
                                   <td className="px-6 py-4 text-xs font-mono text-zinc-500 whitespace-nowrap">
                                     <div className="flex items-center gap-2">
-                                       <Calendar size={12}/>
-                                       {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}
+                                        <Calendar size={12}/>
+                                        {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}
                                     </div>
                                   </td>
                                   <td className="px-6 py-4 text-right">
