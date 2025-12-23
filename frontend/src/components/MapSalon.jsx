@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import { Clock, Users, MapPin, Navigation, Scissors, Sparkles } from "lucide-react"; // Added Scissors, Sparkles
+import { Clock, Users, MapPin, Navigation, Scissors, Sparkles } from "lucide-react"; 
 import "leaflet/dist/leaflet.css";
 import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 import L from "leaflet";
@@ -49,8 +49,8 @@ const getDistanceFromLatLonInMeters = (lat1, lon1, lat2, lon2) => {
   return R * c;
 };
 
-// --- ROUTING MACHINE COMPONENT ---
-const RoutingMachine = ({ userLocation, destination }) => {
+// --- 🔥 UPDATED ROUTING MACHINE (Handles Loader Logic) ---
+const RoutingMachine = ({ userLocation, destination, setLoading }) => {
   const map = useMap();
   const routingControlRef = useRef(null);
   const lastRoutedRef = useRef({ userLat: null, userLng: null, destLat: null, destLng: null });
@@ -66,7 +66,11 @@ const RoutingMachine = ({ userLocation, destination }) => {
         distMoved = getDistanceFromLatLonInMeters(prev.userLat, prev.userLng, userLocation.lat, userLocation.lng);
     }
 
+    // Optimization: Agar same destination hai aur user 80m se kam hila hai, toh reload mat karo
     if (!destChanged && distMoved < 80 && routingControlRef.current) return; 
+
+    // 🔥 START LOADING (Trigger Loader)
+    if (setLoading) setLoading(true);
 
     lastRoutedRef.current = {
         userLat: userLocation.lat,
@@ -75,11 +79,13 @@ const RoutingMachine = ({ userLocation, destination }) => {
         destLng: destination.lng
     };
 
+    // Cleanup old route
     if (routingControlRef.current) {
       try { map.removeControl(routingControlRef.current); } catch (error) { console.warn("Cleanup error:", error); }
       routingControlRef.current = null;
     }
 
+    // Create new route
     const routingControl = L.Routing.control({
       waypoints: [
         L.latLng(userLocation.lat, userLocation.lng),
@@ -98,6 +104,18 @@ const RoutingMachine = ({ userLocation, destination }) => {
       containerClassName: 'routing-container-hidden', 
     });
 
+    // 🔥 STOP LOADING (Jab Route Mil Jaye)
+    routingControl.on('routesfound', function(e) {
+      console.log("Route found!");
+      if (setLoading) setLoading(false);
+    });
+
+    // 🔥 STOP LOADING (Agar Error Aaye)
+    routingControl.on('routingerror', function(e) {
+      console.error('Routing failed:', e);
+      if (setLoading) setLoading(false);
+    });
+
     routingControl.addTo(map);
     routingControlRef.current = routingControl;
 
@@ -113,7 +131,7 @@ const RoutingMachine = ({ userLocation, destination }) => {
         document.head.appendChild(style);
     }
     return () => {};
-  }, [map, userLocation, destination]);
+  }, [map, userLocation, destination, setLoading]);
 
   return null;
 };
@@ -132,7 +150,7 @@ const MapAutoCenter = ({ center, isRouting }) => {
   return null;
 };
 
-// --- 🔥 PREMIUM MAP LOADER (ADAPTED FROM APP.JSX) 🔥 ---
+// --- 🔥 PREMIUM MAP LOADER (User Location Search) ---
 const MapPremiumLoader = () => {
   const [progress, setProgress] = useState(0);
   const [messageIndex, setMessageIndex] = useState(0);
@@ -146,70 +164,36 @@ const MapPremiumLoader = () => {
   ];
 
   useEffect(() => {
-    // Progress Bar Animation
     const timer = setInterval(() => {
-      setProgress((oldProgress) => {
-        if (oldProgress >= 100) {
-          clearInterval(timer);
-          return 100;
-        }
-        const diff = Math.random() * 15; // Faster loading for map
-        return Math.min(oldProgress + diff, 100);
-      });
+      setProgress((old) => (old >= 100 ? 100 : Math.min(old + Math.random() * 15, 100)));
     }, 150);
-
-    // Message Cycling
     const msgTimer = setInterval(() => {
       setMessageIndex((prev) => (prev + 1) % messages.length);
     }, 1000);
-
-    return () => {
-      clearInterval(timer);
-      clearInterval(msgTimer);
-    };
+    return () => { clearInterval(timer); clearInterval(msgTimer); };
   }, []);
 
   return (
     <div className="absolute inset-0 z-[50] flex flex-col items-center justify-center bg-zinc-900 overflow-hidden rounded-3xl">
-      {/* Background Ambience */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-[30%] -left-[10%] w-[70%] h-[70%] rounded-full bg-blue-500/10 blur-[80px] animate-pulse"></div>
         <div className="absolute -bottom-[30%] -right-[10%] w-[70%] h-[70%] rounded-full bg-emerald-500/10 blur-[80px] animate-pulse"></div>
-        {/* Simple Noise Overlay using CSS pattern */}
         <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
       </div>
-
       <div className="relative z-10 flex flex-col items-center">
-        {/* Glowing Icon Container */}
         <div className="relative mb-6 group">
           <div className="absolute inset-0 bg-gradient-to-tr from-blue-500 to-emerald-500 rounded-full blur-xl opacity-20 animate-pulse"></div>
           <div className="relative w-20 h-20 bg-zinc-800 rounded-2xl shadow-2xl border border-zinc-700/50 flex items-center justify-center overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-zinc-900 opacity-50"></div>
-            <Scissors 
-              size={32} 
-              className="text-white relative z-10 animate-[spin_4s_linear_infinite_reverse]" 
-              strokeWidth={1.5}
-            />
+            <Scissors size={32} className="text-white relative z-10 animate-[spin_4s_linear_infinite_reverse]" strokeWidth={1.5} />
           </div>
         </div>
-
-        {/* Text Animation */}
-        <h2 className="text-xl font-black tracking-tight text-white mb-2">
-           Map View
-        </h2>
-
+        <h2 className="text-xl font-black tracking-tight text-white mb-2">Map View</h2>
         <div className="h-5 overflow-hidden mb-6 text-center">
-          <p className="text-zinc-400 text-xs font-medium tracking-wide animate-pulse key={messageIndex}">
-            {messages[messageIndex]}
-          </p>
+          <p className="text-zinc-400 text-xs font-medium tracking-wide animate-pulse key={messageIndex}">{messages[messageIndex]}</p>
         </div>
-
-        {/* Progress Bar */}
         <div className="w-48 h-1 bg-zinc-800 rounded-full overflow-hidden relative">
-          <div 
-            className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-300 ease-out rounded-full"
-            style={{ width: `${progress}%` }}
-          >
+          <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-300 ease-out rounded-full" style={{ width: `${progress}%` }}>
             <div className="absolute top-0 right-0 h-full w-10 bg-gradient-to-r from-transparent to-white/50 blur-[1px]"></div>
           </div>
         </div>
@@ -218,14 +202,35 @@ const MapPremiumLoader = () => {
   );
 };
 
+// --- 🔥 NEW: ROUTE CALCULATION LOADER (Specific for Routing) ---
+const RouteCalculationLoader = () => {
+  return (
+    <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm rounded-3xl animate-in fade-in duration-300">
+      <div className="relative mb-4">
+        {/* Outer Rotating Ring */}
+        <div className="w-16 h-16 rounded-full border-4 border-blue-500/30 border-t-blue-500 animate-spin"></div>
+        {/* Inner Icon */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Navigation size={24} className="text-white fill-white/20" />
+        </div>
+      </div>
+      <h3 className="text-white font-bold text-lg">Calculating Route</h3>
+      <p className="text-zinc-300 text-xs mt-1 animate-pulse">Finding the fastest path...</p>
+    </div>
+  );
+};
+
 // --- MAIN MAP COMPONENT ---
 const MapSalon = ({ salons, onSelect, userLocation, heading, routeDestination, onRouteClick }) => {
   const defaultCenter = [26.2389, 73.0243];
+  
+  // 🔥 New State for Route Loader
+  const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
 
   return (
     <div className="w-full h-[450px] bg-zinc-900 rounded-3xl overflow-hidden relative border border-zinc-200 shadow-2xl z-0 group">
       
-      {/* 🔥 CONDITION: Show Premium Loader if User Location is missing */}
+      {/* 1. Show Global Loader if NO user location */}
       {!userLocation ? (
         <MapPremiumLoader />
       ) : (
@@ -242,7 +247,12 @@ const MapSalon = ({ salons, onSelect, userLocation, heading, routeDestination, o
             url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
           />
 
-          <RoutingMachine userLocation={userLocation} destination={routeDestination} />
+          {/* 🔥 Pass setLoading to Routing Machine */}
+          <RoutingMachine 
+             userLocation={userLocation} 
+             destination={routeDestination} 
+             setLoading={setIsCalculatingRoute} 
+          />
 
           {/* User Marker */}
           <Marker 
@@ -312,6 +322,10 @@ const MapSalon = ({ salons, onSelect, userLocation, heading, routeDestination, o
           ))}
         </MapContainer>
       )}
+
+      {/* 🔥 2. Show Route Calculation Loader on top of Map */}
+      {isCalculatingRoute && <RouteCalculationLoader />}
+
     </div>
   );
 };
