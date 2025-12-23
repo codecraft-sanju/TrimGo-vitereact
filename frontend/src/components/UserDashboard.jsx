@@ -229,8 +229,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
     );
   };
 
-  // 🔥 NEW: Handle Routing Click
- // 🔥 UPDATED: Safe Route Handler
+ 
   const handleRoute = (salon) => {
     // 1. Check if user location exists
     if (!userLocation) {

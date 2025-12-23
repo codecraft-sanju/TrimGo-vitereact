@@ -2,9 +2,9 @@ import React, { useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import { Clock, Users, MapPin, Navigation } from "lucide-react";
 import "leaflet/dist/leaflet.css";
-import "leaflet-routing-machine/dist/leaflet-routing-machine.css"; 
+import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 import L from "leaflet";
-import "leaflet-routing-machine"; 
+import "leaflet-routing-machine";
 
 // --- Fix for Default Leaflet Icon ---
 import icon from "leaflet/dist/images/marker-icon.png";
@@ -33,28 +33,79 @@ const getUserIcon = (heading) => L.divIcon({
   iconAnchor: [10, 10]
 });
 
+// --- HELPER: Distance Calculation (Haversine Formula) ---
+// Iska use karke hum check karenge ki user kitna move hua hai
+const getDistanceFromLatLonInMeters = (lat1, lon1, lat2, lon2) => {
+  const R = 6371e3; // Earth radius in meters
+  const φ1 = lat1 * Math.PI / 180;
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+};
+
 // --- IMPROVED ROUTING MACHINE COMPONENT ---
 const RoutingMachine = ({ userLocation, destination }) => {
   const map = useMap();
   const routingControlRef = useRef(null);
+  
+  // Ref to store last routed positions
+  const lastRoutedRef = useRef({ 
+      userLat: null, 
+      userLng: null, 
+      destLat: null, 
+      destLng: null 
+  });
 
   useEffect(() => {
     // 1. Basic Validation
     if (!map || !userLocation || !destination) return;
 
-    // 2. CLEANUP: Pehle wala route hatao taaki double lines na banein
-    const removeExistingRoute = () => {
-      if (routingControlRef.current) {
-        try {
-          map.removeControl(routingControlRef.current);
-        } catch (error) {
-          console.warn("Cleanup error:", error);
-        }
-        routingControlRef.current = null;
-      }
-    };
+    // --- OPTIMIZATION START: Check difference ---
+    const prev = lastRoutedRef.current;
+    
+    // Check 1: Kya destination badal gaya hai?
+    const destChanged = prev.destLat !== destination.lat || prev.destLng !== destination.lng;
 
-    removeExistingRoute();
+    // Check 2: User kitne meters move hua hai pichli calculation se?
+    let distMoved = 0;
+    if (prev.userLat) {
+        distMoved = getDistanceFromLatLonInMeters(
+            prev.userLat, prev.userLng,
+            userLocation.lat, userLocation.lng
+        );
+    }
+
+    // 🔥 MAIN LOGIC: Agar destination same hai AUR user 80 meters se kam hila hai
+    // toh hum naya route calculate NAHI karenge. (Flickering Fixed)
+    if (!destChanged && distMoved < 80 && routingControlRef.current) {
+        return; 
+    }
+
+    // Update the ref with current values
+    lastRoutedRef.current = {
+        userLat: userLocation.lat,
+        userLng: userLocation.lng,
+        destLat: destination.lat,
+        destLng: destination.lng
+    };
+    // --- OPTIMIZATION END ---
+
+    // 2. CLEANUP: Sirf tab remove karo jab naya bana rahe ho
+    if (routingControlRef.current) {
+      try {
+        map.removeControl(routingControlRef.current);
+      } catch (error) {
+        console.warn("Cleanup error:", error);
+      }
+      routingControlRef.current = null;
+    }
 
     // 3. CREATE NEW ROUTE
     const routingControl = L.Routing.control({
@@ -62,11 +113,14 @@ const RoutingMachine = ({ userLocation, destination }) => {
         L.latLng(userLocation.lat, userLocation.lng),
         L.latLng(destination.lat, destination.lng)
       ],
-      // 🔥 Styling: Professional Blue Line (Thicker & Clearer)
       lineOptions: {
         styles: [{ color: "#2563eb", weight: 6, opacity: 0.8 }] 
       },
-      // UI Options to hide clutter
+      // Using driving profile (faster calculation)
+      router: L.Routing.osrmv1({
+        serviceUrl: 'https://router.project-osrm.org/route/v1',
+        profile: 'driving', 
+      }),
       createMarker: () => null, 
       addWaypoints: false,      
       draggableWaypoints: false,
@@ -75,7 +129,7 @@ const RoutingMachine = ({ userLocation, destination }) => {
       containerClassName: 'routing-container-hidden', 
     });
 
-    // 4. Handle Errors (Prevent Crash if OSRM is busy)
+    // 4. Handle Errors
     routingControl.on('routingerror', function(e) {
       console.log('Routing failed:', e);
     });
@@ -84,8 +138,7 @@ const RoutingMachine = ({ userLocation, destination }) => {
     routingControl.addTo(map);
     routingControlRef.current = routingControl;
 
-    // 6. 🔥 CRITICAL UI FIX: Hide the White Instruction Box via CSS Injection
-    // Yeh ensure karega ki woh white box kabhi dikhe hi nahi
+    // 6. CSS Injection (Hide Instructions Box)
     const styleId = 'leaflet-routing-hide-style';
     if (!document.getElementById(styleId)) {
         const style = document.createElement('style');
@@ -102,9 +155,8 @@ const RoutingMachine = ({ userLocation, destination }) => {
         document.head.appendChild(style);
     }
 
-    return () => {
-      removeExistingRoute();
-    };
+    // Cleanup logic handled at start of next effect to prevent flash
+    return () => {};
   }, [map, userLocation, destination]);
 
   return null;
@@ -174,7 +226,7 @@ const MapSalon = ({ salons, onSelect, userLocation, heading, routeDestination, o
                             <MapPin size={10} /> {salon.area || "City Center"}
                         </p>
                     </div>
-                    {/* Route Button in Popup */}
+                    {/* Route Button */}
                     <button 
                         onClick={() => onRouteClick(salon)}
                         className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center hover:bg-blue-200 transition-colors"
