@@ -622,7 +622,10 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
         )}
 
         <p className="mt-12 text-[10px] text-zinc-400 text-center uppercase tracking-widest font-medium">Live TrimGo Network • © 2025</p>
-        <AIConcierge />
+       <AIConcierge 
+  salons={sortedSalons} 
+  onSalonSelect={handleOpenBooking} 
+/>
       </main>
     </div>
   );
