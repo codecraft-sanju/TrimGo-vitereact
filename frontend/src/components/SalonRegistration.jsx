@@ -187,7 +187,7 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
             </div>
             
             <p className="text-xs text-zinc-400 mt-2 ml-1">
-                Map par pin ko drag karke apni dukan par drop karein.
+                Drag the pin to your shop's location.
             </p>
         </div>
         {/* --- MAP SECTION END --- */}
