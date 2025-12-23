@@ -169,7 +169,7 @@ const MapAutoCenter = ({ center, isRouting }) => {
 
   useEffect(() => {
     if (center && !hasCentered.current && !isRouting) {
-      map.flyTo([center.lat, center.lng], 14, { duration: 1.5 });
+      map.flyTo([center.lat, center.lng], 12, { duration: 1.5 });
       hasCentered.current = true;
     }
   }, [center, map, isRouting]);
