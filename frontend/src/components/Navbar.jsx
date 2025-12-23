@@ -4,7 +4,10 @@ import {
   BarChart3, Users, Clock 
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Toaster, toast } from "react-hot-toast";
+
+// --- React Toastify Imports ---
+import { ToastContainer, toast, Bounce } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // --- Sub-Component: Logo ---
 const Logo = ({ dark = false }) => (
@@ -85,27 +88,41 @@ const Navbar = ({ onNavigateLogin }) => {
     { name: "Stories", href: "#testimonials", sub: "Success stories" },
   ];
 
-  // Custom Toast Handler
+  // --- NEW: Premium Toast Handler ---
   const handleGetApp = () => {
-    toast("TrimGo App Coming Soon!", {
-      icon: '🚀',
-      style: {
-        borderRadius: '100px',
-        background: '#18181b',
-        color: '#fff',
-        padding: '12px 24px',
-        fontWeight: 'bold',
-        boxShadow: '0 20px 40px -10px rgba(0,0,0,0.3)',
-        fontSize: '14px',
-      },
-      duration: 3000,
+    toast.info('TrimGo App Coming Soon!', {
+      position: "top-center",
+      autoClose: 3000,
+      hideProgressBar: false, // Line chalegi
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: "dark", // Dark Premium Theme
+      transition: Bounce,
+      icon: "🚀"
     });
-    
   };
 
   return (
     <>
-      <Toaster position="bottom-center" reverseOrder={false} />
+      {/* NEW: ToastContainer Added Here 
+         Ye container poore app ke toasts ko handle karega 
+         z-index badha diya taki navbar ke upar dikhe 
+      */}
+      <ToastContainer
+        position="top-center"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
+        className="mt-14 sm:mt-0" // Mobile pe thoda niche, desktop pe top
+      />
 
       {/* --- DESKTOP --- */}
       <motion.nav 
@@ -158,8 +175,8 @@ const Navbar = ({ onNavigateLogin }) => {
                     className="absolute top-full left-1/2 -translate-x-1/2 pt-2"
                   >
                     <div className="bg-white rounded-2xl shadow-xl border border-zinc-100 overflow-hidden relative">
-                       <div className="absolute top-0 left-1/2 -translate-x-1/2 -mt-1.5 w-3 h-3 bg-white border-t border-l border-zinc-100 rotate-45" />
-                       <FeaturesMegaMenu />
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -mt-1.5 w-3 h-3 bg-white border-t border-l border-zinc-100 rotate-45" />
+                        <FeaturesMegaMenu />
                     </div>
                   </motion.div>
                 )}
@@ -216,7 +233,6 @@ const Navbar = ({ onNavigateLogin }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            // Changed pt-32 to pt-24 to give more space for image
             className="fixed inset-0 z-40 bg-white/95 backdrop-blur-xl md:hidden flex flex-col pt-24 px-6 overflow-y-auto"
           >
              <motion.div 
@@ -228,22 +244,20 @@ const Navbar = ({ onNavigateLogin }) => {
                 initial="hidden"
                 animate="show"
              >
-                {/* --- NEW: Salon Shop Image Section --- */}
+                {/* --- Salon Shop Image Section --- */}
                 <motion.div 
                     variants={{ hidden: { y: 20, opacity: 0 }, show: { y: 0, opacity: 1 }}}
                     className="w-full h-48 rounded-3xl overflow-hidden shadow-2xl relative group shrink-0"
                 >
                     <img 
-                        src="/salonshopnavbar.jpg" // Ensure this file is in your public folder
+                        src="/salonshopnavbar.jpg" 
                         alt="Salon Interior" 
                         className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
                     />
-                    {/* Optional: Dark Overlay for text legibility if needed */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-5">
-                         <span className="text-white font-bold text-lg">Premium Salon Experience</span>
+                          <span className="text-white font-bold text-lg">Premium Salon Experience</span>
                     </div>
                 </motion.div>
-                {/* ------------------------------------- */}
 
                 {navLinks.map((item) => (
                     <motion.a 
