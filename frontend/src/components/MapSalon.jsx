@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import { Scissors, Clock, Users, MapPin, ArrowRight, Navigation } from "lucide-react";
+import { Clock, Users, MapPin, Navigation } from "lucide-react";
 import "leaflet/dist/leaflet.css";
-import "leaflet-routing-machine/dist/leaflet-routing-machine.css"; // Import Routing CSS
+import "leaflet-routing-machine/dist/leaflet-routing-machine.css"; 
 import L from "leaflet";
-import "leaflet-routing-machine"; // Import Routing Logic
+import "leaflet-routing-machine"; 
 
 // --- Fix for Default Leaflet Icon ---
 import icon from "leaflet/dist/images/marker-icon.png";
@@ -33,58 +33,84 @@ const getUserIcon = (heading) => L.divIcon({
   iconAnchor: [10, 10]
 });
 
-// --- ROUTING MACHINE COMPONENT ---
-// This handles drawing the line
+// --- IMPROVED ROUTING MACHINE COMPONENT ---
 const RoutingMachine = ({ userLocation, destination }) => {
   const map = useMap();
   const routingControlRef = useRef(null);
 
   useEffect(() => {
-    // If we don't have both points, remove any existing route
-    if (!userLocation || !destination) {
+    // 1. Basic Validation
+    if (!map || !userLocation || !destination) return;
+
+    // 2. CLEANUP: Pehle wala route hatao taaki double lines na banein
+    const removeExistingRoute = () => {
       if (routingControlRef.current) {
-        map.removeControl(routingControlRef.current);
+        try {
+          map.removeControl(routingControlRef.current);
+        } catch (error) {
+          console.warn("Cleanup error:", error);
+        }
         routingControlRef.current = null;
       }
-      return;
-    }
+    };
 
-    // Remove previous route if exists
-    if (routingControlRef.current) {
-      map.removeControl(routingControlRef.current);
-    }
+    removeExistingRoute();
 
-    // Create new route
-    routingControlRef.current = L.Routing.control({
+    // 3. CREATE NEW ROUTE
+    const routingControl = L.Routing.control({
       waypoints: [
         L.latLng(userLocation.lat, userLocation.lng),
         L.latLng(destination.lat, destination.lng)
       ],
+      // 🔥 Styling: Professional Blue Line (Thicker & Clearer)
       lineOptions: {
-        styles: [{ color: "#3b82f6", weight: 5, opacity: 0.8 }] // Blue Route Line
+        styles: [{ color: "#2563eb", weight: 6, opacity: 0.8 }] 
       },
-      createMarker: () => null, // Don't create extra markers on top of ours
-      addWaypoints: false, // Disable dragging points
+      // UI Options to hide clutter
+      createMarker: () => null, 
+      addWaypoints: false,      
       draggableWaypoints: false,
-      fitSelectedRoutes: true, // Auto zoom to fit the route
-      show: false // Hide the text instruction box (turn-by-turn list)
-    }).addTo(map);
+      fitSelectedRoutes: true,  
+      showAlternatives: false,  
+      containerClassName: 'routing-container-hidden', 
+    });
 
-    // Hide the container with CSS just in case 'show: false' leaves a white box
-    const container = document.querySelector(".leaflet-routing-container");
-    if(container) container.style.display = "none";
+    // 4. Handle Errors (Prevent Crash if OSRM is busy)
+    routingControl.on('routingerror', function(e) {
+      console.log('Routing failed:', e);
+    });
+
+    // 5. ADD TO MAP
+    routingControl.addTo(map);
+    routingControlRef.current = routingControl;
+
+    // 6. 🔥 CRITICAL UI FIX: Hide the White Instruction Box via CSS Injection
+    // Yeh ensure karega ki woh white box kabhi dikhe hi nahi
+    const styleId = 'leaflet-routing-hide-style';
+    if (!document.getElementById(styleId)) {
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.innerHTML = `
+            .leaflet-routing-container, 
+            .leaflet-routing-alternatives-container { 
+                display: none !important; 
+                visibility: hidden !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
 
     return () => {
-      if (routingControlRef.current) {
-        map.removeControl(routingControlRef.current);
-      }
+      removeExistingRoute();
     };
   }, [map, userLocation, destination]);
 
   return null;
 };
 
-// Helper to auto-center map (only runs if NO route is active)
+// Helper to auto-center map
 const MapAutoCenter = ({ center, isRouting }) => {
   const map = useMap();
   const hasCentered = useRef(false);

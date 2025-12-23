@@ -230,18 +230,28 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
   };
 
   // 🔥 NEW: Handle Routing Click
+ // 🔥 UPDATED: Safe Route Handler
   const handleRoute = (salon) => {
+    // 1. Check if user location exists
     if (!userLocation) {
         alert("Please enable location first to get directions.");
         startLocationTracking();
         return;
     }
-    // Set destination
+
+    // 2. Safety Check: Agar salon ki location missing ho toh crash mat hona
+    if(!salon.latitude || !salon.longitude) {
+        alert("Salon location not found on map.");
+        return;
+    }
+
+    // 3. Set destination (String ko Number mein convert karna zaroori hai)
     setRouteDestination({
-        lat: salon.latitude,
-        lng: salon.longitude
+        lat: Number(salon.latitude),
+        lng: Number(salon.longitude)
     });
-    // Scroll map into view smoothly
+
+    // 4. Scroll map into view smoothly
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
