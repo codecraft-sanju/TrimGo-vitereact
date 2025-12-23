@@ -167,6 +167,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
   
   const [userLocation, setUserLocation] = useState(null); 
   const [heading, setHeading] = useState(0); 
+  const [routeDestination, setRouteDestination] = useState(null); // 🔥 NEW: Route State
   const watchId = useRef(null); 
 
   const startLocationTracking = () => {
@@ -228,6 +229,22 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
     );
   };
 
+  // 🔥 NEW: Handle Routing Click
+  const handleRoute = (salon) => {
+    if (!userLocation) {
+        alert("Please enable location first to get directions.");
+        startLocationTracking();
+        return;
+    }
+    // Set destination
+    setRouteDestination({
+        lat: salon.latitude,
+        lng: salon.longitude
+    });
+    // Scroll map into view smoothly
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   useEffect(() => {
     startLocationTracking();
 
@@ -244,8 +261,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
         setSalons((prevSalons) => [newSalon, ...prevSalons]);
     });
 
-    // 🔥 3. NEW: Listen for Queue Updates (Real-time Waiting Count + Est Time)
-    // Ab backend 'estTime' bhi bhej raha hai
     socket.on("queue_update_broadcast", ({ salonId, waitingCount, estTime }) => {
         setSalons((prevSalons) => 
             prevSalons.map((salon) => {
@@ -253,7 +268,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
                     return { 
                         ...salon, 
                         waiting: waitingCount, 
-                        estTime: estTime // Update dynamic time
+                        estTime: estTime 
                     }; 
                 }
                 return salon;
@@ -474,11 +489,14 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
             </div>
           </div>
 
+          {/* 🔥 PASSING NEW PROPS TO MAP */}
           <MapSalon 
             salons={sortedSalons} 
             userLocation={userLocation}
             heading={heading} 
             onSelect={(s) => handleOpenBooking(s)} 
+            routeDestination={routeDestination} 
+            onRouteClick={handleRoute}
           />
 
           <div className="flex flex-col md:flex-row gap-4 mt-6">
@@ -521,12 +539,22 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
                             <span className="font-semibold">{salon.salonType || "Unisex"}</span>
                         </div>
                       </div>
-                      <div className="text-right">
+
+                      {/* 🔥 NEW: ROUTE BUTTON & RATING */}
+                      <div className="flex flex-col items-end gap-2">
+                        <button 
+                            onClick={() => handleRoute(salon)}
+                            className="p-2 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors border border-blue-100 shadow-sm"
+                            title="Get Directions"
+                        >
+                             <Navigation size={18} fill="currentColor" className="transform rotate-45" />
+                        </button>
+
                         <div className="flex items-center justify-end gap-1 text-sm font-bold text-zinc-900">
                           <Star className="text-yellow-400 fill-yellow-400" size={14} />
                           {salon.rating ? salon.rating.toFixed(1) : "New"}
                         </div>
-                        <p className="text-[10px] text-zinc-400">{salon.reviewsCount || 0} reviews</p>
+                        <p className="text-[10px] text-zinc-400 text-right">{salon.reviewsCount || 0} reviews</p>
                       </div>
                     </div>
 
@@ -542,7 +570,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
                         <span className="text-[9px] uppercase text-zinc-400 font-bold tracking-tight">Est. Time</span>
                         <div className="flex items-center gap-1 mt-0.5">
                           <Clock size={12} className="text-zinc-400" />
-                          {/* 🔥 UPDATED: Now showing Real Dynamic Time */}
                           <span className="text-xs sm:text-sm font-bold text-zinc-900">
                             {salon.estTime || 0} min
                           </span>

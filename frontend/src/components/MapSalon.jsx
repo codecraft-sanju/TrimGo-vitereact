@@ -1,8 +1,10 @@
 import React, { useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import { Scissors, Clock, Users, MapPin, ArrowRight } from "lucide-react";
+import { Scissors, Clock, Users, MapPin, ArrowRight, Navigation } from "lucide-react";
 import "leaflet/dist/leaflet.css";
+import "leaflet-routing-machine/dist/leaflet-routing-machine.css"; // Import Routing CSS
 import L from "leaflet";
+import "leaflet-routing-machine"; // Import Routing Logic
 
 // --- Fix for Default Leaflet Icon ---
 import icon from "leaflet/dist/images/marker-icon.png";
@@ -17,58 +19,86 @@ let DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-// --- Custom User Navigation Triangle Icon ---
-// This function generates the icon with a dynamic rotation (heading)
+// --- Custom User Icon ---
 const getUserIcon = (heading) => L.divIcon({
   className: 'custom-user-marker',
   html: `
     <div style="transform: rotate(${heading || 0}deg); transition: transform 0.2s ease-out; display: flex; align-items: center; justify-content: center;">
-      <div style="
-        width: 0; 
-        height: 0; 
-        border-left: 8px solid transparent;
-        border-right: 8px solid transparent;
-        border-bottom: 20px solid #3b82f6;
-        filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));
-        position: relative;
-        z-index: 2;
-      "></div>
-      <div style="
-        position: absolute;
-        background-color: #3b82f6;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        animation: pulse 2s infinite;
-        z-index: 1;
-      "></div>
+      <div style="width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 20px solid #3b82f6; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3)); position: relative; z-index: 2;"></div>
+      <div style="position: absolute; background-color: #3b82f6; width: 12px; height: 12px; border-radius: 50%; animation: pulse 2s infinite; z-index: 1;"></div>
     </div>
-    <style>
-      @keyframes pulse {
-        0% { transform: scale(1); opacity: 0.6; }
-        100% { transform: scale(3.5); opacity: 0; }
-      }
-    </style>
+    <style>@keyframes pulse { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(3.5); opacity: 0; } }</style>
   `,
   iconSize: [20, 20],
   iconAnchor: [10, 10]
 });
 
-// Helper to auto-center map smoothly
-const MapAutoCenter = ({ center }) => {
+// --- ROUTING MACHINE COMPONENT ---
+// This handles drawing the line
+const RoutingMachine = ({ userLocation, destination }) => {
+  const map = useMap();
+  const routingControlRef = useRef(null);
+
+  useEffect(() => {
+    // If we don't have both points, remove any existing route
+    if (!userLocation || !destination) {
+      if (routingControlRef.current) {
+        map.removeControl(routingControlRef.current);
+        routingControlRef.current = null;
+      }
+      return;
+    }
+
+    // Remove previous route if exists
+    if (routingControlRef.current) {
+      map.removeControl(routingControlRef.current);
+    }
+
+    // Create new route
+    routingControlRef.current = L.Routing.control({
+      waypoints: [
+        L.latLng(userLocation.lat, userLocation.lng),
+        L.latLng(destination.lat, destination.lng)
+      ],
+      lineOptions: {
+        styles: [{ color: "#3b82f6", weight: 5, opacity: 0.8 }] // Blue Route Line
+      },
+      createMarker: () => null, // Don't create extra markers on top of ours
+      addWaypoints: false, // Disable dragging points
+      draggableWaypoints: false,
+      fitSelectedRoutes: true, // Auto zoom to fit the route
+      show: false // Hide the text instruction box (turn-by-turn list)
+    }).addTo(map);
+
+    // Hide the container with CSS just in case 'show: false' leaves a white box
+    const container = document.querySelector(".leaflet-routing-container");
+    if(container) container.style.display = "none";
+
+    return () => {
+      if (routingControlRef.current) {
+        map.removeControl(routingControlRef.current);
+      }
+    };
+  }, [map, userLocation, destination]);
+
+  return null;
+};
+
+// Helper to auto-center map (only runs if NO route is active)
+const MapAutoCenter = ({ center, isRouting }) => {
   const map = useMap();
   const hasCentered = useRef(false);
 
   useEffect(() => {
-    if (center && !hasCentered.current) {
+    if (center && !hasCentered.current && !isRouting) {
       map.flyTo([center.lat, center.lng], 14, { duration: 1.5 });
       hasCentered.current = true;
     }
-  }, [center, map]);
+  }, [center, map, isRouting]);
   return null;
 };
 
-const MapSalon = ({ salons, onSelect, userLocation, heading }) => {
+const MapSalon = ({ salons, onSelect, userLocation, heading, routeDestination, onRouteClick }) => {
   const defaultCenter = [26.2389, 73.0243];
 
   return (
@@ -81,11 +111,14 @@ const MapSalon = ({ salons, onSelect, userLocation, heading }) => {
         className="z-0"
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          attribution='&copy; OpenStreetMap &copy; CARTO'
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
         />
 
-        {/* --- 1. USER'S LIVE LOCATION WITH ROTATION --- */}
+        {/* ROUTING LOGIC */}
+        <RoutingMachine userLocation={userLocation} destination={routeDestination} />
+
+        {/* USER LOCATION */}
         {userLocation && (
           <>
             <Marker 
@@ -95,11 +128,11 @@ const MapSalon = ({ salons, onSelect, userLocation, heading }) => {
             >
               <Popup>Aap Yahan Hain</Popup>
             </Marker>
-            <MapAutoCenter center={userLocation} />
+            <MapAutoCenter center={userLocation} isRouting={!!routeDestination} />
           </>
         )}
 
-        {/* --- 2. SALON MARKERS --- */}
+        {/* SALON MARKERS */}
         {salons.map((salon) => (
           salon.latitude && salon.longitude && (
             <Marker 
@@ -115,11 +148,17 @@ const MapSalon = ({ salons, onSelect, userLocation, heading }) => {
                             <MapPin size={10} /> {salon.area || "City Center"}
                         </p>
                     </div>
-                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-white ${salon.isOnline ? 'bg-zinc-900' : 'bg-red-500'}`}>
-                        <Scissors size={12} />
-                    </div>
+                    {/* Route Button in Popup */}
+                    <button 
+                        onClick={() => onRouteClick(salon)}
+                        className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center hover:bg-blue-200 transition-colors"
+                        title="Show Route"
+                    >
+                        <Navigation size={12} fill="currentColor" />
+                    </button>
                   </div>
 
+                  {/* Stats Grid */}
                   <div className="grid grid-cols-2 gap-2 mb-3 bg-zinc-50 p-2 rounded-lg border border-zinc-100">
                     <div className="flex flex-col items-center">
                         <span className="text-[10px] text-zinc-400 font-bold uppercase">Waiting</span>
@@ -130,7 +169,7 @@ const MapSalon = ({ salons, onSelect, userLocation, heading }) => {
                     <div className="flex flex-col items-center border-l border-zinc-200">
                         <span className="text-[10px] text-zinc-400 font-bold uppercase">ETA</span>
                         <div className="flex items-center gap-1 font-bold text-zinc-900">
-                            <Clock size={12} className="text-emerald-500"/> {salon.eta || 15}m
+                            <Clock size={12} className="text-emerald-500"/> {salon.estTime || 15}m
                         </div>
                     </div>
                   </div>
@@ -144,11 +183,7 @@ const MapSalon = ({ salons, onSelect, userLocation, heading }) => {
                         : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
                     }`}
                   >
-                    {salon.isOnline ? (
-                        <>Book Now <ArrowRight size={12} /></>
-                    ) : (
-                        "Closed"
-                    )}
+                    {salon.isOnline ? "Book Now" : "Closed"}
                   </button>
                 </div>
               </Popup>
@@ -156,14 +191,6 @@ const MapSalon = ({ salons, onSelect, userLocation, heading }) => {
           )
         ))}
       </MapContainer>
-
-      <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full border border-white/20 text-[10px] font-bold text-zinc-600 shadow-lg z-[400] pointer-events-none flex items-center gap-2">
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-        </span>
-        Live Traffic Layer
-      </div>
     </div>
   );
 };
