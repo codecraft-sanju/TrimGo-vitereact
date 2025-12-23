@@ -1,11 +1,10 @@
 // LocationPicker.jsx
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
-import { Search, Crosshair, Loader2, MapPin } from 'lucide-react';
+import { Search, Crosshair, Loader2, MapPin, X } from 'lucide-react'; // X icon bhi import kiya
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// --- Icon Fix for React-Leaflet ---
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
@@ -17,18 +16,16 @@ let DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-// --- Helper: Fly to Location on Change ---
+// --- Helper: Fly to Location ---
 const FlyToLocation = ({ center }) => {
   const map = useMap();
   useEffect(() => {
-    if (center) {
-      map.flyTo([center.lat, center.lng], 16); // Increased zoom level (16) for street view
-    }
+    if (center) map.flyTo([center.lat, center.lng], 16);
   }, [center, map]);
   return null;
 };
 
-// --- Helper: Click to Move Marker ---
+// --- Helper: Click Marker ---
 const LocationMarker = ({ position, setPosition, onLocationSelect }) => {
   useMapEvents({
     click(e) {
@@ -50,140 +47,199 @@ const LocationMarker = ({ position, setPosition, onLocationSelect }) => {
         }
       }}
     >
-      <Popup minWidth={90}>Aapki Dukan Yahan Hai?</Popup>
+      <Popup minWidth={90}>Selected Location</Popup>
     </Marker>
   );
 };
 
 const LocationPicker = ({ onLocationSelect }) => {
-  // FALLBACK: Agar GPS fail ho jaye toh New Delhi (India Center) dikhayenge
-  const FALLBACK_CENTER = { lat: 28.6139, lng: 77.2090 }; 
+  const FALLBACK_CENTER = { lat: 28.6139, lng: 77.2090 };
   
-  const [position, setPosition] = useState(null); // Start with NULL to show loader
+  const [position, setPosition] = useState(null);
   const [searchText, setSearchText] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [isLoadingLoc, setIsLoadingLoc] = useState(true); // Default loading true
+  const [isLoadingLoc, setIsLoadingLoc] = useState(true);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // --- 1. Auto-Detect Location on Mount ---
+  // REF: Yeh batayega ki humne suggestion select kiya hai ya nahi
+  const isSelectingRef = useRef(false);
+  // REF: Click outside detect karne ke liye
+  const wrapperRef = useRef(null);
+
+  // --- 1. Click Outside Logic ---
   useEffect(() => {
-    // Component load hote hi location maang lo
+    function handleClickOutside(event) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setShowSuggestions(false); // Bahar click kiya toh list band
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // --- 2. Auto-Detect Location ---
+  useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          const { latitude, longitude } = pos.coords;
-          const userPos = { lat: latitude, lng: longitude };
-          setPosition(userPos);
-          onLocationSelect(userPos);
+          const newPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setPosition(newPos);
+          onLocationSelect(newPos);
           setIsLoadingLoc(false);
         },
-        (err) => {
-          console.error("Location access denied/error:", err);
-          // Agar user mana karde, toh Fallback center use karo
+        () => {
           setPosition(FALLBACK_CENTER);
-          onLocationSelect(FALLBACK_CENTER);
           setIsLoadingLoc(false);
-          // Optional: Alert hata diya taaki user irritate na ho
         }
       );
     } else {
       setPosition(FALLBACK_CENTER);
       setIsLoadingLoc(false);
     }
-  }, []); // Empty dependency array = Runs once on mount
+  }, []);
 
-  // --- 2. Manual "Locate Me" Button Logic ---
+  // --- 3. Live Search Logic (With Fix) ---
+  useEffect(() => {
+    // Agar humne list se select kiya hai, toh search mat karo
+    if (isSelectingRef.current) {
+      isSelectingRef.current = false; // Reset flag
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      if (searchText.length > 2) {
+        setIsSearching(true);
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${searchText}&countrycodes=in&limit=5`
+          );
+          const data = await response.json();
+          setSuggestions(data);
+          setShowSuggestions(true);
+        } catch (error) {
+          console.error(error);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setShowSuggestions(false);
+      }
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
+  // --- 4. Handle Selection (Fix implemented here) ---
+  const handleSuggestionClick = (place) => {
+    // Flag set karo: "Hum select kar rahe hain, search mat trigger karna"
+    isSelectingRef.current = true; 
+
+    const lat = parseFloat(place.lat);
+    const lng = parseFloat(place.lon);
+    const newPos = { lat, lng };
+    
+    setPosition(newPos);
+    onLocationSelect(newPos);
+    
+    // Display Name short karke dikhao
+    setSearchText(place.display_name.split(',')[0]);
+    
+    // List immediately band karo
+    setShowSuggestions(false);
+  };
+
+  const handleClearSearch = () => {
+    setSearchText("");
+    setShowSuggestions(false);
+    setSuggestions([]);
+  };
+
   const handleCurrentLocation = (e) => {
     e.preventDefault();
     setIsLoadingLoc(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const { latitude, longitude } = pos.coords;
-        const newPos = { lat: latitude, lng: longitude };
+        const newPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         setPosition(newPos);
         onLocationSelect(newPos);
         setIsLoadingLoc(false);
+        setSearchText(""); // Search clear
+        setShowSuggestions(false);
       },
-      (err) => {
-        alert("Location access denied.");
+      () => {
+        alert("Location denied");
         setIsLoadingLoc(false);
       }
     );
   };
 
-  // --- 3. Search Logic ---
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!searchText) return;
-    setIsSearching(true);
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${searchText}&countrycodes=in`
-      );
-      const data = await response.json();
-      if (data && data.length > 0) {
-        const { lat, lon } = data[0];
-        const newPos = { lat: parseFloat(lat), lng: parseFloat(lon) };
-        setPosition(newPos);
-        onLocationSelect(newPos);
-      } else {
-        alert("Location nahi mili.");
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  // --- RENDER LOADING STATE ---
-  // Jab tak location nahi milti, map mat dikhao, loader dikhao
   if (isLoadingLoc && !position) {
     return (
-      <div className="w-full h-80 rounded-xl border border-zinc-200 bg-zinc-50 flex flex-col items-center justify-center text-zinc-400 gap-3">
+      <div className="w-full h-80 rounded-xl bg-zinc-50 flex flex-col items-center justify-center text-zinc-400 gap-3 border border-zinc-200">
         <Loader2 className="animate-spin text-zinc-900" size={32} />
-        <span className="text-sm font-medium animate-pulse">Detecting your location...</span>
+        <span className="text-sm">Locating...</span>
       </div>
     );
   }
 
   return (
-    <div className="relative w-full h-80 rounded-xl overflow-hidden border border-zinc-200 z-0 bg-zinc-100">
+    <div className="relative w-full h-80 rounded-xl overflow-hidden border border-zinc-200 bg-zinc-100 z-0">
       
-      {/* Search Bar */}
-      <div className="absolute top-3 left-3 right-3 z-[1000] flex gap-2">
-        <form onSubmit={handleSearch} className="flex-1 relative shadow-lg rounded-lg">
+      {/* Search Wrapper with Ref for Click Outside */}
+      <div ref={wrapperRef} className="absolute top-3 left-3 right-3 z-[1000] flex flex-col gap-1">
+        <div className="relative shadow-md rounded-lg bg-white">
           <input
             type="text"
             value={searchText}
+            // Focus karte hi agar purane suggestions hain toh dikha do
+            onFocus={() => { if(suggestions.length > 0) setShowSuggestions(true); }}
             onChange={(e) => setSearchText(e.target.value)}
             placeholder="Search area..."
-            className="w-full pl-10 pr-12 py-2.5 bg-white rounded-lg text-sm font-medium text-zinc-800 border-none outline-none focus:ring-2 focus:ring-zinc-900"
+            className="w-full pl-10 pr-10 py-2.5 rounded-lg text-sm font-medium text-zinc-800 border-none outline-none focus:ring-2 focus:ring-zinc-900"
           />
           <Search className="absolute left-3 top-2.5 text-zinc-400" size={16} />
-          <button 
-            type="submit" 
-            className="absolute right-2 top-1.5 bg-zinc-100 hover:bg-zinc-200 p-1 px-2 rounded-md text-zinc-600 transition-colors"
-            disabled={isSearching}
-          >
-            {isSearching ? <Loader2 className="animate-spin" size={16}/> : <ArrowRightIcon />}
-          </button>
-        </form>
+          
+          {/* Clear Button or Loader */}
+          <div className="absolute right-2 top-1.5 flex items-center">
+            {isSearching ? (
+              <Loader2 className="animate-spin text-zinc-400 m-1" size={16}/>
+            ) : searchText ? (
+              <button onClick={handleClearSearch} className="p-1 hover:bg-zinc-100 rounded-full text-zinc-400">
+                <X size={16} />
+              </button>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Suggestions Dropdown */}
+        {showSuggestions && suggestions.length > 0 && (
+          <div className="bg-white rounded-lg shadow-xl border border-zinc-100 overflow-hidden max-h-48 overflow-y-auto">
+            {suggestions.map((place) => (
+              <button
+                key={place.place_id}
+                onClick={() => handleSuggestionClick(place)}
+                className="w-full text-left px-4 py-2 text-xs text-zinc-700 hover:bg-zinc-100 border-b border-zinc-50 last:border-none transition-colors flex items-center gap-2"
+              >
+                <MapPin size={12} className="text-zinc-400 shrink-0" />
+                <span className="truncate">{place.display_name}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* GPS Button */}
       <button
         onClick={handleCurrentLocation}
-        className="absolute bottom-4 right-4 z-[1000] bg-white text-zinc-900 p-3 rounded-full shadow-xl hover:bg-zinc-50 active:scale-95 transition-all border border-zinc-100 flex items-center justify-center"
-        title="My Location"
-        type="button" 
+        className="absolute bottom-4 right-4 z-[1000] bg-white text-zinc-900 p-3 rounded-full shadow-lg hover:bg-zinc-50 border border-zinc-100"
+        type="button"
       >
          <Crosshair size={20} />
       </button>
 
-      {/* Map */}
       <MapContainer 
         center={position || FALLBACK_CENTER} 
-        zoom={16} // Closer zoom for better accuracy
+        zoom={16} 
         scrollWheelZoom={true}
         zoomControl={false}
         style={{ height: "100%", width: "100%" }}
@@ -192,9 +248,7 @@ const LocationPicker = ({ onLocationSelect }) => {
           attribution='&copy; OpenStreetMap'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        
         <FlyToLocation center={position} />
-
         {position && (
           <LocationMarker 
              position={position} 
@@ -206,12 +260,5 @@ const LocationPicker = ({ onLocationSelect }) => {
     </div>
   );
 };
-
-const ArrowRightIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M5 12h14" />
-    <path d="m12 5 7 7-7 7" />
-  </svg>
-);
 
 export default LocationPicker;

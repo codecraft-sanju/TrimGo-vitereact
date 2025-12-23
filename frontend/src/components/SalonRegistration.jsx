@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Store, User, Phone, MapPin, ArrowRight, ChevronLeft, Mail, Lock, Hash, Crosshair } from "lucide-react";
+// Assuming LocationPicker is in the same directory
 import LocationPicker from "./LocationPicker"; 
 
 const BackgroundAurora = () => (
@@ -38,13 +39,13 @@ const ShimmerButton = ({ children, onClick, className = "", disabled = false }) 
 };
 
 const InputGroup = ({ icon: Icon, type, placeholder, label, name, value, onChange }) => (
-  <div className="space-y-1.5">
+  <div className="space-y-1.5 w-full">
     <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1">
       {label}
     </label>
     <div className="relative group">
       <Icon
-        className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-zinc-900 transition-colors"
+        className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-zinc-900 transition-colors pointer-events-none"
         size={20}
       />
       <input
@@ -53,45 +54,49 @@ const InputGroup = ({ icon: Icon, type, placeholder, label, name, value, onChang
         onChange={onChange}
         type={type}
         placeholder={placeholder}
-        // UPDATED: bg-zinc-50 for visibility
-        className="w-full bg-zinc-50 border border-zinc-200 rounded-xl py-4 pl-12 pr-4 text-zinc-900 font-medium focus:outline-none focus:ring-4 focus:ring-zinc-100 focus:border-zinc-900 transition-all placeholder:text-zinc-400"
+        // UPDATED: Added text-base to prevent iOS zoom, responsive padding
+        className="w-full bg-zinc-50 border border-zinc-200 rounded-xl py-3.5 sm:py-4 pl-12 pr-4 text-base text-zinc-900 font-medium focus:outline-none focus:ring-4 focus:ring-zinc-100 focus:border-zinc-900 transition-all placeholder:text-zinc-400"
       />
     </div>
   </div>
 );
 
 const AuthLayout = ({ children, title, subtitle, onBack, illustration }) => (
-  <div className="min-h-screen w-full bg-zinc-50 flex items-center justify-center p-4 relative font-sans overflow-hidden">
+  <div className="min-h-screen w-full bg-zinc-50 flex items-center justify-center p-3 sm:p-4 md:p-6 relative font-sans overflow-x-hidden">
     <BackgroundAurora />
     <NoiseOverlay />
 
     <button
       onClick={onBack}
-      className="absolute top-8 left-8 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 transition z-50 font-bold bg-white/50 px-4 py-2 rounded-full backdrop-blur-sm border border-white/50"
+      className="absolute top-4 left-4 md:top-8 md:left-8 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 transition z-50 font-bold bg-white/50 px-4 py-2 rounded-full backdrop-blur-sm border border-white/50 text-sm md:text-base"
     >
-      <ChevronLeft size={20} /> Home
+      <ChevronLeft size={18} className="md:w-5 md:h-5" /> Home
     </button>
 
-    <div className="w-full max-w-6xl bg-white/80 backdrop-blur-xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row relative z-10 border border-white/60">
-      {/* UPDATED: Changed justify-center to justify-start to prevent top cut-off */}
-      <div className="w-full md:w-1/2 p-8 md:p-16 flex flex-col justify-start max-h-[90vh] overflow-y-auto">
-        <div className="mb-8 mt-2">
-          <h2 className="text-4xl font-black text-zinc-900 mb-3 tracking-tight">
+    <div className="w-full max-w-6xl bg-white/80 backdrop-blur-xl rounded-[2rem] md:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row relative z-10 border border-white/60 mt-12 md:mt-0">
+      
+      {/* CHANGES MADE HERE:
+         1. [&::-webkit-scrollbar]:hidden -> Chrome/Safari/Edge ke liye
+         2. [-ms-overflow-style:none] -> IE/Edge ke liye
+         3. [scrollbar-width:none] -> Firefox ke liye
+      */}
+      <div className="w-full md:w-1/2 p-6 sm:p-8 md:p-12 lg:p-16 flex flex-col justify-start h-auto md:h-[90vh] md:overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="mb-6 md:mb-8 mt-2">
+          <h2 className="text-3xl sm:text-4xl font-black text-zinc-900 mb-2 sm:mb-3 tracking-tight">
             {title}
           </h2>
-          <p className="text-zinc-500 font-medium">{subtitle}</p>
+          <p className="text-sm sm:text-base text-zinc-500 font-medium">{subtitle}</p>
         </div>
         {children}
       </div>
 
-      <div className="hidden md:flex w-1/2 bg-zinc-900 relative p-12 flex-col justify-between overflow-hidden">
+      <div className="hidden md:flex w-1/2 bg-zinc-900 relative p-12 flex-col justify-between overflow-hidden h-[90vh]">
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
         {illustration}
       </div>
     </div>
   </div>
 );
-
 /* ----------------------------------------------------------------------
    COMPONENT 1: SALON REGISTRATION (UPDATED WITH MAP)
 ---------------------------------------------------------------------- */
@@ -139,11 +144,11 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
             <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-8 border border-white/20">
               <Store className="text-white" size={32} />
             </div>
-            <h3 className="text-3xl font-bold text-white mb-6">
+            <h3 className="text-3xl font-bold text-white mb-6 leading-tight">
               "Since using TrimGo, our revenue increased by 30% in the first month."
             </h3>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-zinc-700 rounded-full"></div>
+              <div className="w-10 h-10 bg-zinc-700 rounded-full flex-shrink-0"></div>
               <div>
                 <p className="text-white font-bold text-sm">Rajesh Kumar</p>
                 <p className="text-zinc-500 text-xs">Owner, The Royal Cut</p>
@@ -154,22 +159,31 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
       }
     >
       <form className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4" onSubmit={handleSubmit}>
-        <div className="md:col-span-2">
+        <div className="col-span-1 md:col-span-2">
           <InputGroup icon={Store} name="salonName" value={formData.salonName} onChange={handleChange} type="text" placeholder="Urban Cut Pro" label="Salon Name" />
         </div>
         
-        <InputGroup icon={User} name="ownerName" value={formData.ownerName} onChange={handleChange} type="text" placeholder="Owner Name" label="Contact Person" />
-        <InputGroup icon={Phone} name="phone" value={formData.phone} onChange={handleChange} type="tel" placeholder="9876543210" label="Mobile" />
+        {/* On mobile these stack (col-span-1), on desktop they share the row */}
+        <div className="col-span-1">
+            <InputGroup icon={User} name="ownerName" value={formData.ownerName} onChange={handleChange} type="text" placeholder="Owner Name" label="Contact Person" />
+        </div>
+        <div className="col-span-1">
+            <InputGroup icon={Phone} name="phone" value={formData.phone} onChange={handleChange} type="tel" placeholder="9876543210" label="Mobile" />
+        </div>
         
-        <InputGroup icon={Mail} name="email" value={formData.email} onChange={handleChange} type="email" placeholder="salon@business.com" label="Email Address" />
-        <InputGroup icon={Lock} name="password" value={formData.password} onChange={handleChange} type="password" placeholder="••••••••" label="Password" />
+        <div className="col-span-1 md:col-span-2">
+            <InputGroup icon={Mail} name="email" value={formData.email} onChange={handleChange} type="email" placeholder="salon@business.com" label="Email Address" />
+        </div>
+        <div className="col-span-1 md:col-span-2">
+            <InputGroup icon={Lock} name="password" value={formData.password} onChange={handleChange} type="password" placeholder="••••••••" label="Password" />
+        </div>
 
-        <div className="md:col-span-2">
+        <div className="col-span-1 md:col-span-2">
            <InputGroup icon={MapPin} name="address" value={formData.address} onChange={handleChange} type="text" placeholder="Plot No 4, Shastri Nagar" label="Full Address" />
         </div>
 
         {/* --- MAP SECTION START --- */}
-        <div className="md:col-span-2 space-y-1.5 mt-2 bg-zinc-50 p-3 rounded-xl border border-zinc-100">
+        <div className="col-span-1 md:col-span-2 space-y-1.5 mt-2 bg-zinc-50 p-3 rounded-xl border border-zinc-100">
             <div className="flex justify-between items-center mb-2">
                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1">
                     📍 Pin Shop Location
@@ -181,8 +195,8 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
                 )}
             </div>
             
-            {/* Map Component Container */}
-            <div className="rounded-lg overflow-hidden border border-zinc-200">
+            {/* Map Component Container - UPDATED: Added fixed height for mobile and desktop */}
+            <div className="rounded-lg overflow-hidden border border-zinc-200 w-full h-56 sm:h-64 relative z-0">
                 <LocationPicker onLocationSelect={handleLocationSelect} />
             </div>
             
@@ -192,19 +206,19 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
         </div>
         {/* --- MAP SECTION END --- */}
         
-        <div className="md:col-span-1">
+        <div className="col-span-1">
              <InputGroup icon={Hash} name="zipCode" value={formData.zipCode} onChange={handleChange} type="text" placeholder="342003" label="Zip Code" />
         </div>
 
-        <div className="md:col-span-1 space-y-1.5">
+        <div className="col-span-1 space-y-1.5">
           <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1">Salon Type</label>
           <div className="relative group">
-             <Crosshair className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 z-10" size={20} />
+             <Crosshair className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 z-10 pointer-events-none" size={20} />
              <select 
                name="type"
                value={formData.type} 
                onChange={handleChange}
-               className="w-full bg-zinc-50 border border-zinc-200 rounded-xl py-4 pl-12 pr-4 text-zinc-900 font-medium focus:outline-none focus:ring-4 focus:ring-zinc-100 focus:border-zinc-900 transition-all appearance-none relative z-0"
+               className="w-full bg-zinc-50 border border-zinc-200 rounded-xl py-3.5 sm:py-4 pl-12 pr-4 text-base text-zinc-900 font-medium focus:outline-none focus:ring-4 focus:ring-zinc-100 focus:border-zinc-900 transition-all appearance-none relative z-0 cursor-pointer"
              >
                <option value="Unisex">Unisex</option>
                <option value="Men Only">Men Only</option>
@@ -213,17 +227,17 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
           </div>
         </div>
 
-        <div className="md:col-span-2 pt-4">
-          <ShimmerButton className="w-full py-4">
+        <div className="col-span-1 md:col-span-2 pt-4">
+          <ShimmerButton className="w-full py-4 text-base">
             Complete Registration <ArrowRight size={18} />
           </ShimmerButton>
         </div>
       </form>
 
       <div className="mt-6 text-center pb-8">
-        <p className="text-zinc-500 font-medium">
+        <p className="text-sm sm:text-base text-zinc-500 font-medium">
           Already a partner?{" "}
-          <button onClick={onNavigateLogin} className="text-zinc-900 font-bold hover:underline">
+          <button onClick={onNavigateLogin} className="text-zinc-900 font-bold hover:underline focus:outline-none">
             Login to Dashboard
           </button>
         </p>
@@ -249,14 +263,14 @@ export const SalonLogin = ({ onBack, onLogin, onNavigateRegister }) => {
         <>
           <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-black z-0"></div>
           <div className="relative z-10 h-full flex flex-col justify-center">
-             <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/10 mb-6">
+             <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/10 mb-6 transform hover:scale-105 transition-transform duration-500">
                 <div className="flex justify-between items-center mb-4">
                     <span className="text-white/60 text-sm font-bold uppercase">Today's Revenue</span>
                     <span className="text-emerald-400 text-xs font-bold bg-emerald-400/10 px-2 py-1 rounded-full">+12%</span>
                 </div>
                 <div className="text-4xl font-black text-white">₹12,450</div>
              </div>
-             <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/10">
+             <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/10 transform hover:scale-105 transition-transform duration-500 delay-100">
                 <div className="flex justify-between items-center mb-4">
                     <span className="text-white/60 text-sm font-bold uppercase">Active Queue</span>
                     <span className="text-white text-xs font-bold">Live</span>
@@ -274,11 +288,11 @@ export const SalonLogin = ({ onBack, onLogin, onNavigateRegister }) => {
         <InputGroup icon={User} name="identifier" value={credentials.identifier} onChange={handleChange} type="text" placeholder="Email or Mobile Number" label="Login ID" />
         <InputGroup icon={Lock} name="password" value={credentials.password} onChange={handleChange} type="password" placeholder="••••••••" label="Password" />
         <div className="pt-4">
-          <ShimmerButton className="w-full py-4">Access Dashboard <ArrowRight size={18} /></ShimmerButton>
+          <ShimmerButton className="w-full py-4 text-base">Access Dashboard <ArrowRight size={18} /></ShimmerButton>
         </div>
       </form>
       <div className="mt-8 text-center pb-8">
-        <p className="text-zinc-500 font-medium">New to TrimGo? <button onClick={onNavigateRegister} className="text-zinc-900 font-bold hover:underline">Register your Salon</button></p>
+        <p className="text-sm sm:text-base text-zinc-500 font-medium">New to TrimGo? <button onClick={onNavigateRegister} className="text-zinc-900 font-bold hover:underline focus:outline-none">Register your Salon</button></p>
       </div>
     </AuthLayout>
   );
