@@ -74,7 +74,7 @@ const FeaturesMegaMenu = () => (
 );
 
 // --- Main Navbar Component ---
-const Navbar = ({ onNavigateUser, onNavigateLogin }) => {
+const Navbar = ({ onNavigateLogin }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const [activeTab, setActiveTab] = useState(null);
