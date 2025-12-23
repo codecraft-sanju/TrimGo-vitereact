@@ -20,6 +20,7 @@ import SalonDashboard from "./components/SalonDashboard";
 import UserDashboard from "./components/UserDashboard";
 import { BackgroundAurora, NoiseOverlay } from "./components/SharedUI";
 import AdvancedDashboardSection from "./components/AdvancedDashboardSection"; 
+import RewardsSection from "./components/RewardsSection";
 
 /* ---------------------------------
    HELPER HOOKS
@@ -163,15 +164,29 @@ const CustomCursor = () => {
         cursor.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0)`;
       }
 
-      // Check if hovering over clickable elements
       const target = e.target;
+      
+      // 1. Check if hovering over clickable elements
       const isClickable = target.closest('a, button, input, textarea, .cursor-pointer');
+      
+      // 2. Check if hovering over a dark background section
+      const isDarkSection = target.closest('.dark-theme-area');
 
-      if (follower) {
+      if (follower && cursor) {
+        // Handle Hover State (Size)
         if (isClickable) {
           follower.classList.add('is-hovering');
         } else {
           follower.classList.remove('is-hovering');
+        }
+
+        // Handle Dark Theme State (Color)
+        if (isDarkSection) {
+          cursor.classList.add('is-dark-mode');
+          follower.classList.add('is-dark-mode');
+        } else {
+          cursor.classList.remove('is-dark-mode');
+          follower.classList.remove('is-dark-mode');
         }
       }
     };
@@ -210,7 +225,10 @@ const CustomCursor = () => {
           pointer-events: none;
           z-index: 9999;
           border-radius: 50%;
+          transition: width 0.3s, height 0.3s, background-color 0.3s, border-color 0.3s; /* Added color transition */
         }
+        
+        /* DEFAULT (LIGHT THEME) STATE */
         .cursor-dot {
           width: 8px;
           height: 8px;
@@ -223,18 +241,35 @@ const CustomCursor = () => {
           height: 32px;
           background-color: rgba(24, 24, 27, 0.1);
           border: 1px solid rgba(24, 24, 27, 0.2);
-          transition: width 0.3s, height 0.3s, background-color 0.3s;
         }
-        /* Hover Effect */
+
+        /* HOVER STATE */
         .cursor-follower.is-hovering {
           width: 64px;
           height: 64px;
           background-color: rgba(59, 130, 246, 0.1); /* Blue tint */
           border-color: rgba(59, 130, 246, 0.3);
           transform: translate3d(calc(var(--x) - 32px), calc(var(--y) - 32px), 0) !important;
-          margin-left: -16px; /* Adjustment for size change */
+          margin-left: -16px; 
           margin-top: -16px;
         }
+
+        /* --- NEW: DARK MODE STATE (WHITE CURSOR) --- */
+        .cursor-dot.is-dark-mode {
+            background-color: #ffffff !important;
+        }
+        
+        .cursor-follower.is-dark-mode {
+            background-color: rgba(255, 255, 255, 0.1) !important;
+            border-color: rgba(255, 255, 255, 0.5) !important;
+        }
+
+        /* DARK MODE + HOVER COMBINATION */
+        .cursor-follower.is-dark-mode.is-hovering {
+            background-color: rgba(255, 255, 255, 0.2) !important;
+            border-color: #ffffff !important;
+        }
+
       `}</style>
       <div ref={cursorRef} className="cursor-dot hidden md:block"></div>
       <div ref={followerRef} className="cursor-follower hidden md:block"></div>
@@ -381,6 +416,7 @@ const LandingPage = ({ onNavigateUser, onNavigateSalon, onNavigateAdmin, onNavig
       
       {/* Dashboard Section */}
       <div id="advanced"><AdvancedDashboardSection /></div>
+      <RewardsSection />
       
       <section id="features" className="pt-32 pb-32 px-6 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
