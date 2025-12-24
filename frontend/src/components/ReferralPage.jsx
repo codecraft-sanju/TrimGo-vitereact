@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
-  ArrowLeft, Copy, Check, Share2, Users, TrendingUp, 
-  Gift, ShieldCheck, Truck, Sparkles, Zap, ChevronRight,
-  Trophy, Lock, MessageCircle
+  ArrowLeft, Copy, Check, Share2, Users, 
+  Gift, ShieldCheck, Truck, Sparkles, 
+  Trophy, Lock, MessageCircle, RefreshCw
 } from "lucide-react";
 
 /* --- 🎨 ADVANCED UI COMPONENTS --- */
@@ -39,19 +39,17 @@ const ProgressBar = ({ current, max }) => {
 /* --- 🚀 MAIN COMPONENT --- */
 const ReferralPage = ({ user, onBack }) => {
   const [copied, setCopied] = useState(false);
-
-  // Data Mocks
-  const referralCode = user?.referralCode || "TRIM-VIP-24";
-  const referralCount = user?.referredSalons?.length || 8; 
-  const nextMilestone = 10;
+  const [loading, setLoading] = useState(false);
   
+  // Dynamic stats based on user prop
+  const referralCode = user?.referralCode || "TRIM-VIP-24";
+  const referralCount = user?.referredSalons?.length || 0; 
+
   const handleCopy = () => {
     navigator.clipboard.writeText(referralCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  // ... handleCopy ke baad
 
   const handleShare = async () => {
     const shareData = {
@@ -67,16 +65,15 @@ const ReferralPage = ({ user, onBack }) => {
         console.log('Error sharing:', err);
       }
     } else {
-      // Desktop fallback
       handleCopy();
-      alert("Link copied to clipboard! (Share feature is for mobile only)");
+      alert("Link copied to clipboard!");
     }
   };
 
   return (
     <div className="min-h-screen w-full bg-[#F2F4F8] font-sans text-zinc-900 selection:bg-indigo-500/30 overflow-x-hidden relative">
       
-      {/* Background Decor (Mesh Gradient) */}
+      {/* Background Decor */}
       <div className="fixed inset-0 z-0">
         <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-purple-200/40 rounded-full blur-[120px]" />
         <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-indigo-200/40 rounded-full blur-[120px]" />
@@ -141,8 +138,7 @@ const ReferralPage = ({ user, onBack }) => {
                       {copied ? <Check size={20} className="text-white" /> : <Copy size={20} className="text-white" />}
                     </button>
                   </div>
-                  <ShimmerButton onClick={handleShare} 
-                  className="flex-1 sm:flex-none">
+                  <ShimmerButton onClick={handleShare} className="flex-1 sm:flex-none">
                     <Share2 size={18} /> Share Link
                   </ShimmerButton>
                 </div>
@@ -195,7 +191,6 @@ const ReferralPage = ({ user, onBack }) => {
                 </div>
 
                 <div className="space-y-4">
-                   {/* Tier 1 */}
                    <div className={`relative group p-4 rounded-2xl border transition-all duration-300 ${referralCount >= 5 ? 'bg-gradient-to-r from-emerald-50 to-white border-emerald-100' : 'bg-zinc-50 border-zinc-100 opacity-80'}`}>
                       <div className="flex items-center gap-4 relative z-10">
                          <div className={`h-12 w-12 rounded-full flex items-center justify-center border-4 text-lg font-bold transition-all ${referralCount >= 5 ? 'bg-emerald-500 border-emerald-200 text-white shadow-lg shadow-emerald-200' : 'bg-white border-zinc-200 text-zinc-300'}`}>
@@ -213,12 +208,7 @@ const ReferralPage = ({ user, onBack }) => {
                       </div>
                    </div>
 
-                   {/* Tier 2 */}
                    <div className={`relative group p-4 rounded-2xl border transition-all duration-300 ${referralCount >= 10 ? 'bg-gradient-to-r from-indigo-50 to-white border-indigo-100' : 'bg-white border-zinc-100'}`}>
-                      {referralCount > 5 && referralCount < 10 && (
-                        <div className="absolute left-0 top-0 bottom-0 bg-indigo-50/50 rounded-l-2xl transition-all duration-500" style={{ width: `${((referralCount - 5) / 5) * 100}%` }} />
-                      )}
-                      
                       <div className="flex items-center gap-4 relative z-10">
                          <div className={`h-12 w-12 rounded-full flex items-center justify-center border-4 text-lg font-bold transition-all ${referralCount >= 10 ? 'bg-indigo-600 border-indigo-200 text-white shadow-lg shadow-indigo-200' : 'bg-white border-zinc-200 text-zinc-300'}`}>
                             {referralCount >= 10 ? <Gift size={20} /> : "2"}
@@ -240,7 +230,7 @@ const ReferralPage = ({ user, onBack }) => {
              </GlassCard>
           </div>
 
-          {/* 4. MERCH SHOWCASE */}
+          {/* 4. MERCH SHOWCASE - RE-ADDED ORIGINAL IMAGE LOGIC */}
           <div className="md:col-span-5">
              <div className="h-full relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#FFEEEE] via-[#FFF5F5] to-white border border-pink-100 p-8 flex flex-col justify-between group">
                 <div className="relative z-10">
@@ -253,6 +243,8 @@ const ReferralPage = ({ user, onBack }) => {
                   </h3>
                   <p className="text-sm text-zinc-500 mt-2 font-medium">T-Shirt • Apron • Window Stickers</p>
                 </div>
+                
+                {/* Image Section */}
                 <div className="relative h-48 w-full flex items-center justify-center mt-4">
                   <div className="absolute inset-0 bg-gradient-to-t from-pink-200/50 to-transparent rounded-full blur-3xl opacity-50 translate-y-10 group-hover:opacity-80 transition-opacity duration-700" />
                   <img 
@@ -265,6 +257,7 @@ const ReferralPage = ({ user, onBack }) => {
                     }} 
                   />
                 </div>
+
                 <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-4">
                    <Truck size={12} />
                    <span>Free Shipping • India Wide</span>
@@ -275,12 +268,12 @@ const ReferralPage = ({ user, onBack }) => {
           {/* 5. VERIFICATION STEPS */}
           <div className="md:col-span-12">
             <GlassCard className="p-8">
-               <h3 className="text-lg font-bold text-zinc-900 mb-6 flex items-center gap-2">
-                 <ShieldCheck className="text-indigo-500" size={20} />
-                 Verification Lifecycle
-               </h3>
-               
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative mb-8">
+                <h3 className="text-lg font-bold text-zinc-900 mb-6 flex items-center gap-2">
+                  <ShieldCheck className="text-indigo-500" size={20} />
+                  Verification Lifecycle
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative mb-8">
                   <div className="hidden md:block absolute top-6 left-10 right-10 h-0.5 bg-gradient-to-r from-zinc-200 via-zinc-200 to-transparent -z-10" />
                   {[
                     { title: "Register", desc: "Salon uses your code", icon: "1" },
@@ -297,10 +290,9 @@ const ReferralPage = ({ user, onBack }) => {
                        </div>
                     </div>
                   ))}
-               </div>
+                </div>
 
-               {/* 🔥 6. SHIPPING INFO BANNER (New Addition) */}
-               <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 p-5 md:p-6 flex flex-col md:flex-row items-start md:items-center gap-5">
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 p-5 md:p-6 flex flex-col md:flex-row items-start md:items-center gap-5">
                   <div className="h-12 w-12 rounded-full bg-white flex items-center justify-center text-emerald-600 shadow-sm shrink-0">
                      <MessageCircle size={24} />
                   </div>
@@ -316,8 +308,7 @@ const ReferralPage = ({ user, onBack }) => {
                   <button className="hidden md:flex items-center gap-2 px-4 py-2 bg-white rounded-lg text-xs font-bold text-emerald-700 shadow-sm border border-emerald-100 hover:bg-emerald-50 transition-colors">
                      <Truck size={14} /> Track Status
                   </button>
-               </div>
-
+                </div>
             </GlassCard>
           </div>
 
