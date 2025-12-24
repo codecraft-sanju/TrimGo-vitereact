@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
-import { Search, Crosshair, Loader2, MapPin, X, Navigation } from 'lucide-react'; // Navigation icon added
+import { Search, Crosshair, Loader2, MapPin, X, Navigation } from 'lucide-react'; 
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -149,25 +149,27 @@ const LocationPicker = ({ onLocationSelect }) => {
 
   const handleCurrentLocation = (e) => {
     e.preventDefault();
-    setIsLoadingLoc(true); // Start Loader
+    setIsLoadingLoc(true); // Start Loader immediately
+    
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const newPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         setPosition(newPos);
         onLocationSelect(newPos);
-        setIsLoadingLoc(false); // Stop Loader
+        setIsLoadingLoc(false); // Stop Loader when data arrives
         setSearchText("");
         setShowSuggestions(false);
       },
       () => {
         alert("Location access denied. Please enable GPS.");
-        setIsLoadingLoc(false);
+        setIsLoadingLoc(false); // Stop Loader on error
       }
     );
   };
 
   // --- PREMIUM LOADER UI ---
-  if (isLoadingLoc && !position) {
+  // UPDATED: Removed "&& !position" check so it shows whenever loading occurs
+  if (isLoadingLoc) {
     return (
       <div className="relative w-full h-full rounded-xl bg-zinc-900 overflow-hidden flex flex-col items-center justify-center text-white z-0 border border-zinc-800">
         {/* Abstract Background Noise */}
