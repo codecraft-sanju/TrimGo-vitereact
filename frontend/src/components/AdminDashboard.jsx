@@ -3,7 +3,7 @@ import {
   ShieldCheck, User, Lock, LayoutDashboard, Store, Users, CreditCard,
   LogOut, Globe2, Bell, DollarSign, Activity, Clock, Download, Zap,
   CheckCircle, AlertTriangle, Star, Ban, Settings, Search, Mail, Phone, 
-  Calendar, MapPin, Menu, X
+  Calendar, MapPin, Menu, X, Tag, Gift // Imported new icons
 } from "lucide-react";
 import api from "../utils/api";
 import { io } from "socket.io-client"; 
@@ -27,7 +27,7 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 // ==========================================
-// 1. ADMIN LOGIN COMPONENT (Responsive)
+// 1. ADMIN LOGIN COMPONENT
 // ==========================================
 export const AdminLogin = ({ onBack, onLogin }) => {
   const [creds, setCreds] = useState({ username: "", password: "" });
@@ -54,7 +54,6 @@ export const AdminLogin = ({ onBack, onLogin }) => {
             <ShieldCheck className="text-white" size={32} />
           </div>
           <h2 className="text-2xl font-black text-white">Founder Access</h2>
-          {/* CHANGED: Updated Branding */}
           <p className="text-zinc-500 text-sm mt-1">TrimGo</p>
         </div>
 
@@ -96,7 +95,6 @@ export const AdminLogin = ({ onBack, onLogin }) => {
 // 2. ADMIN MAP COMPONENT
 // ==========================================
 const AdminMap = ({ salons }) => {
-    // Default Center (Jodhpur)
     const defaultCenter = [26.2389, 73.0243]; 
 
     return (
@@ -127,21 +125,19 @@ const AdminMap = ({ salons }) => {
                     )
                 ))}
             </MapContainer>
-            {/* Dark Overlay for Dashboard aesthetic */}
             <div className="absolute inset-0 pointer-events-none border-[6px] border-zinc-900/20 rounded-3xl z-[400]"></div>
         </div>
     );
 };
 
 // ==========================================
-// 3. ADMIN DASHBOARD COMPONENT (Full Responsive)
+// 3. ADMIN DASHBOARD COMPONENT
 // ==========================================
 export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
   const [activeTab, setActiveTab] = useState("overview");
   const [searchQuery, setSearchQuery] = useState("");
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile Menu State
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  // Dynamic Data States
   const [stats, setStats] = useState({ users: 0, salons: 0, revenue: 0 });
   const [activityLog, setActivityLog] = useState([]);
   const [userList, setUserList] = useState([]);
@@ -192,7 +188,6 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
     try {
         const { data } = await api.get("/salon/all");
         if(data.success) {
-            // CHANGED: Sort salons by date (newest first)
             const sortedSalons = data.salons.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
             setLocalSalons(sortedSalons);
             if(setSalons) setSalons(sortedSalons); 
@@ -207,8 +202,13 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
       setLoading(true);
       const { data } = await api.get("/auth/all");
       if (data.success) {
-        // CHANGED: Sort users by date (newest first)
-        const sortedUsers = data.users.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        // Sort by referral count (highest first) then date
+        const sortedUsers = data.users.sort((a, b) => {
+            const refA = a.referredSalons?.length || 0;
+            const refB = b.referredSalons?.length || 0;
+            if (refB !== refA) return refB - refA; 
+            return new Date(b.createdAt) - new Date(a.createdAt);
+        });
         setUserList(sortedUsers);
       }
     } catch (error) {
@@ -224,7 +224,6 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
         const { data } = await api.put(`/admin/verify/${id}`, { verified: !currentStatus });
         if(data.success) {
             setLocalSalons(prev => prev.map(s => s._id === id ? { ...s, verified: !currentStatus } : s));
-            // Optional: toast success
         }
     } catch (error) {
         alert("Action Failed");
@@ -248,22 +247,20 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
   const displayedSalons = localSalons.length > 0 ? localSalons : salons;
   const filteredSalons = displayedSalons.filter(s => s.salonName.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  // --- HELPER FOR SIDEBAR ITEMS ---
   const navItems = [
     { id: "overview", icon: LayoutDashboard, label: "Command Center" },
     { id: "salons", icon: Store, label: "Partner Management" },
-    { id: "users", icon: Users, label: "User Base" },
+    { id: "users", icon: Users, label: "User Base & Referrals" }, // Label updated
     { id: "financials", icon: CreditCard, label: "Financials" },
   ];
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-indigo-500 selection:text-white flex flex-col md:flex-row overflow-hidden">
       
-      {/* 1. MOBILE HEADER (Visible only on small screens) */}
+      {/* 1. MOBILE HEADER */}
       <div className="md:hidden h-16 bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-800 flex items-center justify-between px-4 sticky top-0 z-50">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]">T</div>
-            {/* CHANGED: Updated Branding */}
             <span className="font-bold text-lg tracking-tight">TrimGo<span className="text-zinc-500">Admin</span></span>
           </div>
           <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 text-zinc-400 hover:text-white">
@@ -274,10 +271,7 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
       {/* 2. MOBILE SIDEBAR OVERLAY */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[100] md:hidden">
-            {/* Backdrop */}
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)}></div>
-            
-            {/* Drawer */}
             <div className="absolute top-0 left-0 w-3/4 max-w-[280px] h-full bg-zinc-900 border-r border-zinc-800 flex flex-col shadow-2xl animate-[slideRight_0.3s_ease-out]">
                 <div className="h-16 flex items-center justify-between px-6 border-b border-zinc-800">
                     <span className="font-bold text-lg">Menu</span>
@@ -308,11 +302,10 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
         </div>
       )}
 
-      {/* 3. DESKTOP SIDEBAR (Visible only on md+) */}
+      {/* 3. DESKTOP SIDEBAR */}
       <aside className="hidden md:flex w-64 border-r border-zinc-800 bg-zinc-900/30 flex-col backdrop-blur-xl z-20 h-screen sticky top-0">
         <div className="h-16 flex items-center px-6 border-b border-zinc-800">
           <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-white mr-3 shadow-[0_0_15px_rgba(79,70,229,0.4)]">T</div>
-          {/* CHANGED: Updated Branding */}
           <span className="font-bold text-lg tracking-tight">TrimGo<span className="text-zinc-500">Admin</span></span>
         </div>
 
@@ -348,7 +341,7 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
         {/* Desktop Header */}
         <header className="hidden md:flex h-16 border-b border-zinc-800 items-center justify-between px-8 bg-zinc-900/30 backdrop-blur-md sticky top-0 z-10">
           <h2 className="text-xl font-bold flex items-center gap-2">
-            {activeTab === 'overview' ? "Command Center" : activeTab === 'users' ? "User Base" : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+            {activeTab === 'overview' ? "Command Center" : activeTab === 'users' ? "User Base & Referrals" : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
             {activeTab === 'overview' && <span className="text-xs font-normal text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded-full border border-zinc-700">Live Socket: Connected</span>}
           </h2>
           <div className="flex items-center gap-4">
@@ -369,7 +362,6 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
           {activeTab === "overview" && (
             <div className="space-y-6 md:space-y-8 animate-[slideUp_0.4s_ease-out]">
               
-              {/* Stats Cards (Responsive Grid: 1col mobile -> 2col tablet -> 4col desktop) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 {[
                   { label: "Total Revenue", val: `₹${stats.revenue?.toLocaleString() || 0}`, change: "Lifetime", icon: DollarSign, color: "text-green-400" },
@@ -460,7 +452,6 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
 
               <AdminMap salons={filteredSalons} />
 
-              {/* Table Container with Horizontal Scroll */}
               <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl overflow-hidden mt-6">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm text-zinc-400 min-w-[800px]">
@@ -515,13 +506,13 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
             </div>
           )}
 
-          {/* ---------------- USERS VIEW ---------------- */}
+          {/* ---------------- USERS VIEW (UPDATED FOR REFERRALS) ---------------- */}
           {activeTab === "users" && (
              <div className="animate-[slideUp_0.4s_ease-out]">
                 <div className="flex justify-between items-center mb-6">
                   <div>
-                    <h2 className="text-2xl font-black text-white">User Base</h2>
-                    <p className="text-zinc-500 text-sm">Real-time registered users from database.</p>
+                    <h2 className="text-2xl font-black text-white">User Base & Referrals</h2>
+                    <p className="text-zinc-500 text-sm">Monitor user growth and referral performance.</p>
                   </div>
                   <div className="flex gap-2">
                       <span className="px-3 py-1 bg-zinc-800 rounded-full text-xs text-zinc-400 border border-zinc-700 whitespace-nowrap">
@@ -537,10 +528,11 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                 ) : (
                   <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl overflow-hidden">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm text-zinc-400 min-w-[700px]">
+                        <table className="w-full text-left text-sm text-zinc-400 min-w-[800px]">
                         <thead className="bg-zinc-900 text-zinc-500 font-bold uppercase text-[10px] tracking-wider">
                             <tr>
                             <th className="px-6 py-4">User</th>
+                            <th className="px-6 py-4">Referral Stats</th> {/* NEW COLUMN */}
                             <th className="px-6 py-4">Contact Info</th>
                             <th className="px-6 py-4">Joined Date</th>
                             <th className="px-6 py-4 text-right">Status</th>
@@ -549,19 +541,46 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                         <tbody className="divide-y divide-zinc-800/50">
                             {userList.length === 0 ? (
                                <tr>
-                                  <td colSpan="4" className="text-center py-10 text-zinc-600">No users found in database.</td>
+                                  <td colSpan="5" className="text-center py-10 text-zinc-600">No users found.</td>
                                </tr>
                             ) : (
-                              userList.map((user) => (
-                                <tr key={user._id} className="hover:bg-white/[0.02] transition">
+                              userList.map((user) => {
+                                // Referral Logic Calculation
+                                const referralCount = user.referredSalons ? user.referredSalons.length : 0;
+                                const isHighPerformer = referralCount > 0;
+
+                                return (
+                                <tr key={user._id} className={`hover:bg-white/[0.02] transition ${isHighPerformer ? 'bg-indigo-900/10' : ''}`}>
                                   <td className="px-6 py-4">
                                     <div className="flex items-center gap-3">
-                                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0 ${isHighPerformer ? 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/20' : 'bg-gradient-to-br from-zinc-700 to-zinc-800'}`}>
                                         {user.name ? user.name.charAt(0).toUpperCase() : "U"}
                                       </div>
                                       <span className="font-bold text-white whitespace-nowrap">{user.name || "Unknown"}</span>
                                     </div>
                                   </td>
+                                  
+                                  {/* 🔥 NEW REFERRAL DATA COLUMN */}
+                                  <td className="px-6 py-4">
+                                    <div className="flex flex-col items-start gap-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-lg font-black ${isHighPerformer ? 'text-emerald-400' : 'text-zinc-600'}`}>
+                                                {referralCount}
+                                            </span>
+                                            <span className="text-[10px] uppercase font-bold text-zinc-500">Salons Referred</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700">
+                                            <Tag size={10} className="text-zinc-400"/>
+                                            <span className="text-[10px] font-mono text-zinc-300">{user.referralCode || "---"}</span>
+                                        </div>
+                                        {isHighPerformer && (
+                                            <div className="flex items-center gap-1 text-[9px] text-yellow-500 font-bold mt-1 animate-pulse">
+                                                <Gift size={10} /> Needs Payout
+                                            </div>
+                                        )}
+                                    </div>
+                                  </td>
+
                                   <td className="px-6 py-4">
                                     <div className="flex flex-col gap-1">
                                         <div className="flex items-center gap-2 text-xs whitespace-nowrap">
@@ -584,7 +603,7 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                                     </span>
                                   </td>
                                 </tr>
-                              ))
+                              )})
                             )}
                         </tbody>
                         </table>

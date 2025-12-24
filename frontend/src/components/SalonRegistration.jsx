@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Store, User, Phone, MapPin, ArrowRight, ChevronLeft, Mail, Lock, Hash, Crosshair } from "lucide-react";
+import { Store, User, Phone, MapPin, ArrowRight, ChevronLeft, Mail, Lock, Hash, Crosshair, Tag } from "lucide-react"; // Tag icon added
 // Assuming LocationPicker is in the same directory
 import LocationPicker from "./LocationPicker"; 
 
@@ -75,11 +75,7 @@ const AuthLayout = ({ children, title, subtitle, onBack, illustration }) => (
 
     <div className="w-full max-w-6xl bg-white/80 backdrop-blur-xl rounded-[2rem] md:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row relative z-10 border border-white/60 mt-12 md:mt-0">
       
-      {/* CHANGES MADE HERE:
-         1. [&::-webkit-scrollbar]:hidden -> Chrome/Safari/Edge ke liye
-         2. [-ms-overflow-style:none] -> IE/Edge ke liye
-         3. [scrollbar-width:none] -> Firefox ke liye
-      */}
+      {/* CHANGES MADE HERE: Scrollbar hiding logic */}
       <div className="w-full md:w-1/2 p-6 sm:p-8 md:p-12 lg:p-16 flex flex-col justify-start h-auto md:h-[90vh] md:overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <div className="mb-6 md:mb-8 mt-2">
           <h2 className="text-3xl sm:text-4xl font-black text-zinc-900 mb-2 sm:mb-3 tracking-tight">
@@ -97,8 +93,9 @@ const AuthLayout = ({ children, title, subtitle, onBack, illustration }) => (
     </div>
   </div>
 );
+
 /* ----------------------------------------------------------------------
-   COMPONENT 1: SALON REGISTRATION (UPDATED WITH MAP)
+   COMPONENT 1: SALON REGISTRATION (UPDATED WITH REFERRAL CODE)
 ---------------------------------------------------------------------- */
 export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
   const [formData, setFormData] = useState({
@@ -112,6 +109,7 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
     type: "Unisex",
     latitude: "",
     longitude: "",
+    referralCode: "", // NEW FIELD ADDED
   });
 
   const handleChange = (e) => {
@@ -195,7 +193,7 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
                 )}
             </div>
             
-            {/* Map Component Container - UPDATED: Added fixed height for mobile and desktop */}
+            {/* Map Component Container */}
             <div className="rounded-lg overflow-hidden border border-zinc-200 w-full h-56 sm:h-64 relative z-0">
                 <LocationPicker onLocationSelect={handleLocationSelect} />
             </div>
@@ -227,6 +225,22 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
           </div>
         </div>
 
+        {/* --- NEW REFERRAL CODE SECTION --- */}
+        <div className="col-span-1 md:col-span-2 pt-2">
+             <InputGroup 
+                icon={Tag} 
+                name="referralCode" 
+                value={formData.referralCode} 
+                onChange={handleChange} 
+                type="text" 
+                placeholder="Ex: SAN458 (Optional)" 
+                label="Have a Referral Code?" 
+             />
+             <p className="text-[10px] text-zinc-400 ml-1 mt-1">
+                Enter Agent Code if someone referred you.
+             </p>
+        </div>
+
         <div className="col-span-1 md:col-span-2 pt-4">
           <ShimmerButton className="w-full py-4 text-base">
             Complete Registration <ArrowRight size={18} />
@@ -247,7 +261,7 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
 };
 
 /* ----------------------------------------------------------------------
-   COMPONENT 2: SALON LOGIN
+   COMPONENT 2: SALON LOGIN (No changes needed here usually)
 ---------------------------------------------------------------------- */
 export const SalonLogin = ({ onBack, onLogin, onNavigateRegister }) => {
   const [credentials, setCredentials] = useState({ identifier: "", password: "" });

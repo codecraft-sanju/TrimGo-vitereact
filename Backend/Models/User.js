@@ -37,6 +37,20 @@ const userSchema = new mongoose.Schema(
       minlength: 6,
       select: false,
     },
+
+    // --- NEW: Referral System Fields ---
+    referralCode: {
+      type: String,
+      unique: true,
+    },
+    
+    // Yahan hum save karenge ki is user ne kin salons ko refer kiya
+    referredSalons: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Salon"
+      }
+    ]
   },
   {
     timestamps: true,
@@ -44,20 +58,27 @@ const userSchema = new mongoose.Schema(
 );
 
 // -------------------------------------
-// Password hash before save 🔐 (Fixed)
+// Password hash & Referral Code Generation
 // -------------------------------------
 userSchema.pre("save", async function () {
-  // Note: Yahan 'next' parameter hata diya hai
+  
+  // 1. Generate Referral Code (Agar pehle se nahi hai)
+  if (!this.referralCode) {
+    // Logic: Name ke first 3 letters + 4 Random Numbers (e.g., SAN9821)
+    const namePart = this.name ? this.name.substring(0, 3).toUpperCase() : "USR";
+    const randomPart = Math.floor(1000 + Math.random() * 9000); 
+    this.referralCode = `${namePart}${randomPart}`;
+  }
 
-  // agar password change hi nahi hua to return (function yahi khatam)
+  // 2. Password Hashing (Existing Logic)
+  // Agar password change nahi hua, toh yahi return kar jao
   if (!this.isModified("password")) return;
 
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
-    // Yahan ab next() call karne ki zarurat nahi hai, async function automatically complete maana jayega
   } catch (err) {
-    throw err; // next(err) ki jagah error throw karo
+    throw err;
   }
 });
 

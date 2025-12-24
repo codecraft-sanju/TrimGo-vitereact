@@ -13,10 +13,9 @@ import SalonDashboard from "./components/SalonDashboard";
 import UserDashboard from "./components/UserDashboard";
 import { NoiseOverlay } from "./components/SharedUI";
 
-// Import the new LandingPage
+// Import Pages
 import LandingPage from "./components/LandingPage";
-
-
+import ReferralPage from "./components/ReferralPage"; // --- NEW IMPORT ---
 
 // 0. Premium Advanced Preloader (Global)
 const PremiumPreloader = () => {
@@ -438,7 +437,8 @@ const AppContent = () => {
                onLogout={handleLogout}
                salons={salons} 
                onJoinQueue={handleJoinQueue}
-               onProfileClick={() => navigate("/dashboard/user/profile")} 
+               onProfileClick={() => navigate("/dashboard/user/profile")}
+               onReferralClick={() => navigate("/dashboard/user/referrals")} // --- Updated ---
              />
           </ProtectedRoute>
         } />
@@ -449,6 +449,16 @@ const AppContent = () => {
               user={currentUser} 
               onBack={() => navigate("/dashboard/user")} 
               onLogout={handleLogout}
+            />
+          </ProtectedRoute>
+        } />
+
+        {/* --- NEW REFERRAL PAGE ROUTE --- */}
+        <Route path="/dashboard/user/referrals" element={
+          <ProtectedRoute user={currentUser} authLoading={authLoading}>
+            <ReferralPage 
+              user={currentUser} 
+              onBack={() => navigate("/dashboard/user")} 
             />
           </ProtectedRoute>
         } />

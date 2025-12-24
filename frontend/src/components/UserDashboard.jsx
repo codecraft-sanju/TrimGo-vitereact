@@ -12,7 +12,8 @@ import {
   Sparkles,
   Navigation, 
   Crosshair, 
-  Menu 
+  Menu,
+  Gift // Keep Gift icon for the button
 } from "lucide-react";
 import { io } from "socket.io-client"; 
 import api from "../utils/api"; 
@@ -154,7 +155,7 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm }) => {
    MAIN COMPONENT 
 ---------------------------------- */
 
-const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
+const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick, onReferralClick }) => {
   const [selectedCity, setSelectedCity] = useState("Locating...");
   const [sortBy, setSortBy] = useState("distance"); 
   const [searchTerm, setSearchTerm] = useState("");
@@ -167,7 +168,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
   
   const [userLocation, setUserLocation] = useState(null); 
   const [heading, setHeading] = useState(0); 
-  const [routeDestination, setRouteDestination] = useState(null); // 🔥 NEW: Route State
+  const [routeDestination, setRouteDestination] = useState(null); 
   const watchId = useRef(null); 
 
   const startLocationTracking = () => {
@@ -231,26 +232,22 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
 
  
   const handleRoute = (salon) => {
-    // 1. Check if user location exists
     if (!userLocation) {
         alert("Please enable location first to get directions.");
         startLocationTracking();
         return;
     }
 
-    // 2. Safety Check: Agar salon ki location missing ho toh crash mat hona
     if(!salon.latitude || !salon.longitude) {
         alert("Salon location not found on map.");
         return;
     }
 
-    // 3. Set destination (String ko Number mein convert karna zaroori hai)
     setRouteDestination({
         lat: Number(salon.latitude),
         lng: Number(salon.longitude)
     });
 
-    // 4. Scroll map into view smoothly
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -429,6 +426,16 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
 
           <div className="flex items-center gap-4">
             <div className="hidden md:flex items-center gap-4">
+              
+              {/* --- NEW: Earn Rewards Button (Desktop) --- */}
+              <button 
+                onClick={onReferralClick}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100 text-xs font-bold hover:bg-indigo-100 transition-colors"
+              >
+                <Gift size={14} />
+                <span>Earn Rewards</span>
+              </button>
+
               <button 
                   onClick={startLocationTracking}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${userLocation ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-zinc-100 text-zinc-600 border-zinc-200'}`}
@@ -440,6 +447,15 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
             </div>
 
             <div className="md:hidden flex items-center gap-3">
+              
+              {/* --- NEW: Earn Rewards Icon (Mobile) --- */}
+              <button 
+                onClick={onReferralClick}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100 active:scale-95"
+              >
+                 <Gift size={16} />
+              </button>
+
               <div onClick={onProfileClick} className="relative cursor-pointer active:scale-95 transition-transform">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 p-[1.5px] shadow-sm">
                   <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
@@ -465,6 +481,16 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
               origin-top-right transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1)
               ${isMobileMenuOpen ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-90 -translate-y-4 invisible pointer-events-none'}
           `}>
+              
+              {/* --- NEW: Mobile Menu Item --- */}
+              <button 
+                onClick={() => { onReferralClick(); setIsMobileMenuOpen(false); }}
+                className="w-full flex items-center justify-start gap-3 px-4 py-3 rounded-xl font-bold text-sm border border-transparent hover:bg-zinc-50 text-zinc-700"
+              >
+                <Gift size={16} className="text-indigo-500"/>
+                <span>Partner Program</span>
+              </button>
+
               <button 
                 onClick={() => { startLocationTracking(); setIsMobileMenuOpen(false); }}
                 className={`w-full flex items-center justify-start gap-3 px-4 py-3 rounded-xl font-bold text-sm border transition-all ${userLocation ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-zinc-50 text-zinc-600 border-zinc-100 hover:bg-zinc-100'}`}
@@ -485,6 +511,9 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 pt-24 sm:pt-24 pb-16 relative z-10">
+        
+        {/* --- BANNER REMOVED FROM HERE --- */}
+
         <div className="mb-8 sm:mb-10">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
             <div>
@@ -498,7 +527,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
             </div>
           </div>
 
-          {/* 🔥 PASSING NEW PROPS TO MAP */}
           <MapSalon 
             salons={sortedSalons} 
             userLocation={userLocation}
@@ -549,7 +577,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
                         </div>
                       </div>
 
-                      {/* 🔥 NEW: ROUTE BUTTON & RATING */}
                       <div className="flex flex-col items-end gap-2">
                         <button 
                             onClick={() => handleRoute(salon)}
@@ -622,10 +649,10 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick }) => {
         )}
 
         <p className="mt-12 text-[10px] text-zinc-400 text-center uppercase tracking-widest font-medium">Live TrimGo Network • © 2025</p>
-       <AIConcierge 
-  salons={sortedSalons} 
-  onSalonSelect={handleOpenBooking} 
-/>
+        <AIConcierge 
+            salons={sortedSalons} 
+            onSalonSelect={handleOpenBooking} 
+        />
       </main>
     </div>
   );

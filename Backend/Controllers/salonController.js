@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import Salon from "../Models/Salon.js";
 import Ticket from "../Models/Ticket.js"; 
+import User from "../Models/User.js"; // 1. User Model import kiya (Referral ke liye)
 
 const createToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -23,7 +24,8 @@ export const registerSalon = async (req, res) => {
   try {
     const { 
       salonName, ownerName, email, phone, address, zipCode, password, 
-      type, latitude, longitude 
+      type, latitude, longitude,
+      referralCode // 2. Frontend se Referral Code receive kiya
     } = req.body;
 
     if (!salonName || !ownerName || !email || !phone || !address || !zipCode || !password || !latitude || !longitude) {
@@ -32,6 +34,27 @@ export const registerSalon = async (req, res) => {
 
     const existingSalon = await Salon.findOne({ $or: [{ email: email.toLowerCase() }, { phone }] });
     if (existingSalon) return res.status(400).json({ success: false, message: "Salon already registered." });
+
+    // -------------------------------------------------------
+    // 3. Referral Logic Start
+    // -------------------------------------------------------
+    let referringUserId = null;
+
+    if (referralCode) {
+      // Check agar code valid hai
+      const referrer = await User.findOne({ referralCode });
+      
+      if (!referrer) {
+        return res.status(400).json({ 
+            success: false, 
+            message: "Invalid Referral Code. Please check or leave empty." 
+        });
+      }
+      referringUserId = referrer._id;
+    }
+    // -------------------------------------------------------
+    // Referral Logic End
+    // -------------------------------------------------------
 
     const salon = await Salon.create({
       salonName,
@@ -47,8 +70,16 @@ export const registerSalon = async (req, res) => {
       isOnline: true,
       verified: false,
       services: [],
-      staff: []
+      staff: [],
+      referredBy: referringUserId // 4. Salon model me ID save ki
     });
+
+    // 5. Agar referral tha, to User (Agent) ki list update karo
+    if (referringUserId) {
+        await User.findByIdAndUpdate(referringUserId, {
+            $push: { referredSalons: salon._id }
+        });
+    }
 
     req.io.emit("salon_registered", salon);
 

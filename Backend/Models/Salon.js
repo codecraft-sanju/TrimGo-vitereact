@@ -101,16 +101,22 @@ const salonSchema = new mongoose.Schema(
         name: String,
         status: { type: String, default: 'available' }
       }
-    ]
+    ],
+
+    // --- NEW REFERRAL FIELD ---
+    // Kis user ne is Salon ko refer kiya hai?
+    referredBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null
+    }
   },
   {
     timestamps: true,
   }
 );
 
-// -------------------------------------
-// Password Hash Logic
-// -------------------------------------
+
 salonSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
 
