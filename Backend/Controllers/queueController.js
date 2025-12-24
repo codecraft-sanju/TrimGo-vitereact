@@ -239,3 +239,30 @@ export const getSalonData = async (req, res) => {
         res.status(500).json({ success: false, message: "Error fetching data" });
     }
 }
+
+/* -------------------------------------------------------------------------- */
+/* USER ACTION: GET BOOKING HISTORY (FOR PROFILE PAGE)                        */
+/* -------------------------------------------------------------------------- */
+export const getUserHistory = async (req, res) => {
+  try {
+    const userId = req.user._id; // Auth middleware se user ID mili
+
+    // Database mein user ki tickets dhundo aur sort karo (Latest pehle)
+    const history = await Ticket.find({ userId })
+      .populate("salonId", "salonName address") // Salon ka naam aur address join kiya
+      .sort({ createdAt: -1 }); 
+
+    res.status(200).json({
+      success: true,
+      count: history.length,
+      history, // Frontend par ye array jayega
+    });
+
+  } catch (err) {
+    console.error("Error fetching history:", err);
+    res.status(500).json({ 
+        success: false, 
+        message: "Server Error while fetching history" 
+    });
+  }
+};
