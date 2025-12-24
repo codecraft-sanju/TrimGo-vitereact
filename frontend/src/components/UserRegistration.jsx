@@ -12,6 +12,8 @@ import {
   // Added Eye and EyeOff icons
   Eye,
   EyeOff,
+  // Added Loader2 for the spinner
+  Loader2,
 } from "lucide-react";
 // 1. Import API Helper
 import api from "../utils/api";
@@ -203,6 +205,8 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }
   const [error, setError] = useState("");
   
   const [locationStatus, setLocationStatus] = useState("pending");
+  // New state for location loading
+  const [locationLoading, setLocationLoading] = useState(false);
 
   const handleRequestLocation = () => {
     if (!navigator.geolocation) {
@@ -210,14 +214,21 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }
       return;
     }
 
+    // Start loading
+    setLocationLoading(true);
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         console.log("✅ Location access granted at registration.");
         setLocationStatus("granted");
+        // Stop loading on success
+        setLocationLoading(false);
       },
       (err) => {
         console.log("❌ Location access denied:", err.message);
         setLocationStatus("denied");
+        // Stop loading on error
+        setLocationLoading(false);
         if (err.code === 1) {
           setError("Please enable location permissions in your browser settings.");
         }
@@ -300,34 +311,50 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }
         
         {/* Location Button */}
         <div 
-          onClick={handleRequestLocation}
+          onClick={!locationLoading ? handleRequestLocation : undefined}
           className={`group flex items-center justify-between p-3 md:p-4 rounded-xl border transition-all cursor-pointer ${
             locationStatus === "granted" 
             ? "bg-emerald-50 border-emerald-100" 
             : "bg-zinc-50 border-zinc-200 hover:border-zinc-300"
-          }`}
+          } ${locationLoading ? "opacity-75 cursor-wait" : ""}`}
         >
           <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
               locationStatus === "granted" ? "bg-emerald-500 text-white" : "bg-zinc-200 text-zinc-500"
             }`}>
-              <MapPin size={18} />
+              {/* Show Loader if loading, otherwise show MapPin */}
+              {locationLoading ? (
+                <Loader2 size={18} className="animate-spin text-zinc-500" />
+              ) : (
+                <MapPin size={18} />
+              )}
             </div>
             <div>
               <p className={`text-xs font-bold uppercase tracking-wider ${
                 locationStatus === "granted" ? "text-emerald-700" : "text-zinc-500"
               }`}>
-                {locationStatus === "granted" ? "Location Verified" : "Enable Location"}
+                {locationLoading 
+                  ? "Locating..." 
+                  : locationStatus === "granted" 
+                    ? "Location Verified" 
+                    : "Enable Location"
+                }
               </p>
-              <p className="text-[10px] text-zinc-400 leading-tight">Required for live queue tracking</p>
+              <p className="text-[10px] text-zinc-400 leading-tight">
+                {locationLoading ? "Please wait..." : "Required for live queue tracking"}
+              </p>
             </div>
           </div>
-          {locationStatus !== "granted" && (
+          
+          {/* Right side status/button */}
+          {!locationLoading && locationStatus !== "granted" && (
             <span className="text-[10px] font-bold px-2 py-1 rounded bg-white shadow-sm group-hover:bg-zinc-900 group-hover:text-white transition-colors">
               Allow
             </span>
           )}
-          {locationStatus === "granted" && <CheckCircle className="text-emerald-500" size={18} />}
+          {!locationLoading && locationStatus === "granted" && (
+            <CheckCircle className="text-emerald-500" size={18} />
+          )}
         </div>
 
         {error && (
