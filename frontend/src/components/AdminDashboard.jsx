@@ -3,7 +3,7 @@ import {
   ShieldCheck, User, Lock, LayoutDashboard, Store, Users, CreditCard,
   LogOut, Globe2, Bell, DollarSign, Activity, Clock, Download, Zap,
   CheckCircle, AlertTriangle, Star, Ban, Settings, Search, Mail, Phone, 
-  Calendar, MapPin, Menu, X, Tag, Gift // Imported new icons
+  Calendar, MapPin, Menu, X, Tag, Gift, Trash2
 } from "lucide-react";
 import api from "../utils/api";
 import { io } from "socket.io-client"; 
@@ -244,13 +244,34 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
     }
   };
 
+  // 🔥 NEW USER DELETION FUNCTION 🔥
+  const deleteUser = async (id) => {
+    if(window.confirm("⚠️ DANGER: Are you sure you want to PERMANENTLY delete this user? This cannot be undone.")) {
+        try {
+            // NOTE: Make sure your backend has router.delete('/admin/delete-user/:id', ...)
+            const { data } = await api.delete(`/admin/delete-user/${id}`); 
+            
+            if(data.success) {
+                // Remove from UI instantly
+                setUserList(prev => prev.filter(u => u._id !== id));
+                // Update stats locally
+                setStats(prev => ({ ...prev, users: prev.users > 0 ? prev.users - 1 : 0 }));
+                alert("User deleted successfully.");
+            }
+        } catch (error) {
+            console.error("Delete User Error", error);
+            alert("Failed to delete user. Check console.");
+        }
+    }
+  };
+
   const displayedSalons = localSalons.length > 0 ? localSalons : salons;
   const filteredSalons = displayedSalons.filter(s => s.salonName.toLowerCase().includes(searchQuery.toLowerCase()));
 
   const navItems = [
     { id: "overview", icon: LayoutDashboard, label: "Command Center" },
     { id: "salons", icon: Store, label: "Partner Management" },
-    { id: "users", icon: Users, label: "User Base & Referrals" }, // Label updated
+    { id: "users", icon: Users, label: "User Base & Referrals" },
     { id: "financials", icon: CreditCard, label: "Financials" },
   ];
 
@@ -284,8 +305,8 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                           onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
                           className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                             activeTab === item.id 
-                              ? "bg-indigo-600/10 text-indigo-400 border border-indigo-600/20" 
-                              : "text-zinc-400 hover:text-white hover:bg-white/5"
+                            ? "bg-indigo-600/10 text-indigo-400 border border-indigo-600/20" 
+                            : "text-zinc-400 hover:text-white hover:bg-white/5"
                           }`}
                         >
                           <item.icon size={18} />
@@ -506,7 +527,7 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
             </div>
           )}
 
-          {/* ---------------- USERS VIEW (UPDATED FOR REFERRALS) ---------------- */}
+          {/* ---------------- USERS VIEW (UPDATED FOR REFERRALS & DELETE) ---------------- */}
           {activeTab === "users" && (
              <div className="animate-[slideUp_0.4s_ease-out]">
                 <div className="flex justify-between items-center mb-6">
@@ -532,10 +553,10 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                         <thead className="bg-zinc-900 text-zinc-500 font-bold uppercase text-[10px] tracking-wider">
                             <tr>
                             <th className="px-6 py-4">User</th>
-                            <th className="px-6 py-4">Referral Stats</th> {/* NEW COLUMN */}
+                            <th className="px-6 py-4">Referral Stats</th> 
                             <th className="px-6 py-4">Contact Info</th>
                             <th className="px-6 py-4">Joined Date</th>
-                            <th className="px-6 py-4 text-right">Status</th>
+                            <th className="px-6 py-4 text-right">Actions</th> {/* Updated Header */}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-800/50">
@@ -560,7 +581,7 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                                     </div>
                                   </td>
                                   
-                                  {/* 🔥 NEW REFERRAL DATA COLUMN */}
+                                  {/* REFERRAL DATA COLUMN */}
                                   <td className="px-6 py-4">
                                     <div className="flex flex-col items-start gap-1">
                                         <div className="flex items-center gap-2">
@@ -597,11 +618,23 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                                         {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}
                                     </div>
                                   </td>
+                                  
+                                  {/* 🔥 DELETE ACTION COLUMN 🔥 */}
                                   <td className="px-6 py-4 text-right">
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 text-[10px] font-bold border border-green-500/20">
-                                      Active
-                                    </span>
+                                    <div className="flex items-center justify-end gap-3">
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 text-[10px] font-bold border border-green-500/20">
+                                            Active
+                                        </span>
+                                        <button 
+                                            onClick={() => deleteUser(user._id)}
+                                            className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 hover:scale-105 transition-all duration-200 border border-red-500/20 group"
+                                            title="Delete User"
+                                        >
+                                            <Trash2 size={14} className="group-hover:text-red-400"/>
+                                        </button>
+                                    </div>
                                   </td>
+
                                 </tr>
                               )})
                             )}

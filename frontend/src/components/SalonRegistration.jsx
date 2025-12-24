@@ -194,7 +194,7 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
             </div>
             
             {/* Map Component Container */}
-            <div className="rounded-lg overflow-hidden border border-zinc-200 w-full h-56 sm:h-64 relative z-0">
+            <div className="rounded-lg overflow-hidden border border-zinc-200 w-full h-80 sm:h-72 relative z-0">
                 <LocationPicker onLocationSelect={handleLocationSelect} />
             </div>
             

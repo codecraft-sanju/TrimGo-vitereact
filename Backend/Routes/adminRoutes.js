@@ -2,8 +2,11 @@ import express from "express";
 import { 
     getDashboardStats, 
     toggleSalonStatus, 
-    deleteSalon 
+    deleteSalon ,
+     deleteUser
+   
 } from "../Controllers/adminController.js";
+
 
 const router = express.Router();
 
@@ -18,5 +21,6 @@ router.put("/verify/:id", toggleSalonStatus);
 
 // 3. Delete Salon Permanently
 router.delete("/delete/:id", deleteSalon);
+router.delete("/delete-user/:id", deleteUser);
 
 export default router;
