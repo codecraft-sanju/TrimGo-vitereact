@@ -16,6 +16,7 @@ import {
   Gift // Keep Gift icon for the button
 } from "lucide-react";
 import { io } from "socket.io-client"; 
+import Lenis from 'lenis'; // IMPORT LENIS HERE
 import api from "../utils/api"; 
 
 // Imports
@@ -170,6 +171,28 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick, onReferral
   const [heading, setHeading] = useState(0); 
   const [routeDestination, setRouteDestination] = useState(null); 
   const watchId = useRef(null); 
+
+  // --- LENIS SMOOTH SCROLL IMPLEMENTATION ---
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // standard pleasant easing
+      smoothWheel: true,
+      wheelMultiplier: 1,
+    });
+
+    function raf(time) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+
+    requestAnimationFrame(raf);
+
+    return () => {
+      lenis.destroy();
+    };
+  }, []);
+  // ------------------------------------------
 
   const startLocationTracking = () => {
     if (!navigator.geolocation) {
