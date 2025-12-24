@@ -8,7 +8,6 @@ import {
 
 /* ---------------------------------
    LOCAL HOOKS & UTILS
-   (Included here to make this component self-contained)
 ---------------------------------- */
 
 const useOnScreen = (options) => {
@@ -139,6 +138,7 @@ const AdvancedDashboardSection = () => {
           ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"}
         `}
       >
+        {/* LEFT TEXT CONTENT */}
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 text-white text-xs font-semibold mb-4">
             <span className="flex h-2 w-2">
@@ -183,9 +183,11 @@ const AdvancedDashboardSection = () => {
           </div>
         </div>
 
+        {/* RIGHT DASHBOARD PREVIEW */}
         <div className="perspective-[1600px]">
           <TiltCard className="w-full">
             <div className="relative rounded-3xl border border-zinc-200 bg-white shadow-2xl overflow-hidden">
+              {/* Header Bar */}
               <div className="h-12 border-b border-zinc-200 flex items-center px-4 gap-2 bg-zinc-50/80 backdrop-blur">
                 <div className="flex gap-2">
                   <div className="w-3 h-3 rounded-full bg-red-400/70 border border-red-500/70"></div>
@@ -197,80 +199,88 @@ const AdvancedDashboardSection = () => {
                 </div>
               </div>
 
-              <div className="p-6 md:p-7 grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6">
-                <div className="space-y-4">
-                  <div className="p-4 rounded-xl border border-zinc-200 bg-zinc-50">
-                    <div className="text-zinc-500 text-[11px] uppercase font-bold tracking-wider mb-1.5">
-                      Current wait
-                    </div>
-                    <div className="text-3xl font-bold text-zinc-900">
-                      12{" "}
-                      <span className="text-base font-normal text-zinc-500">
-                        mins
-                      </span>
-                    </div>
+              {/* Dashboard Content Grid */}
+              <div className="p-4 md:p-7 grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-5 lg:gap-6">
+                
+                {/* Stat 1: Current Wait */}
+                <div className="p-4 rounded-xl border border-zinc-200 bg-zinc-50 col-span-1">
+                  <div className="text-zinc-500 text-[10px] md:text-[11px] uppercase font-bold tracking-wider mb-1.5">
+                    Current wait
                   </div>
-
-                  <div className="p-4 rounded-xl border border-zinc-200 bg-zinc-50">
-                    <div className="text-zinc-500 text-[11px] uppercase font-bold tracking-wider mb-1.5">
-                      Queue depth
-                    </div>
-                    <div className="text-3xl font-bold text-zinc-900">
-                      4{" "}
-                      <span className="text-base font-normal text-zinc-500">
-                        people
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-xl border border-zinc-200 bg-gradient-to-br from-emerald-50 via-white to-sky-50">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">
-                        AI
-                      </div>
-                      <span className="text-emerald-600 text-xs font-bold uppercase tracking-wide">
-                        Insight
-                      </span>
-                    </div>
-                    <p className="text-zinc-600 text-xs leading-relaxed">
-                      Peak traffic expected at{" "}
-                      <span className="font-semibold">5:00 PM</span> based on
-                      the last 30 days.
-                    </p>
+                  <div className="text-2xl md:text-3xl font-bold text-zinc-900">
+                    12{" "}
+                    <span className="text-sm md:text-base font-normal text-zinc-500">
+                      mins
+                    </span>
                   </div>
                 </div>
 
-                <div className="md:col-span-2 rounded-xl border border-zinc-200 bg-zinc-900 text-white overflow-hidden flex flex-col">
-                  <div className="p-4 border-b border-white/10 flex justify-between items-center bg-zinc-950/60">
+                {/* Stat 2: Queue Depth */}
+                <div className="p-4 rounded-xl border border-zinc-200 bg-zinc-50 col-span-1">
+                  <div className="text-zinc-500 text-[10px] md:text-[11px] uppercase font-bold tracking-wider mb-1.5">
+                    Queue depth
+                  </div>
+                  <div className="text-2xl md:text-3xl font-bold text-zinc-900">
+                    4{" "}
+                    <span className="text-sm md:text-base font-normal text-zinc-500">
+                      ppl
+                    </span>
+                  </div>
+                </div>
+
+                {/* Stat 3: AI Insight */}
+                <div className="p-4 rounded-xl border border-zinc-200 bg-gradient-to-br from-emerald-50 via-white to-sky-50 col-span-2 md:col-span-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">
+                      AI
+                    </div>
+                    <span className="text-emerald-600 text-xs font-bold uppercase tracking-wide">
+                      Insight
+                    </span>
+                  </div>
+                  <p className="text-zinc-600 text-xs leading-relaxed">
+                    Peak traffic expected at{" "}
+                    <span className="font-semibold">5:00 PM</span> based on
+                    the last 30 days.
+                  </p>
+                </div>
+
+                {/* Queue List - CHANGE HERE: md:col-span-3 (fills full width on desktop) */}
+                <div className="col-span-2 md:col-span-3 rounded-xl border border-zinc-200 bg-zinc-900 text-white overflow-hidden flex flex-col">
+                  <div className="p-3 md:p-4 border-b border-white/10 flex justify-between items-center bg-zinc-950/60">
                     <span className="font-semibold text-sm">Live Queue</span>
                     <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                      LIVE SYNCED
+                      SYNCED
                     </span>
                   </div>
+                  
+                  {/* List Items */}
                   <div className="p-2 space-y-1">
-                    {[1, 2, 3, 4, 5].map((i) => (
+                    {[1, 2, 3, 4].map((i) => (
                       <div
                         key={i}
-                        className="flex items-center gap-4 p-3 rounded-lg hover:bg-white/5 transition-colors cursor-pointer group"
+                        className="flex items-center gap-3 md:gap-4 p-2 md:p-3 rounded-lg hover:bg-white/5 transition-colors cursor-pointer group"
                       >
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center text-zinc-300 text-xs font-bold">
+                        <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center text-zinc-300 text-[10px] md:text-xs font-bold">
                           #{i}
                         </div>
                         <div className="flex-1">
-                          <div className="h-2 w-24 bg-zinc-800 rounded mb-1 group-hover:bg-zinc-700 transition"></div>
-                          <div className="h-2 w-16 bg-zinc-900 rounded group-hover:bg-zinc-800 transition"></div>
+                          <div className="h-2 w-16 md:w-24 bg-zinc-800 rounded mb-1 group-hover:bg-zinc-700 transition"></div>
+                          <div className="h-1.5 md:h-2 w-10 md:w-16 bg-zinc-900 rounded group-hover:bg-zinc-800 transition"></div>
                         </div>
-                        <div className="text-[11px] font-mono text-zinc-500 group-hover:text-white transition">
+                        <div className="text-[10px] md:text-[11px] font-mono text-zinc-500 group-hover:text-white transition">
                           1{i}:0{i % 2 === 0 ? "5" : "0"} PM
                         </div>
                       </div>
                     ))}
                   </div>
-                  <div className="mt-auto px-4 py-3 border-t border-white/10 text-[11px] text-zinc-400 flex items-center justify-between bg-zinc-950/80">
-                    <span>Smart auto-assign is ON</span>
+                  
+                  {/* Footer */}
+                  <div className="mt-auto px-4 py-2 md:py-3 border-t border-white/10 text-[10px] md:text-[11px] text-zinc-400 flex items-center justify-between bg-zinc-950/80">
+                    <span>Auto-assign ON</span>
                     <span className="flex items-center gap-1">
-                      <Sparkles size={12} /> <span>AI load balancing</span>
+                      <Sparkles size={10} /> <span>AI Load</span>
                     </span>
                   </div>
                 </div>
