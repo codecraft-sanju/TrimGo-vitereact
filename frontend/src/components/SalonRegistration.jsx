@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Store, User, Phone, MapPin, ArrowRight, ChevronLeft, Mail, Lock, Hash, Crosshair, Tag } from "lucide-react"; // Tag icon added
+import { Store, User, Phone, MapPin, ArrowRight, ChevronLeft, Mail, Lock, Hash, Crosshair, Tag, Loader2 } from "lucide-react"; // Loader2 icon added
 // Assuming LocationPicker is in the same directory
 import LocationPicker from "./LocationPicker"; 
 
@@ -23,16 +23,21 @@ const NoiseOverlay = () => (
   </div>
 );
 
-const ShimmerButton = ({ children, onClick, className = "", disabled = false }) => {
+// UPDATED: Added isLoading prop to ShimmerButton
+const ShimmerButton = ({ children, onClick, className = "", disabled = false, isLoading = false }) => {
   return (
     <button
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || isLoading}
       className={`group relative overflow-hidden rounded-xl font-bold transition-all duration-300 hover:-translate-y-1 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed bg-zinc-900 text-white shadow-xl shadow-zinc-900/20 hover:shadow-2xl hover:shadow-zinc-900/30 ${className}`}
     >
       <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent z-10" />
       <span className="relative z-20 flex items-center justify-center gap-2 px-6 py-3.5">
-        {children}
+        {isLoading ? (
+          <Loader2 className="animate-spin" size={20} />
+        ) : (
+          children
+        )}
       </span>
     </button>
   );
@@ -95,9 +100,10 @@ const AuthLayout = ({ children, title, subtitle, onBack, illustration }) => (
 );
 
 /* ----------------------------------------------------------------------
-   COMPONENT 1: SALON REGISTRATION (UPDATED WITH REFERRAL CODE)
+   COMPONENT 1: SALON REGISTRATION (UPDATED WITH LOADER)
 ---------------------------------------------------------------------- */
 export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
+  const [isLoading, setIsLoading] = useState(false); // NEW: Loading state
   const [formData, setFormData] = useState({
     salonName: "",
     ownerName: "",
@@ -124,10 +130,14 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true); // Start Loading
     console.log("Submitting Data with Location:", formData);
-    if (onRegister) onRegister(formData);
+    if (onRegister) {
+      await onRegister(formData);
+    }
+    setIsLoading(false); // Stop Loading
   };
 
   return (
@@ -161,7 +171,6 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
           <InputGroup icon={Store} name="salonName" value={formData.salonName} onChange={handleChange} type="text" placeholder="Urban Cut Pro" label="Salon Name" />
         </div>
         
-        {/* On mobile these stack (col-span-1), on desktop they share the row */}
         <div className="col-span-1">
             <InputGroup icon={User} name="ownerName" value={formData.ownerName} onChange={handleChange} type="text" placeholder="Owner Name" label="Contact Person" />
         </div>
@@ -177,7 +186,7 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
         </div>
 
         <div className="col-span-1 md:col-span-2">
-           <InputGroup icon={MapPin} name="address" value={formData.address} onChange={handleChange} type="text" placeholder="Plot No 4, Shastri Nagar" label="Full Address" />
+            <InputGroup icon={MapPin} name="address" value={formData.address} onChange={handleChange} type="text" placeholder="Plot No 4, Shastri Nagar" label="Full Address" />
         </div>
 
         {/* --- MAP SECTION START --- */}
@@ -193,7 +202,6 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
                 )}
             </div>
             
-            {/* Map Component Container */}
             <div className="rounded-lg overflow-hidden border border-zinc-200 w-full h-80 sm:h-72 relative z-0">
                 <LocationPicker onLocationSelect={handleLocationSelect} />
             </div>
@@ -225,7 +233,6 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
           </div>
         </div>
 
-        {/* --- NEW REFERRAL CODE SECTION --- */}
         <div className="col-span-1 md:col-span-2 pt-2">
              <InputGroup 
                 icon={Tag} 
@@ -242,7 +249,7 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
         </div>
 
         <div className="col-span-1 md:col-span-2 pt-4">
-          <ShimmerButton className="w-full py-4 text-base">
+          <ShimmerButton isLoading={isLoading} className="w-full py-4 text-base">
             Complete Registration <ArrowRight size={18} />
           </ShimmerButton>
         </div>
@@ -261,12 +268,21 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
 };
 
 /* ----------------------------------------------------------------------
-   COMPONENT 2: SALON LOGIN (No changes needed here usually)
+   COMPONENT 2: SALON LOGIN (UPDATED WITH LOADER)
 ---------------------------------------------------------------------- */
 export const SalonLogin = ({ onBack, onLogin, onNavigateRegister }) => {
+  const [isLoading, setIsLoading] = useState(false); // NEW: Loading state
   const [credentials, setCredentials] = useState({ identifier: "", password: "" });
   const handleChange = (e) => setCredentials({ ...credentials, [e.target.name]: e.target.value });
-  const handleSubmit = (e) => { e.preventDefault(); if (onLogin) onLogin(credentials); };
+  
+  const handleSubmit = async (e) => { 
+    e.preventDefault(); 
+    setIsLoading(true); // Start Loading
+    if (onLogin) {
+      await onLogin(credentials);
+    }
+    setIsLoading(false); // Stop Loading
+  };
 
   return (
     <AuthLayout
@@ -302,7 +318,9 @@ export const SalonLogin = ({ onBack, onLogin, onNavigateRegister }) => {
         <InputGroup icon={User} name="identifier" value={credentials.identifier} onChange={handleChange} type="text" placeholder="Email or Mobile Number" label="Login ID" />
         <InputGroup icon={Lock} name="password" value={credentials.password} onChange={handleChange} type="password" placeholder="••••••••" label="Password" />
         <div className="pt-4">
-          <ShimmerButton className="w-full py-4 text-base">Access Dashboard <ArrowRight size={18} /></ShimmerButton>
+          <ShimmerButton isLoading={isLoading} className="w-full py-4 text-base">
+            Access Dashboard <ArrowRight size={18} />
+          </ShimmerButton>
         </div>
       </form>
       <div className="mt-8 text-center pb-8">
