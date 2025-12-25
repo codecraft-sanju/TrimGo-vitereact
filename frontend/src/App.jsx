@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { Bell, Ticket, X, CheckCircle, Sparkles, Scissors } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion"; // Required: npm install framer-motion
 
 // --- API & COMPONENTS IMPORTS ---
 import api from "./utils/api";
@@ -15,104 +16,132 @@ import { NoiseOverlay } from "./components/SharedUI";
 
 // Import Pages
 import LandingPage from "./components/LandingPage";
-import ReferralPage from "./components/ReferralPage"; // --- NEW IMPORT ---
+import ReferralPage from "./components/ReferralPage";
 
-// 0. Premium Advanced Preloader (Global)
-const PremiumPreloader = () => {
-  const [progress, setProgress] = useState(0);
-  const [messageIndex, setMessageIndex] = useState(0);
-  
-  const messages = [
-    "Initializing TrimGo...",
-    "Finding nearby salons...",
-    "Sharpening blades...",
-    "Calculating wait times...",
-    "Polishing mirrors...",
-    "Getting things ready..."
-  ];
+// ----------------------------------------------------------------------
+// 0. ULTRA-PREMIUM AESTHETIC LOADER (The "Editorial" Look)
+// ----------------------------------------------------------------------
+const PremiumPreloader = ({ onLoadingComplete }) => {
+  const [count, setCount] = useState(0);
 
   useEffect(() => {
+    // Determine loading speed
+    const duration = 2500; 
+    const steps = 100;
+    const intervalTime = duration / steps;
+
     const timer = setInterval(() => {
-      setProgress((oldProgress) => {
-        if (oldProgress === 100) {
+      setCount((prev) => {
+        if (prev >= 100) {
           clearInterval(timer);
+          setTimeout(onLoadingComplete, 1000); // Wait for exit animation
           return 100;
         }
-        const diff = Math.random() * 10;
-        return Math.min(oldProgress + diff, 100);
+        // Organic loading rhythm (sometimes fast, sometimes slow)
+        const jump = Math.random() > 0.8 ? Math.floor(Math.random() * 10) + 5 : 1;
+        return Math.min(prev + jump, 100);
       });
-    }, 200);
+    }, intervalTime);
 
-    const msgTimer = setInterval(() => {
-      setMessageIndex((prev) => (prev + 1) % messages.length);
-    }, 800);
+    return () => clearInterval(timer);
+  }, [onLoadingComplete]);
 
-    return () => {
-      clearInterval(timer);
-      clearInterval(msgTimer);
-    };
-  }, []);
+  // Letter animation variants
+  const letterVariants = {
+    hidden: { y: 100, opacity: 0 },
+    visible: (i) => ({
+      y: 0,
+      opacity: 1,
+      transition: {
+        delay: i * 0.05,
+        duration: 0.8,
+        ease: [0.215, 0.61, 0.355, 1], // Cubic-bezier for "pop"
+      },
+    }),
+  };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-zinc-50 overflow-hidden">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[30%] -left-[10%] w-[70%] h-[70%] rounded-full bg-blue-400/10 blur-[120px] animate-pulse"></div>
-        <div className="absolute -bottom-[30%] -right-[10%] w-[70%] h-[70%] rounded-full bg-emerald-400/10 blur-[120px] animate-pulse"></div>
-        <NoiseOverlay />
+    <motion.div
+      initial={{ y: 0 }}
+      exit={{ y: "-100%", transition: { duration: 1.2, ease: [0.76, 0, 0.24, 1] } }} // The "Curtain" Slide
+      className="fixed inset-0 z-[9999] bg-neutral-950 text-white flex flex-col justify-between p-6 md:p-12 overflow-hidden"
+    >
+      {/* Background Noise Texture */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay">
+         <div className="w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
       </div>
 
-      <div className="relative z-10 flex flex-col items-center">
-        <div className="relative mb-8 group">
-          <div className="absolute inset-0 bg-gradient-to-tr from-blue-500 to-emerald-500 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500 animate-pulse"></div>
-          <div className="relative w-24 h-24 bg-white rounded-3xl shadow-2xl border border-zinc-100 flex items-center justify-center overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-zinc-50 to-zinc-100 opacity-50"></div>
-            <Scissors 
-              size={40} 
-              className="text-zinc-900 relative z-10 animate-[spin_4s_linear_infinite_reverse]" 
-              strokeWidth={1.5}
-            />
-          </div>
-        </div>
+      {/* Top Header */}
+      <div className="w-full flex justify-between items-start z-10 opacity-60">
+        <span className="text-xs md:text-sm font-light tracking-[0.2em] uppercase">Est. 2024</span>
+        <Scissors size={20} className="animate-spin-slow opacity-80" strokeWidth={1} />
+      </div>
 
-        <h1 className="text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-zinc-900 via-zinc-600 to-zinc-900 bg-[length:200%_auto] animate-[shimmer_3s_linear_infinite] mb-2">
-          TrimGo
-        </h1>
-
-        <div className="h-6 overflow-hidden mb-8">
-          <p className="text-zinc-400 text-sm font-medium tracking-wide animate-[slideUpFade_0.5s_ease-out] key={messageIndex}">
-            {messages[messageIndex]}
-          </p>
-        </div>
-
-        <div className="w-64 h-1.5 bg-zinc-200 rounded-full overflow-hidden relative">
-          <div 
-            className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-300 ease-out rounded-full"
-            style={{ width: `${progress}%` }}
-          >
-            <div className="absolute top-0 right-0 h-full w-20 bg-gradient-to-r from-transparent to-white/50 blur-[2px]"></div>
-          </div>
+      {/* Center Content: Massive Typography */}
+      <div className="relative z-10 flex flex-col items-center justify-center h-full">
+        <div className="overflow-hidden flex items-center justify-center">
+            {/* Staggered Text Reveal */}
+            {["T", "R", "I", "M", "G", "O"].map((char, index) => (
+              <motion.span
+                key={index}
+                custom={index}
+                variants={letterVariants}
+                initial="hidden"
+                animate="visible"
+                className="text-7xl sm:text-8xl md:text-[10rem] font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-b from-white via-neutral-200 to-neutral-600"
+              >
+                {char}
+              </motion.span>
+            ))}
         </div>
         
-        <p className="mt-2 text-[10px] text-zinc-300 font-bold uppercase tracking-widest">
-          {Math.round(progress)}% Loaded
-        </p>
+        {/* Subtitle */}
+        <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8, duration: 1 }}
+            className="mt-4 md:mt-8 overflow-hidden"
+        >
+             <p className="text-xs md:text-sm font-medium tracking-[0.4em] text-neutral-500 uppercase">
+                Queue Management System
+             </p>
+        </motion.div>
       </div>
 
-      <style>{`
-        @keyframes shimmer {
-          0% { background-position: 0% 50%; }
-          100% { background-position: 200% 50%; }
-        }
-        @keyframes slideUpFade {
-          0% { opacity: 0; transform: translateY(10px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-    </div>
+      {/* Bottom Footer: The Counter & Bar */}
+      <div className="w-full z-10">
+        <div className="flex justify-between items-end mb-4">
+            <div className="flex flex-col">
+                <span className="text-xs text-neutral-500 uppercase tracking-widest mb-1">Status</span>
+                <span className="text-sm font-medium text-emerald-400">
+                    {count < 100 ? "Loading Assets..." : "Ready"}
+                </span>
+            </div>
+            
+            {/* Huge Number Counter */}
+            <div className="text-6xl md:text-8xl font-thin tracking-tighter leading-none tabular-nums text-white">
+                {count}
+                <span className="text-2xl md:text-4xl text-neutral-600 font-normal">%</span>
+            </div>
+        </div>
+
+        {/* Ultra Thin Progress Line */}
+        <div className="w-full h-[1px] bg-neutral-800 relative overflow-hidden">
+            <motion.div 
+                className="absolute top-0 left-0 h-full bg-white"
+                initial={{ width: "0%" }}
+                animate={{ width: `${count}%` }}
+                transition={{ ease: "linear", duration: 0.2 }}
+            />
+        </div>
+      </div>
+    </motion.div>
   );
 };
 
+// ----------------------------------------------------------------------
 // 1. Toast Notification
+// ----------------------------------------------------------------------
 const Toast = ({ message, type, onClose }) => {
   useEffect(() => {
     const timer = setTimeout(onClose, 3000);
@@ -134,7 +163,9 @@ const Toast = ({ message, type, onClose }) => {
   );
 };
 
+// ----------------------------------------------------------------------
 // 2. Live Ticket Widget
+// ----------------------------------------------------------------------
 const LiveTicket = ({ ticket, onCancel }) => {
   const [timeLeft, setTimeLeft] = useState(ticket ? ticket.eta : 0);
   useEffect(() => {
@@ -232,6 +263,9 @@ const AppContent = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [currentSalon, setCurrentSalon] = useState(null);
   const [authLoading, setAuthLoading] = useState(true); 
+  
+  // PRELOADER STATE
+  const [showPreloader, setShowPreloader] = useState(true);
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -263,9 +297,8 @@ const AppContent = () => {
       } catch (err) {
         console.log("Auth session check completed with no active session.");
       } finally {
-        setTimeout(() => {
-            setAuthLoading(false);
-        }, 2000);
+        // Stop the auth loading spinner logic, but the preloader handles the visuals
+        setAuthLoading(false);
       }
     };
     checkAuth();
@@ -363,135 +396,148 @@ const AppContent = () => {
 
   const isDashboard = location.pathname.includes('dashboard') || location.pathname.includes('admin');
 
-  if (authLoading) return <PremiumPreloader />;
-
   return (
     <>
-      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
-      
-      {activeTicket && !isDashboard && (
-        <LiveTicket 
-            ticket={activeTicket} 
-            onCancel={() => {
-                setActiveTicket(null);
-            }} 
-        />
-      )}
+      {/* AESTHETIC PRELOADER OVERLAY 
+        The AnimatePresence allows the "Exit" animation (sliding up) to finish 
+        before the component is removed from DOM.
+      */}
+      <AnimatePresence mode="wait">
+        {showPreloader && (
+          <PremiumPreloader onLoadingComplete={() => setShowPreloader(false)} />
+        )}
+      </AnimatePresence>
 
-      <Routes>
-        <Route path="/" element={
-          <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
-            <LandingPage
-              onNavigateUser={() => navigate("/register/user")}
-              onNavigateSalon={() => navigate("/register/salon")}
-              onNavigateAdmin={() => navigate("/admin/login")}
-              onNavigateLogin={() => navigate("/user/login")} 
+      {/* APP CONTENT 
+         We hide the content scroll while preloader is active, 
+         but we render it so it's ready underneath the overlay.
+      */}
+      <div className={showPreloader ? "h-screen overflow-hidden" : ""}>
+        
+        {!showPreloader && toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+        
+        {activeTicket && !isDashboard && !showPreloader && (
+            <LiveTicket 
+                ticket={activeTicket} 
+                onCancel={() => {
+                    setActiveTicket(null);
+                }} 
             />
-          </PublicRoute>
-        } />
+        )}
 
-        <Route path="/user/login" element={
-          <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
-            <UserLogin 
-               onBack={() => navigate("/")}
-               onLogin={handleUserLoginSuccess} 
-               onNavigateSalonLogin={() => navigate("/salon/login")}
-            />
-          </PublicRoute>
-        } />
+        <Routes>
+            <Route path="/" element={
+              <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
+                <LandingPage
+                  onNavigateUser={() => navigate("/register/user")}
+                  onNavigateSalon={() => navigate("/register/salon")}
+                  onNavigateAdmin={() => navigate("/admin/login")}
+                  onNavigateLogin={() => navigate("/user/login")} 
+                />
+              </PublicRoute>
+            } />
 
-        <Route path="/register/user" element={
-          <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
-            <UserRegistration
-              onBack={() => navigate("/")}
-              onRegisterUser={handleUserLoginSuccess} 
-              onNavigateLogin={() => navigate("/user/login")}
-            />
-          </PublicRoute>
-        } />
+            <Route path="/user/login" element={
+              <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
+                <UserLogin 
+                   onBack={() => navigate("/")}
+                   onLogin={handleUserLoginSuccess} 
+                   onNavigateSalonLogin={() => navigate("/salon/login")}
+                />
+              </PublicRoute>
+            } />
 
-        <Route path="/register/salon" element={
-          <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
-            <SalonRegistration
-              onBack={() => navigate("/")}
-              onRegister={handleRegisterSalon}
-              onNavigateLogin={() => navigate("/salon/login")} 
-            />
-          </PublicRoute>
-        } />
+            <Route path="/register/user" element={
+              <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
+                <UserRegistration
+                  onBack={() => navigate("/")}
+                  onRegisterUser={handleUserLoginSuccess} 
+                  onNavigateLogin={() => navigate("/user/login")}
+                />
+              </PublicRoute>
+            } />
 
-        <Route path="/salon/login" element={
-           <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
-            <SalonLogin
-              onBack={() => navigate("/")}
-              onLogin={handleSalonLogin}
-              onNavigateRegister={() => navigate("/register/salon")}
-            />
-           </PublicRoute>
-        } />
+            <Route path="/register/salon" element={
+              <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
+                <SalonRegistration
+                  onBack={() => navigate("/")}
+                  onRegister={handleRegisterSalon}
+                  onNavigateLogin={() => navigate("/salon/login")} 
+                />
+              </PublicRoute>
+            } />
 
-        <Route path="/dashboard/user" element={
-          <ProtectedRoute user={currentUser} authLoading={authLoading}>
-             <UserDashboard
-               user={currentUser}
-               onLogout={handleLogout}
-               salons={salons} 
-               onJoinQueue={handleJoinQueue}
-               onProfileClick={() => navigate("/dashboard/user/profile")}
-               onReferralClick={() => navigate("/dashboard/user/referrals")} // --- Updated ---
-             />
-          </ProtectedRoute>
-        } />
+            <Route path="/salon/login" element={
+               <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
+                <SalonLogin
+                  onBack={() => navigate("/")}
+                  onLogin={handleSalonLogin}
+                  onNavigateRegister={() => navigate("/register/salon")}
+                />
+               </PublicRoute>
+            } />
 
-        <Route path="/dashboard/user/profile" element={
-          <ProtectedRoute user={currentUser} authLoading={authLoading}>
-            <UserProfile 
-              user={currentUser} 
-              onBack={() => navigate("/dashboard/user")} 
-              onLogout={handleLogout}
-            />
-          </ProtectedRoute>
-        } />
+            <Route path="/dashboard/user" element={
+              <ProtectedRoute user={currentUser} authLoading={authLoading}>
+                  <UserDashboard
+                    user={currentUser}
+                    onLogout={handleLogout}
+                    salons={salons} 
+                    onJoinQueue={handleJoinQueue}
+                    onProfileClick={() => navigate("/dashboard/user/profile")}
+                    onReferralClick={() => navigate("/dashboard/user/referrals")} 
+                  />
+              </ProtectedRoute>
+            } />
 
-        {/* --- NEW REFERRAL PAGE ROUTE --- */}
-        <Route path="/dashboard/user/referrals" element={
-          <ProtectedRoute user={currentUser} authLoading={authLoading}>
-            <ReferralPage 
-              user={currentUser} 
-              onBack={() => navigate("/dashboard/user")} 
-            />
-          </ProtectedRoute>
-        } />
+            <Route path="/dashboard/user/profile" element={
+              <ProtectedRoute user={currentUser} authLoading={authLoading}>
+                <UserProfile 
+                  user={currentUser} 
+                  onBack={() => navigate("/dashboard/user")} 
+                  onLogout={handleLogout}
+                />
+              </ProtectedRoute>
+            } />
 
-        <Route path="/dashboard/salon" element={
-          authLoading ? null : (currentSalon ? (
-            <SalonDashboard
-              salon={currentSalon} 
-              onLogout={handleLogout}
-            />
-          ) : (
-            <Navigate to="/salon/login" replace />
-          ))
-        } />
+            <Route path="/dashboard/user/referrals" element={
+              <ProtectedRoute user={currentUser} authLoading={authLoading}>
+                <ReferralPage 
+                  user={currentUser} 
+                  onBack={() => navigate("/dashboard/user")} 
+                />
+              </ProtectedRoute>
+            } />
 
-        <Route path="/admin/login" element={
-          <AdminPublicRoute>
-            <AdminLogin 
-              onBack={() => navigate("/")}
-              onLogin={handleAdminLogin}
-            />
-          </AdminPublicRoute>
-        } />
+            <Route path="/dashboard/salon" element={
+              authLoading ? null : (currentSalon ? (
+                <SalonDashboard
+                  salon={currentSalon} 
+                  onLogout={handleLogout}
+                />
+              ) : (
+                <Navigate to="/salon/login" replace />
+              ))
+            } />
 
-        <Route path="/admin/dashboard" element={
-          <ProtectedAdminRoute>
-            <AdminDashboard 
-              onLogout={handleAdminLogout}
-            />
-          </ProtectedAdminRoute>
-        } />
+            <Route path="/admin/login" element={
+              <AdminPublicRoute>
+                <AdminLogin 
+                  onBack={() => navigate("/")}
+                  onLogin={handleAdminLogin}
+                />
+              </AdminPublicRoute>
+            } />
 
-      </Routes>
+            <Route path="/admin/dashboard" element={
+              <ProtectedAdminRoute>
+                <AdminDashboard 
+                  onLogout={handleAdminLogout}
+                />
+              </ProtectedAdminRoute>
+            } />
+        </Routes>
+      </div>
     </>
   );
 };
