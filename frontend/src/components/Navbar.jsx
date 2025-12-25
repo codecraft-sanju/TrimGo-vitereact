@@ -257,23 +257,19 @@ const Navbar = ({ onNavigateLogin }) => {
             </motion.button>
           </div>
 
-          {/* Toggle Button - Now floats above the menu */}
+          {/* Toggle Button - Modified: Hides when open, only shows Menu icon when closed */}
           <motion.button 
+            initial={{ opacity: 1, scale: 1 }}
+            animate={{ 
+              opacity: isMenuOpen ? 0 : 1,
+              scale: isMenuOpen ? 0.8 : 1,
+              pointerEvents: isMenuOpen ? "none" : "auto"
+            }}
             whileTap={{ scale: 0.9 }}
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className={`md:hidden p-3 rounded-full transition-all relative z-[60] shadow-lg ${isMenuOpen ? "bg-zinc-800 text-white shadow-zinc-900/20" : "bg-white text-zinc-900 shadow-zinc-200/50"}`}
+            onClick={() => setIsMenuOpen(true)}
+            className="md:hidden p-3 rounded-full bg-white text-zinc-900 shadow-zinc-200/50 shadow-lg relative z-[60] transition-all"
           >
-            <AnimatePresence mode="wait" initial={false}>
-              {isMenuOpen ? (
-                <motion.div key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.2 }}>
-                  <X size={20} />
-                </motion.div>
-              ) : (
-                <motion.div key="menu" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.2 }}>
-                  <Menu size={20} />
-                </motion.div>
-              )}
-            </AnimatePresence>
+             <Menu size={20} />
           </motion.button>
         </div>
       </motion.nav>
@@ -321,7 +317,7 @@ const Navbar = ({ onNavigateLogin }) => {
 
                 <div className="p-8 pt-16 h-full flex flex-col pointer-events-auto">
                     
-                    {/* Header inside Menu */}
+                    {/* Header inside Menu (With New Close Button) */}
                     <motion.div 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -330,11 +326,18 @@ const Navbar = ({ onNavigateLogin }) => {
                     >
                           <div className="flex items-center gap-3">
                              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-zinc-950 font-bold">TG</div>
-                             <span className="text-white text-xl font-bold">Menu</span>
+                             <span className="text-white text-xl font-bold">TrimGo</span>
                           </div>
-                          <div className="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-medium text-zinc-400">
-                             v1.0
-                          </div>
+                          
+                          {/* --- NEW CLOSE BUTTON INSIDE DARK THEME --- */}
+                          <motion.button 
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => setIsMenuOpen(false)}
+                            className="p-3 bg-zinc-900 border border-zinc-800 rounded-full text-white hover:bg-zinc-800 transition-colors shadow-lg shadow-black/20"
+                          >
+                            <X size={20} />
+                          </motion.button>
+
                     </motion.div>
 
                     {/* Navigation Links with 3D Cascade */}
