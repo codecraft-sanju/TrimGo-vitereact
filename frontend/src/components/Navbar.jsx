@@ -273,45 +273,59 @@ const Navbar = ({ onNavigateLogin }) => {
       <AnimatePresence>
         {isMenuOpen && (
           <>
-            {/* 1. Backdrop Blur (Fades in) */}
+            {/* 1. Backdrop Blur (Fades in) - Added onClick to close */}
             <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.4 }}
                 onClick={() => setIsMenuOpen(false)}
-                className="fixed inset-0 bg-zinc-950/60 backdrop-blur-sm z-40"
+                className="fixed inset-0 bg-zinc-950/60 backdrop-blur-sm z-40 cursor-pointer"
             />
 
-            {/* 2. The Main Sheet (Slides Up) */}
+            {/* 2. The Main Sheet (Slides Up & DRAGGABLE) */}
             <motion.div 
               variants={sheetVars}
               initial="initial"
               animate="animate"
               exit="exit"
-              className="fixed bottom-0 left-0 right-0 h-[92vh] bg-[#0A0A0A] z-50 rounded-t-[2.5rem] overflow-hidden shadow-2xl shadow-black/50 border-t border-white/10 flex flex-col"
+              // --- DRAG LOGIC ADDED HERE ---
+              drag="y" 
+              dragConstraints={{ top: 0 }} 
+              dragElastic={{ top: 0, bottom: 0.2 }}
+              onDragEnd={(_, { offset, velocity }) => {
+                // Close if dragged down > 100px OR flicked fast
+                if (offset.y > 100 || velocity.y > 100) {
+                  setIsMenuOpen(false);
+                }
+              }}
+              className="fixed bottom-0 left-0 right-0 h-[92vh] bg-[#0A0A0A] z-50 rounded-t-[2.5rem] overflow-hidden shadow-2xl shadow-black/50 border-t border-white/10 flex flex-col touch-none"
             >
                 {/* Decorative Elements */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-1.5 bg-zinc-800 rounded-full mt-4" />
+                {/* Handle Bar - Visual cue for dragging */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-10 flex items-center justify-center cursor-grab active:cursor-grabbing z-20">
+                     <div className="w-16 h-1.5 bg-zinc-800 rounded-full" />
+                </div>
+                
                 <div className="absolute top-[-20%] left-[-20%] w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
                 <div className="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-rose-600/5 rounded-full blur-[100px] pointer-events-none" />
 
-                <div className="p-8 pt-16 h-full flex flex-col">
+                <div className="p-8 pt-16 h-full flex flex-col pointer-events-auto">
                     
                     {/* Header inside Menu */}
                     <motion.div 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
-                        className="flex items-center justify-between mb-8"
+                        className="flex items-center justify-between mb-8 select-none"
                     >
-                         <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3">
                              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-zinc-950 font-bold">TG</div>
                              <span className="text-white text-xl font-bold">Menu</span>
-                         </div>
-                         <div className="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-medium text-zinc-400">
+                          </div>
+                          <div className="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-medium text-zinc-400">
                              v1.0
-                         </div>
+                          </div>
                     </motion.div>
 
                     {/* Navigation Links with 3D Cascade */}
@@ -320,12 +334,14 @@ const Navbar = ({ onNavigateLogin }) => {
                         initial="initial"
                         animate="animate"
                         exit="exit"
-                        className="flex flex-col gap-3 flex-1 overflow-y-auto"
+                        className="flex flex-col gap-3 flex-1 overflow-y-auto no-scrollbar"
+                        // Stop drag propagation here so we can scroll the list without closing the menu
+                        onPointerDownCapture={(e) => e.stopPropagation()} 
                     >
                         {/* Featured Card */}
                         <motion.div 
                             variants={flipItemVars}
-                            className="relative h-40 rounded-3xl overflow-hidden mb-4 group border border-white/10 cursor-pointer"
+                            className="relative h-40 rounded-3xl overflow-hidden mb-4 group border border-white/10 cursor-pointer shrink-0"
                         >
                             <img src="/salonshopnavbar.jpg" alt="Featured" className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity duration-500 scale-105" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent flex flex-col justify-end p-5">
@@ -343,7 +359,7 @@ const Navbar = ({ onNavigateLogin }) => {
                                 href={item.href}
                                 variants={flipItemVars}
                                 onClick={() => setIsMenuOpen(false)}
-                                className="group flex items-center justify-between p-5 rounded-3xl bg-zinc-900/50 hover:bg-zinc-800 border border-white/5 hover:border-white/10 transition-all active:scale-[0.98]"
+                                className="group flex items-center justify-between p-5 rounded-3xl bg-zinc-900/50 hover:bg-zinc-800 border border-white/5 hover:border-white/10 transition-all active:scale-[0.98] shrink-0"
                             >
                                 <div>
                                     <span className="text-2xl font-semibold text-zinc-200 group-hover:text-white transition-colors">{item.name}</span>
@@ -354,12 +370,15 @@ const Navbar = ({ onNavigateLogin }) => {
                                 </div>
                             </motion.a>
                         ))}
+                        
+                        {/* Spacing for bottom actions visibility when scrolling */}
+                        <div className="h-24"></div>
                     </motion.div>
 
-                    {/* Bottom Action */}
+                    {/* Bottom Action - Absolute positioned to stay at bottom */}
                     <motion.div 
                         variants={flipItemVars}
-                        className="mt-6 pt-6 border-t border-white/5 grid grid-cols-2 gap-4"
+                        className="absolute bottom-8 left-8 right-8 pt-6 border-t border-white/5 grid grid-cols-2 gap-4 bg-[#0A0A0A]/90 backdrop-blur-md"
                     >
                         <button 
                             onClick={onNavigateLogin}
