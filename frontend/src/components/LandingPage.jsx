@@ -13,9 +13,6 @@ import Testimonials from "./Testimonials";
 import Footer from "./Footer";
 import { BackgroundAurora, NoiseOverlay } from "./SharedUI";
 
-/* ---------------------------------
-   HELPER HOOKS
----------------------------------- */
 const useOnScreen = (options) => {
   const ref = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -32,9 +29,7 @@ const useOnScreen = (options) => {
   return [ref, isVisible];
 };
 
-/* ---------------------------------
-   LOCAL UI COMPONENTS 
----------------------------------- */
+
 
 const SmoothScroll = ({ children }) => {
   useEffect(() => {

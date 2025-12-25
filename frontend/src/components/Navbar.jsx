@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Menu, X, ArrowRight, Sparkles, ChevronDown, 
   BarChart3, Users, Clock 
@@ -23,7 +23,7 @@ const Logo = ({ dark = false }) => (
         hover: { rotate: 12, scale: 1.05 }
       }}
       transition={{ type: "spring", stiffness: 400, damping: 15 }}
-      className={`w-9 h-9 ${dark ? "bg-white text-zinc-900" : "bg-zinc-900 text-white"} rounded-xl flex items-center justify-center font-bold text-sm shadow-lg shadow-zinc-900/10`}
+      className={`w-9 h-9 ${dark ? "bg-white text-zinc-950" : "bg-zinc-900 text-white"} rounded-xl flex items-center justify-center font-bold text-sm shadow-lg shadow-zinc-900/10`}
     >
       TG
     </motion.div>
@@ -33,7 +33,7 @@ const Logo = ({ dark = false }) => (
   </motion.div>
 );
 
-// --- Sub-Component: Mega Menu Content ---
+// --- Sub-Component: Mega Menu Content (Desktop) ---
 const FeaturesMegaMenu = () => (
   <div className="w-[500px] p-4 grid grid-cols-2 gap-2 text-left cursor-default">
     <div className="space-y-1">
@@ -76,11 +76,95 @@ const FeaturesMegaMenu = () => (
   </div>
 );
 
+// --- PREMIUM ANIMATION VARIANTS ---
+
+// 1. The Container: Uses clip-path for a circular "Ripple" expansion from top-right
+const menuContainerVars = {
+  initial: { 
+    clipPath: "circle(0% at calc(100% - 2.5rem) 2.5rem)", 
+    opacity: 0,
+  },
+  animate: { 
+    clipPath: "circle(150% at calc(100% - 2.5rem) 2.5rem)", 
+    opacity: 1,
+    transition: { 
+      type: "spring",
+      stiffness: 30,    
+      damping: 15,      
+      mass: 1,
+      restDelta: 0.001
+    }
+  },
+  exit: { 
+    clipPath: "circle(0% at calc(100% - 2.5rem) 2.5rem)",
+    opacity: 0,
+    transition: { 
+      type: "spring",
+      stiffness: 300,   
+      damping: 35,
+    }
+  }
+};
+
+// 2. The Content: Staggers in
+const contentContainerVars = {
+  initial: { opacity: 0 },
+  animate: { 
+    opacity: 1,
+    transition: { 
+      staggerChildren: 0.1, 
+      delayChildren: 0.2    
+    }
+  },
+  exit: { 
+    opacity: 0,
+    transition: { 
+      staggerChildren: 0.05, 
+      staggerDirection: -1,
+      when: "afterChildren"
+    }
+  }
+};
+
+// 3. The Items: Slide up with a subtle Motion Blur effect
+const itemVars = {
+  initial: { 
+    y: 40, 
+    opacity: 0,
+    filter: "blur(10px)", 
+  },
+  animate: { 
+    y: 0, 
+    opacity: 1, 
+    filter: "blur(0px)",  
+    transition: { 
+      type: "spring",
+      stiffness: 50,
+      damping: 10
+    }
+  },
+  exit: { 
+    y: -20, 
+    opacity: 0,
+    filter: "blur(5px)",
+    transition: { duration: 0.2 }
+  }
+};
+
 // --- Main Navbar Component ---
 const Navbar = ({ onNavigateLogin }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const [activeTab, setActiveTab] = useState(null);
+
+  // Prevent scrolling when menu is open
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+  }, [isMenuOpen]);
 
   const navLinks = [
     { name: "Features", href: "#features", sub: "Explore our tools", hasDropdown: true },
@@ -88,17 +172,16 @@ const Navbar = ({ onNavigateLogin }) => {
     { name: "Stories", href: "#testimonials", sub: "Success stories" },
   ];
 
-  // --- NEW: Premium Toast Handler ---
+  // --- Premium Toast Handler ---
   const handleGetApp = () => {
     toast.info('TrimGo App Coming Soon!', {
       position: "top-center",
       autoClose: 3000,
-      hideProgressBar: false, // Line chalegi
+      hideProgressBar: false,
       closeOnClick: true,
       pauseOnHover: true,
       draggable: true,
-      progress: undefined,
-      theme: "dark", // Dark Premium Theme
+      theme: "dark",
       transition: Bounce,
       icon: "🚀"
     });
@@ -106,10 +189,6 @@ const Navbar = ({ onNavigateLogin }) => {
 
   return (
     <>
-      {/* NEW: ToastContainer Added Here 
-         Ye container poore app ke toasts ko handle karega 
-         z-index badha diya taki navbar ke upar dikhe 
-      */}
       <ToastContainer
         position="top-center"
         autoClose={3000}
@@ -121,18 +200,24 @@ const Navbar = ({ onNavigateLogin }) => {
         draggable
         pauseOnHover
         theme="dark"
-        className="mt-14 sm:mt-0" // Mobile pe thoda niche, desktop pe top
+        className="mt-14 sm:mt-0 z-[60]" 
       />
 
-      {/* --- DESKTOP --- */}
+      {/* --- DESKTOP / MAIN BAR (LIGHT MODE - UNCHANGED) --- */}
       <motion.nav 
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 260, damping: 20 }}
-        className="fixed top-4 sm:top-6 left-1/2 -translate-x-1/2 w-[92%] sm:w-[95%] max-w-6xl z-50 bg-white/70 backdrop-blur-xl backdrop-saturate-150 border border-white/50 shadow-lg shadow-zinc-200/20 rounded-full px-4 sm:px-6 py-2 sm:py-3 flex justify-between items-center"
+        className={`fixed top-4 sm:top-6 left-1/2 -translate-x-1/2 w-[92%] sm:w-[95%] max-w-6xl z-50 transition-all duration-300
+          ${isMenuOpen ? "bg-transparent border-transparent shadow-none" : "bg-white/70 backdrop-blur-xl backdrop-saturate-150 border border-white/50 shadow-lg shadow-zinc-200/20"}
+          rounded-full px-4 sm:px-6 py-2 sm:py-3 flex justify-between items-center`}
       >
-        <Logo />
+        {/* Logo changes color based on Menu State */}
+        <div className="relative z-50">
+           <Logo dark={isMenuOpen} />
+        </div>
         
+        {/* Desktop Links */}
         <div className="hidden md:flex gap-1 items-center bg-zinc-100/50 p-1 rounded-full border border-white/50" onMouseLeave={() => setActiveTab(null)}>
           {navLinks.map((link, index) => (
             <div 
@@ -206,10 +291,11 @@ const Navbar = ({ onNavigateLogin }) => {
             </motion.button>
           </div>
 
+          {/* Mobile Menu Toggle - Adapts Color */}
           <motion.button 
             whileTap={{ scale: 0.9 }}
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden p-2.5 rounded-full bg-zinc-100 text-zinc-900 hover:bg-zinc-200 transition-colors relative z-50"
+            className={`md:hidden p-2.5 rounded-full transition-colors relative z-50 ${isMenuOpen ? "bg-zinc-800 text-white" : "bg-zinc-100 text-zinc-900 hover:bg-zinc-200"}`}
           >
             <AnimatePresence mode="wait" initial={false}>
               {isMenuOpen ? (
@@ -226,86 +312,106 @@ const Navbar = ({ onNavigateLogin }) => {
         </div>
       </motion.nav>
 
-      {/* --- MOBILE --- */}
+      {/* --- PREMIUM DARK MOBILE MENU --- */}
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-white/95 backdrop-blur-xl md:hidden flex flex-col pt-24 px-6 overflow-y-auto"
+            variants={menuContainerVars}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="fixed inset-0 z-40 bg-black flex flex-col pt-28 px-6 overflow-hidden"
           >
+             {/* Subtle Ambient Background - Pulsing */}
              <motion.div 
-                className="flex flex-col gap-6"
-                variants={{
-                    hidden: { opacity: 0 },
-                    show: { opacity: 1, transition: { staggerChildren: 0.1 }}
-                }}
-                initial="hidden"
-                animate="show"
+                animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }} 
+                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute top-[-10%] left-[-20%] w-[60%] h-[50%] bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none" 
+             />
+             <motion.div 
+                animate={{ scale: [1, 1.1, 1], opacity: [0.5, 0.7, 0.5] }} 
+                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                className="absolute bottom-[-10%] right-[-20%] w-[60%] h-[50%] bg-purple-500/10 rounded-full blur-[100px] pointer-events-none" 
+             />
+
+             <motion.div 
+               className="flex flex-col gap-6 h-full relative z-10"
+               variants={contentContainerVars}
+               initial="initial"
+               animate="animate"
+               exit="exit"
              >
-                {/* --- Salon Shop Image Section --- */}
+                {/* --- Image Section with Dark Aesthetic (UPDATED FOR CLARITY) --- */}
                 <motion.div 
-                    variants={{ hidden: { y: 20, opacity: 0 }, show: { y: 0, opacity: 1 }}}
-                    className="w-full h-48 rounded-3xl overflow-hidden shadow-2xl relative group shrink-0"
+                    variants={itemVars}
+                    className="w-full h-44 rounded-3xl overflow-hidden shadow-2xl relative group shrink-0 border border-zinc-800/50"
                 >
-                    <img 
+                    <motion.img 
+                        initial={{ scale: 1.1 }}
+                        animate={{ scale: 1 }}
+                        transition={{ duration: 5, ease: "easeOut" }} 
                         src="/salonshopnavbar.jpg" 
                         alt="Salon Interior" 
-                        className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
+                        // Changed opacity from 60 to 90 for clearer view
+                        className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-700"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-5">
-                          <span className="text-white font-bold text-lg">Premium Salon Experience</span>
+                    {/* Adjusted gradient to be very subtle, only at the bottom for text readability */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-6">
+                          <div>
+                             <span className="text-white font-bold text-lg tracking-wide block">TrimGo Partner</span>
+                             <span className="text-zinc-400 text-xs uppercase tracking-widest font-medium">Manage your salon</span>
+                          </div>
                     </div>
                 </motion.div>
 
-                {navLinks.map((item) => (
-                    <motion.a 
-                        key={item.name}
-                        href={item.href}
-                        variants={{ hidden: { y: 20, opacity: 0 }, show: { y: 0, opacity: 1 }}}
-                        className="group flex justify-between items-center border-b border-zinc-100 pb-4"
-                        onClick={() => setIsMenuOpen(false)}
-                    >
-                        <div>
-                            <span className="text-3xl font-bold text-zinc-900 block tracking-tight group-hover:text-indigo-600 transition-colors">
-                                {item.name}
-                            </span>
-                            <span className="text-sm text-zinc-400 font-medium">{item.sub}</span>
-                        </div>
-                        <div className="w-10 h-10 rounded-full border border-zinc-200 flex items-center justify-center group-hover:bg-zinc-900 group-hover:text-white group-hover:border-zinc-900 transition-all">
-                            <ArrowRight size={18} className="-rotate-45 group-hover:rotate-0 transition-transform" />
-                        </div>
-                    </motion.a>
-                ))}
-             </motion.div>
-             
-             <motion.div 
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                className="mt-auto py-10 w-full"
-             >
-                <button 
-                    onClick={() => {
-                        setIsMenuOpen(false);
-                        handleGetApp();
-                    }}
-                    className="w-full py-4 rounded-2xl bg-zinc-900 text-white font-bold text-lg shadow-xl shadow-zinc-900/20 flex items-center justify-center gap-2"
-                >
-                    Get the App <Sparkles size={18} />
-                </button>
-                <div className="text-center mt-4">
-                    <button 
-                        onClick={() => {
-                            setIsMenuOpen(false);
-                            onNavigateLogin();
-                        }}
-                        className="text-zinc-500 font-medium hover:text-zinc-900"
-                    >
-                        Already have an account? Log In
-                    </button>
+                {/* --- Dark Mode Links --- */}
+                <div className="flex flex-col gap-2">
+                  {navLinks.map((item) => (
+                      <motion.a 
+                          key={item.name}
+                          href={item.href}
+                          variants={itemVars}
+                          className="group flex justify-between items-center p-4 rounded-2xl hover:bg-zinc-900 transition-colors border border-transparent hover:border-zinc-800"
+                          onClick={() => setIsMenuOpen(false)}
+                      >
+                          <div>
+                              <span className="text-3xl font-bold text-white block tracking-tight group-hover:text-indigo-400 transition-colors">
+                                  {item.name}
+                              </span>
+                              <span className="text-sm text-zinc-500 font-medium group-hover:text-zinc-400 transition-colors">{item.sub}</span>
+                          </div>
+                          <div className="w-12 h-12 rounded-full border border-zinc-800 bg-zinc-900 flex items-center justify-center text-white group-hover:bg-white group-hover:text-black group-hover:border-white transition-all">
+                              <ArrowRight size={20} className="-rotate-45 group-hover:rotate-0 transition-transform duration-300" />
+                          </div>
+                      </motion.a>
+                  ))}
                 </div>
+                
+                {/* --- Bottom Actions (Dark Mode Contrast) --- */}
+                <motion.div 
+                  variants={itemVars}
+                  className="mt-auto pb-10 w-full grid grid-cols-2 gap-3"
+                >
+                   <button 
+                       onClick={() => {
+                           setIsMenuOpen(false);
+                           onNavigateLogin();
+                       }}
+                       className="w-full py-4 rounded-2xl bg-zinc-900 border border-zinc-800 text-white font-bold text-lg hover:bg-zinc-800 active:scale-95 transition-all"
+                   >
+                       Log In
+                   </button>
+
+                   <button 
+                       onClick={() => {
+                           setIsMenuOpen(false);
+                           handleGetApp();
+                       }}
+                       className="w-full py-4 rounded-2xl bg-white text-zinc-950 font-bold text-lg shadow-xl shadow-white/5 flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-zinc-200"
+                   >
+                       Get App <Sparkles size={18} className="text-zinc-950" />
+                   </button>
+                </motion.div>
              </motion.div>
           </motion.div>
         )}
