@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { 
   Menu, X, ArrowRight, Sparkles, ChevronDown, 
-  BarChart3, Users, Clock 
+  BarChart3, Users, Clock, Zap
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -76,77 +76,48 @@ const FeaturesMegaMenu = () => (
   </div>
 );
 
-// --- PREMIUM ANIMATION VARIANTS ---
+// --- 3D ANIMATION VARIANTS (ULTRA SMOOTH) ---
 
-// 1. The Container: Uses clip-path for a circular "Ripple" expansion from top-right
-const menuContainerVars = {
-  initial: { 
-    clipPath: "circle(0% at calc(100% - 2.5rem) 2.5rem)", 
-    opacity: 0,
-  },
-  animate: { 
-    clipPath: "circle(150% at calc(100% - 2.5rem) 2.5rem)", 
-    opacity: 1,
-    transition: { 
-      type: "spring",
-      stiffness: 30,    
-      damping: 15,      
-      mass: 1,
-      restDelta: 0.001
-    }
-  },
-  exit: { 
-    clipPath: "circle(0% at calc(100% - 2.5rem) 2.5rem)",
-    opacity: 0,
-    transition: { 
-      type: "spring",
-      stiffness: 300,   
-      damping: 35,
-    }
-  }
-};
-
-// 2. The Content: Staggers in
-const contentContainerVars = {
-  initial: { opacity: 0 },
-  animate: { 
-    opacity: 1,
-    transition: { 
-      staggerChildren: 0.1, 
-      delayChildren: 0.2    
-    }
-  },
-  exit: { 
-    opacity: 0,
-    transition: { 
-      staggerChildren: 0.05, 
-      staggerDirection: -1,
-      when: "afterChildren"
-    }
-  }
-};
-
-// 3. The Items: Slide up with a subtle Motion Blur effect
-const itemVars = {
-  initial: { 
-    y: 40, 
-    opacity: 0,
-    filter: "blur(10px)", 
-  },
+// 1. The Sheet (Slide Up with heavy damping for premium feel)
+const sheetVars = {
+  initial: { y: "100%", opacity: 0 },
   animate: { 
     y: 0, 
-    opacity: 1, 
-    filter: "blur(0px)",  
-    transition: { 
-      type: "spring",
-      stiffness: 50,
-      damping: 10
-    }
+    opacity: 1,
+    transition: { type: "spring", stiffness: 200, damping: 25, mass: 1 }
   },
   exit: { 
-    y: -20, 
+    y: "100%", 
     opacity: 0,
-    filter: "blur(5px)",
+    transition: { type: "spring", stiffness: 300, damping: 30 }
+  }
+};
+
+// 2. The Content Stagger
+const staggerContainerVars = {
+  animate: {
+    transition: { staggerChildren: 0.1, delayChildren: 0.2 }
+  },
+  exit: {
+    transition: { staggerChildren: 0.05, staggerDirection: -1 }
+  }
+};
+
+// 3. The 3D Flip Item (The "Alag" Effect)
+const flipItemVars = {
+  initial: { rotateX: 90, y: 20, opacity: 0, filter: "blur(10px)" },
+  animate: { 
+    rotateX: 0, 
+    y: 0, 
+    opacity: 1,
+    filter: "blur(0px)",
+    transition: { type: "spring", stiffness: 100, damping: 20 } 
+  },
+  exit: { 
+    rotateX: -40, 
+    y: -20, 
+    opacity: 0, 
+    filter: "blur(10px)",
     transition: { duration: 0.2 }
   }
 };
@@ -167,20 +138,15 @@ const Navbar = ({ onNavigateLogin }) => {
   }, [isMenuOpen]);
 
   const navLinks = [
-    { name: "Features", href: "#features", sub: "Explore our tools", hasDropdown: true },
-    { name: "Dashboard", href: "#advanced", sub: "Manage your queue" },
+    { name: "Features", href: "#features", sub: "Explore tools", hasDropdown: true },
+    { name: "Dashboard", href: "#advanced", sub: "Analytics view" },
     { name: "Stories", href: "#testimonials", sub: "Success stories" },
   ];
 
-  // --- Premium Toast Handler ---
   const handleGetApp = () => {
     toast.info('TrimGo App Coming Soon!', {
       position: "top-center",
       autoClose: 3000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
       theme: "dark",
       transition: Bounce,
       icon: "🚀"
@@ -192,29 +158,21 @@ const Navbar = ({ onNavigateLogin }) => {
       <ToastContainer
         position="top-center"
         autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
         theme="dark"
         className="mt-14 sm:mt-0 z-[60]" 
       />
 
-      {/* --- DESKTOP / MAIN BAR (LIGHT MODE - UNCHANGED) --- */}
+      {/* --- DESKTOP NAV --- */}
       <motion.nav 
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 260, damping: 20 }}
         className={`fixed top-4 sm:top-6 left-1/2 -translate-x-1/2 w-[92%] sm:w-[95%] max-w-6xl z-50 transition-all duration-300
-          ${isMenuOpen ? "bg-transparent border-transparent shadow-none" : "bg-white/70 backdrop-blur-xl backdrop-saturate-150 border border-white/50 shadow-lg shadow-zinc-200/20"}
-          rounded-full px-4 sm:px-6 py-2 sm:py-3 flex justify-between items-center`}
+          ${isMenuOpen ? "bg-transparent pointer-events-none" : "bg-white/70 backdrop-blur-xl backdrop-saturate-150 border border-white/50 shadow-lg shadow-zinc-200/20 pointer-events-auto"}
+          rounded-full px-4 sm:px-6 py-2 sm:py-3 flex justify-between items-center transform-gpu`}
       >
-        {/* Logo changes color based on Menu State */}
-        <div className="relative z-50">
-           <Logo dark={isMenuOpen} />
+        <div className={`relative z-50 transition-opacity duration-300 ${isMenuOpen ? "opacity-0" : "opacity-100"}`}>
+           <Logo />
         </div>
         
         {/* Desktop Links */}
@@ -280,7 +238,6 @@ const Navbar = ({ onNavigateLogin }) => {
             >
               Log In
             </motion.button>
-
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -291,11 +248,11 @@ const Navbar = ({ onNavigateLogin }) => {
             </motion.button>
           </div>
 
-          {/* Mobile Menu Toggle - Adapts Color */}
+          {/* Toggle Button - Now floats above the menu */}
           <motion.button 
             whileTap={{ scale: 0.9 }}
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className={`md:hidden p-2.5 rounded-full transition-colors relative z-50 ${isMenuOpen ? "bg-zinc-800 text-white" : "bg-zinc-100 text-zinc-900 hover:bg-zinc-200"}`}
+            className={`md:hidden p-3 rounded-full transition-all relative z-[60] shadow-lg ${isMenuOpen ? "bg-zinc-800 text-white shadow-zinc-900/20" : "bg-white text-zinc-900 shadow-zinc-200/50"}`}
           >
             <AnimatePresence mode="wait" initial={false}>
               {isMenuOpen ? (
@@ -312,108 +269,115 @@ const Navbar = ({ onNavigateLogin }) => {
         </div>
       </motion.nav>
 
-      {/* --- PREMIUM DARK MOBILE MENU --- */}
+      {/* --- AESTHETIC MOBILE MENU --- */}
       <AnimatePresence>
         {isMenuOpen && (
-          <motion.div 
-            variants={menuContainerVars}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            className="fixed inset-0 z-40 bg-black flex flex-col pt-28 px-6 overflow-hidden"
-          >
-             {/* Subtle Ambient Background - Pulsing */}
-             <motion.div 
-                animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }} 
-                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute top-[-10%] left-[-20%] w-[60%] h-[50%] bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none" 
-             />
-             <motion.div 
-                animate={{ scale: [1, 1.1, 1], opacity: [0.5, 0.7, 0.5] }} 
-                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                className="absolute bottom-[-10%] right-[-20%] w-[60%] h-[50%] bg-purple-500/10 rounded-full blur-[100px] pointer-events-none" 
-             />
+          <>
+            {/* 1. Backdrop Blur (Fades in) */}
+            <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.4 }}
+                onClick={() => setIsMenuOpen(false)}
+                className="fixed inset-0 bg-zinc-950/60 backdrop-blur-sm z-40"
+            />
 
-             <motion.div 
-               className="flex flex-col gap-6 h-full relative z-10"
-               variants={contentContainerVars}
-               initial="initial"
-               animate="animate"
-               exit="exit"
-             >
-                {/* --- Image Section with Dark Aesthetic (UPDATED FOR CLARITY) --- */}
-                <motion.div 
-                    variants={itemVars}
-                    className="w-full h-44 rounded-3xl overflow-hidden shadow-2xl relative group shrink-0 border border-zinc-800/50"
-                >
-                    <motion.img 
-                        initial={{ scale: 1.1 }}
-                        animate={{ scale: 1 }}
-                        transition={{ duration: 5, ease: "easeOut" }} 
-                        src="/salonshopnavbar.jpg" 
-                        alt="Salon Interior" 
-                        // Changed opacity from 60 to 90 for clearer view
-                        className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-700"
-                    />
-                    {/* Adjusted gradient to be very subtle, only at the bottom for text readability */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-6">
-                          <div>
-                             <span className="text-white font-bold text-lg tracking-wide block">TrimGo Partner</span>
-                             <span className="text-zinc-400 text-xs uppercase tracking-widest font-medium">Manage your salon</span>
-                          </div>
-                    </div>
-                </motion.div>
+            {/* 2. The Main Sheet (Slides Up) */}
+            <motion.div 
+              variants={sheetVars}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="fixed bottom-0 left-0 right-0 h-[92vh] bg-[#0A0A0A] z-50 rounded-t-[2.5rem] overflow-hidden shadow-2xl shadow-black/50 border-t border-white/10 flex flex-col"
+            >
+                {/* Decorative Elements */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-1.5 bg-zinc-800 rounded-full mt-4" />
+                <div className="absolute top-[-20%] left-[-20%] w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-rose-600/5 rounded-full blur-[100px] pointer-events-none" />
 
-                {/* --- Dark Mode Links --- */}
-                <div className="flex flex-col gap-2">
-                  {navLinks.map((item) => (
-                      <motion.a 
-                          key={item.name}
-                          href={item.href}
-                          variants={itemVars}
-                          className="group flex justify-between items-center p-4 rounded-2xl hover:bg-zinc-900 transition-colors border border-transparent hover:border-zinc-800"
-                          onClick={() => setIsMenuOpen(false)}
-                      >
-                          <div>
-                              <span className="text-3xl font-bold text-white block tracking-tight group-hover:text-indigo-400 transition-colors">
-                                  {item.name}
-                              </span>
-                              <span className="text-sm text-zinc-500 font-medium group-hover:text-zinc-400 transition-colors">{item.sub}</span>
-                          </div>
-                          <div className="w-12 h-12 rounded-full border border-zinc-800 bg-zinc-900 flex items-center justify-center text-white group-hover:bg-white group-hover:text-black group-hover:border-white transition-all">
-                              <ArrowRight size={20} className="-rotate-45 group-hover:rotate-0 transition-transform duration-300" />
-                          </div>
-                      </motion.a>
-                  ))}
+                <div className="p-8 pt-16 h-full flex flex-col">
+                    
+                    {/* Header inside Menu */}
+                    <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="flex items-center justify-between mb-8"
+                    >
+                         <div className="flex items-center gap-3">
+                             <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-zinc-950 font-bold">TG</div>
+                             <span className="text-white text-xl font-bold">Menu</span>
+                         </div>
+                         <div className="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-medium text-zinc-400">
+                             v1.0
+                         </div>
+                    </motion.div>
+
+                    {/* Navigation Links with 3D Cascade */}
+                    <motion.div 
+                        variants={staggerContainerVars}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                        className="flex flex-col gap-3 flex-1 overflow-y-auto"
+                    >
+                        {/* Featured Card */}
+                        <motion.div 
+                            variants={flipItemVars}
+                            className="relative h-40 rounded-3xl overflow-hidden mb-4 group border border-white/10 cursor-pointer"
+                        >
+                            <img src="/salonshopnavbar.jpg" alt="Featured" className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity duration-500 scale-105" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent flex flex-col justify-end p-5">
+                                <div className="flex items-center gap-2 text-indigo-400 text-xs font-bold uppercase tracking-wider mb-1">
+                                    <Zap size={12} fill="currentColor" /> New Feature
+                                </div>
+                                <h3 className="text-white font-bold text-lg">Partner Dashboard</h3>
+                            </div>
+                        </motion.div>
+
+                        {/* List Items */}
+                        {navLinks.map((item, i) => (
+                            <motion.a 
+                                key={item.name}
+                                href={item.href}
+                                variants={flipItemVars}
+                                onClick={() => setIsMenuOpen(false)}
+                                className="group flex items-center justify-between p-5 rounded-3xl bg-zinc-900/50 hover:bg-zinc-800 border border-white/5 hover:border-white/10 transition-all active:scale-[0.98]"
+                            >
+                                <div>
+                                    <span className="text-2xl font-semibold text-zinc-200 group-hover:text-white transition-colors">{item.name}</span>
+                                    <p className="text-sm text-zinc-500 group-hover:text-zinc-400 mt-0.5">{item.sub}</p>
+                                </div>
+                                <div className="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-zinc-400 group-hover:bg-white group-hover:text-black transition-all">
+                                    <ArrowRight size={18} className="-rotate-45 group-hover:rotate-0 transition-transform duration-300" />
+                                </div>
+                            </motion.a>
+                        ))}
+                    </motion.div>
+
+                    {/* Bottom Action */}
+                    <motion.div 
+                        variants={flipItemVars}
+                        className="mt-6 pt-6 border-t border-white/5 grid grid-cols-2 gap-4"
+                    >
+                        <button 
+                            onClick={onNavigateLogin}
+                            className="py-4 rounded-2xl text-zinc-300 hover:text-white font-semibold hover:bg-zinc-900 transition-colors"
+                        >
+                            Log In
+                        </button>
+                        <button 
+                            onClick={handleGetApp}
+                            className="py-4 rounded-2xl bg-white text-zinc-950 font-bold shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] transition-shadow"
+                        >
+                            Get App
+                        </button>
+                    </motion.div>
+
                 </div>
-                
-                {/* --- Bottom Actions (Dark Mode Contrast) --- */}
-                <motion.div 
-                  variants={itemVars}
-                  className="mt-auto pb-10 w-full grid grid-cols-2 gap-3"
-                >
-                   <button 
-                       onClick={() => {
-                           setIsMenuOpen(false);
-                           onNavigateLogin();
-                       }}
-                       className="w-full py-4 rounded-2xl bg-zinc-900 border border-zinc-800 text-white font-bold text-lg hover:bg-zinc-800 active:scale-95 transition-all"
-                   >
-                       Log In
-                   </button>
-
-                   <button 
-                       onClick={() => {
-                           setIsMenuOpen(false);
-                           handleGetApp();
-                       }}
-                       className="w-full py-4 rounded-2xl bg-white text-zinc-950 font-bold text-lg shadow-xl shadow-white/5 flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-zinc-200"
-                   >
-                       Get App <Sparkles size={18} className="text-zinc-950" />
-                   </button>
-                </motion.div>
-             </motion.div>
-          </motion.div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </>
