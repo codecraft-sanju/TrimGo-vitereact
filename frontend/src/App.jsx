@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { Bell, Ticket, X, CheckCircle, Sparkles, Scissors } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion"; // --- NEW IMPORT ---
 
 // --- API & COMPONENTS IMPORTS ---
 import api from "./utils/api";
@@ -15,104 +16,130 @@ import { NoiseOverlay } from "./components/SharedUI";
 
 // Import Pages
 import LandingPage from "./components/LandingPage";
-import ReferralPage from "./components/ReferralPage"; // --- NEW IMPORT ---
+import ReferralPage from "./components/ReferralPage";
 
-// 0. Premium Advanced Preloader (Global)
-const PremiumPreloader = () => {
-  const [progress, setProgress] = useState(0);
-  const [messageIndex, setMessageIndex] = useState(0);
-  
-  const messages = [
-    "Initializing TrimGo...",
-    "Finding nearby salons...",
-    "Sharpening blades...",
-    "Calculating wait times...",
-    "Polishing mirrors...",
-    "Getting things ready..."
-  ];
+// ----------------------------------------------------------------------
+// 0. AESTHETIC & RESPONSIVE PRELOADER (GSAP Style)
+// ----------------------------------------------------------------------
+const PremiumPreloader = ({ onLoadingComplete }) => {
+  const [count, setCount] = useState(0);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
+  // Handle window resize for perfect icon sizing
   useEffect(() => {
-    const timer = setInterval(() => {
-      setProgress((oldProgress) => {
-        if (oldProgress === 100) {
-          clearInterval(timer);
-          return 100;
-        }
-        const diff = Math.random() * 10;
-        return Math.min(oldProgress + diff, 100);
-      });
-    }, 200);
-
-    const msgTimer = setInterval(() => {
-      setMessageIndex((prev) => (prev + 1) % messages.length);
-    }, 800);
-
-    return () => {
-      clearInterval(timer);
-      clearInterval(msgTimer);
-    };
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  return (
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-zinc-50 overflow-hidden">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[30%] -left-[10%] w-[70%] h-[70%] rounded-full bg-blue-400/10 blur-[120px] animate-pulse"></div>
-        <div className="absolute -bottom-[30%] -right-[10%] w-[70%] h-[70%] rounded-full bg-emerald-400/10 blur-[120px] animate-pulse"></div>
-        <NoiseOverlay />
-      </div>
+  useEffect(() => {
+    const duration = 2200; // Duration of the loading experience
+    const steps = 100;
+    const intervalTime = duration / steps;
 
-      <div className="relative z-10 flex flex-col items-center">
-        <div className="relative mb-8 group">
-          <div className="absolute inset-0 bg-gradient-to-tr from-blue-500 to-emerald-500 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500 animate-pulse"></div>
-          <div className="relative w-24 h-24 bg-white rounded-3xl shadow-2xl border border-zinc-100 flex items-center justify-center overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-zinc-50 to-zinc-100 opacity-50"></div>
+    const timer = setInterval(() => {
+      setCount((prev) => {
+        if (prev >= 100) {
+          clearInterval(timer);
+          // Wait a split second at 100% before triggering the exit
+          setTimeout(onLoadingComplete, 600); 
+          return 100;
+        }
+        // Randomize increment for "organic" feel
+        return Math.min(prev + Math.floor(Math.random() * 5) + 1, 100);
+      });
+    }, intervalTime);
+
+    return () => clearInterval(timer);
+  }, [onLoadingComplete]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 1 }}
+      exit={{ y: "-100%", transition: { duration: 0.8, ease: [0.76, 0, 0.24, 1] } }}
+      className="fixed inset-0 z-[9999] bg-zinc-950 text-white flex flex-col items-center justify-center overflow-hidden px-4"
+    >
+      {/* Background Ambience */}
+      <div className="absolute inset-0 opacity-20 pointer-events-none">
+        <NoiseOverlay /> 
+      </div>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-emerald-500/20 blur-[80px] md:blur-[120px] rounded-full animate-pulse" />
+
+      {/* Main Content Container */}
+      <div className="relative z-10 flex flex-col items-center w-full max-w-4xl">
+        
+        {/* Animated Logo Section - Fully Responsive */}
+        <div className="relative flex flex-row items-center justify-center gap-2 md:gap-6 mb-8 md:mb-12">
+          
+          {/* TRIM */}
+          <motion.div
+            initial={{ x: -40, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 1, ease: "easeOut" }}
+          >
+            <h1 className="text-5xl sm:text-7xl md:text-9xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-zinc-500">
+              TRIM
+            </h1>
+          </motion.div>
+
+          {/* Scissor Icon */}
+          <motion.div 
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ duration: 1.2, type: "spring", bounce: 0.5 }}
+            className="text-emerald-400 flex items-center justify-center"
+          >
             <Scissors 
-              size={40} 
-              className="text-zinc-900 relative z-10 animate-[spin_4s_linear_infinite_reverse]" 
-              strokeWidth={1.5}
+              size={isMobile ? 32 : 80} 
+              strokeWidth={1.5} 
+              className="w-8 h-8 sm:w-16 sm:h-16 md:w-24 md:h-24" 
+            />
+          </motion.div>
+
+          {/* GO */}
+          <motion.div
+            initial={{ x: 40, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 1, ease: "easeOut" }}
+          >
+            <h1 className="text-5xl sm:text-7xl md:text-9xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-zinc-500">
+              GO
+            </h1>
+          </motion.div>
+        </div>
+
+        {/* Loading Bar - Responsive Width */}
+        <div className="w-[85%] max-w-[400px] relative">
+          <div className="flex justify-between text-[10px] md:text-xs font-medium text-zinc-500 uppercase tracking-[0.2em] mb-2">
+            <span>Loading Assets</span>
+            <span>{count}%</span>
+          </div>
+          <div className="h-[2px] w-full bg-zinc-800 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-gradient-to-r from-emerald-500 to-blue-500"
+              initial={{ width: 0 }}
+              animate={{ width: `${count}%` }}
+              transition={{ ease: "linear" }}
             />
           </div>
         </div>
 
-        <h1 className="text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-zinc-900 via-zinc-600 to-zinc-900 bg-[length:200%_auto] animate-[shimmer_3s_linear_infinite] mb-2">
-          TrimGo
-        </h1>
-
-        <div className="h-6 overflow-hidden mb-8">
-          <p className="text-zinc-400 text-sm font-medium tracking-wide animate-[slideUpFade_0.5s_ease-out] key={messageIndex}">
-            {messages[messageIndex]}
-          </p>
-        </div>
-
-        <div className="w-64 h-1.5 bg-zinc-200 rounded-full overflow-hidden relative">
-          <div 
-            className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-300 ease-out rounded-full"
-            style={{ width: `${progress}%` }}
-          >
-            <div className="absolute top-0 right-0 h-full w-20 bg-gradient-to-r from-transparent to-white/50 blur-[2px]"></div>
-          </div>
-        </div>
-        
-        <p className="mt-2 text-[10px] text-zinc-300 font-bold uppercase tracking-widest">
-          {Math.round(progress)}% Loaded
-        </p>
+        {/* Tagline */}
+        <motion.p 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: count > 60 ? 1 : 0, y: count > 60 ? 0 : 20 }}
+          className="absolute bottom-[-60px] md:bottom-[-80px] text-zinc-600 text-[10px] md:text-xs tracking-[0.3em] uppercase text-center w-full"
+        >
+          Look Good • Feel Good
+        </motion.p>
       </div>
-
-      <style>{`
-        @keyframes shimmer {
-          0% { background-position: 0% 50%; }
-          100% { background-position: 200% 50%; }
-        }
-        @keyframes slideUpFade {
-          0% { opacity: 0; transform: translateY(10px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-    </div>
+    </motion.div>
   );
 };
 
+// ----------------------------------------------------------------------
 // 1. Toast Notification
+// ----------------------------------------------------------------------
 const Toast = ({ message, type, onClose }) => {
   useEffect(() => {
     const timer = setTimeout(onClose, 3000);
@@ -134,7 +161,9 @@ const Toast = ({ message, type, onClose }) => {
   );
 };
 
+// ----------------------------------------------------------------------
 // 2. Live Ticket Widget
+// ----------------------------------------------------------------------
 const LiveTicket = ({ ticket, onCancel }) => {
   const [timeLeft, setTimeLeft] = useState(ticket ? ticket.eta : 0);
   useEffect(() => {
@@ -232,6 +261,9 @@ const AppContent = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [currentSalon, setCurrentSalon] = useState(null);
   const [authLoading, setAuthLoading] = useState(true); 
+  
+  // PRELOADER STATE
+  const [showPreloader, setShowPreloader] = useState(true);
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -263,9 +295,8 @@ const AppContent = () => {
       } catch (err) {
         console.log("Auth session check completed with no active session.");
       } finally {
-        setTimeout(() => {
-            setAuthLoading(false);
-        }, 2000);
+        // We set authLoading to false, but the Preloader stays up until its animation finishes
+        setAuthLoading(false);
       }
     };
     checkAuth();
@@ -363,13 +394,27 @@ const AppContent = () => {
 
   const isDashboard = location.pathname.includes('dashboard') || location.pathname.includes('admin');
 
-  if (authLoading) return <PremiumPreloader />;
-
   return (
     <>
-      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      {/* AESTHETIC PRELOADER OVERLAY 
+        Using AnimatePresence so it can play the 'exit' animation (curtain slide up) 
+        before removing itself from the DOM.
+      */}
+      <AnimatePresence>
+        {showPreloader && (
+          <PremiumPreloader onLoadingComplete={() => setShowPreloader(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* APP CONTENT 
+        We render this immediately so it's ready "behind the curtain".
+        We only hide it if authLoading is true to prevent premature redirects
+        inside the Protected/Public routes.
+      */}
       
-      {activeTicket && !isDashboard && (
+      {!showPreloader && toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      
+      {activeTicket && !isDashboard && !showPreloader && (
         <LiveTicket 
             ticket={activeTicket} 
             onCancel={() => {
@@ -378,120 +423,121 @@ const AppContent = () => {
         />
       )}
 
-      <Routes>
-        <Route path="/" element={
-          <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
-            <LandingPage
-              onNavigateUser={() => navigate("/register/user")}
-              onNavigateSalon={() => navigate("/register/salon")}
-              onNavigateAdmin={() => navigate("/admin/login")}
-              onNavigateLogin={() => navigate("/user/login")} 
-            />
-          </PublicRoute>
-        } />
+      {/* The Routes are always rendered, but Protected/Public Routes check authLoading inside them */}
+      <div className={showPreloader ? "hidden" : "block"}>
+          <Routes>
+            <Route path="/" element={
+              <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
+                <LandingPage
+                  onNavigateUser={() => navigate("/register/user")}
+                  onNavigateSalon={() => navigate("/register/salon")}
+                  onNavigateAdmin={() => navigate("/admin/login")}
+                  onNavigateLogin={() => navigate("/user/login")} 
+                />
+              </PublicRoute>
+            } />
 
-        <Route path="/user/login" element={
-          <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
-            <UserLogin 
-               onBack={() => navigate("/")}
-               onLogin={handleUserLoginSuccess} 
-               onNavigateSalonLogin={() => navigate("/salon/login")}
-            />
-          </PublicRoute>
-        } />
+            <Route path="/user/login" element={
+              <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
+                <UserLogin 
+                   onBack={() => navigate("/")}
+                   onLogin={handleUserLoginSuccess} 
+                   onNavigateSalonLogin={() => navigate("/salon/login")}
+                />
+              </PublicRoute>
+            } />
 
-        <Route path="/register/user" element={
-          <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
-            <UserRegistration
-              onBack={() => navigate("/")}
-              onRegisterUser={handleUserLoginSuccess} 
-              onNavigateLogin={() => navigate("/user/login")}
-            />
-          </PublicRoute>
-        } />
+            <Route path="/register/user" element={
+              <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
+                <UserRegistration
+                  onBack={() => navigate("/")}
+                  onRegisterUser={handleUserLoginSuccess} 
+                  onNavigateLogin={() => navigate("/user/login")}
+                />
+              </PublicRoute>
+            } />
 
-        <Route path="/register/salon" element={
-          <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
-            <SalonRegistration
-              onBack={() => navigate("/")}
-              onRegister={handleRegisterSalon}
-              onNavigateLogin={() => navigate("/salon/login")} 
-            />
-          </PublicRoute>
-        } />
+            <Route path="/register/salon" element={
+              <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
+                <SalonRegistration
+                  onBack={() => navigate("/")}
+                  onRegister={handleRegisterSalon}
+                  onNavigateLogin={() => navigate("/salon/login")} 
+                />
+              </PublicRoute>
+            } />
 
-        <Route path="/salon/login" element={
-           <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
-            <SalonLogin
-              onBack={() => navigate("/")}
-              onLogin={handleSalonLogin}
-              onNavigateRegister={() => navigate("/register/salon")}
-            />
-           </PublicRoute>
-        } />
+            <Route path="/salon/login" element={
+               <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
+                <SalonLogin
+                  onBack={() => navigate("/")}
+                  onLogin={handleSalonLogin}
+                  onNavigateRegister={() => navigate("/register/salon")}
+                />
+               </PublicRoute>
+            } />
 
-        <Route path="/dashboard/user" element={
-          <ProtectedRoute user={currentUser} authLoading={authLoading}>
-             <UserDashboard
-               user={currentUser}
-               onLogout={handleLogout}
-               salons={salons} 
-               onJoinQueue={handleJoinQueue}
-               onProfileClick={() => navigate("/dashboard/user/profile")}
-               onReferralClick={() => navigate("/dashboard/user/referrals")} // --- Updated ---
-             />
-          </ProtectedRoute>
-        } />
+            <Route path="/dashboard/user" element={
+              <ProtectedRoute user={currentUser} authLoading={authLoading}>
+                  <UserDashboard
+                    user={currentUser}
+                    onLogout={handleLogout}
+                    salons={salons} 
+                    onJoinQueue={handleJoinQueue}
+                    onProfileClick={() => navigate("/dashboard/user/profile")}
+                    onReferralClick={() => navigate("/dashboard/user/referrals")} 
+                  />
+              </ProtectedRoute>
+            } />
 
-        <Route path="/dashboard/user/profile" element={
-          <ProtectedRoute user={currentUser} authLoading={authLoading}>
-            <UserProfile 
-              user={currentUser} 
-              onBack={() => navigate("/dashboard/user")} 
-              onLogout={handleLogout}
-            />
-          </ProtectedRoute>
-        } />
+            <Route path="/dashboard/user/profile" element={
+              <ProtectedRoute user={currentUser} authLoading={authLoading}>
+                <UserProfile 
+                  user={currentUser} 
+                  onBack={() => navigate("/dashboard/user")} 
+                  onLogout={handleLogout}
+                />
+              </ProtectedRoute>
+            } />
 
-        {/* --- NEW REFERRAL PAGE ROUTE --- */}
-        <Route path="/dashboard/user/referrals" element={
-          <ProtectedRoute user={currentUser} authLoading={authLoading}>
-            <ReferralPage 
-              user={currentUser} 
-              onBack={() => navigate("/dashboard/user")} 
-            />
-          </ProtectedRoute>
-        } />
+            <Route path="/dashboard/user/referrals" element={
+              <ProtectedRoute user={currentUser} authLoading={authLoading}>
+                <ReferralPage 
+                  user={currentUser} 
+                  onBack={() => navigate("/dashboard/user")} 
+                />
+              </ProtectedRoute>
+            } />
 
-        <Route path="/dashboard/salon" element={
-          authLoading ? null : (currentSalon ? (
-            <SalonDashboard
-              salon={currentSalon} 
-              onLogout={handleLogout}
-            />
-          ) : (
-            <Navigate to="/salon/login" replace />
-          ))
-        } />
+            <Route path="/dashboard/salon" element={
+              authLoading ? null : (currentSalon ? (
+                <SalonDashboard
+                  salon={currentSalon} 
+                  onLogout={handleLogout}
+                />
+              ) : (
+                <Navigate to="/salon/login" replace />
+              ))
+            } />
 
-        <Route path="/admin/login" element={
-          <AdminPublicRoute>
-            <AdminLogin 
-              onBack={() => navigate("/")}
-              onLogin={handleAdminLogin}
-            />
-          </AdminPublicRoute>
-        } />
+            <Route path="/admin/login" element={
+              <AdminPublicRoute>
+                <AdminLogin 
+                  onBack={() => navigate("/")}
+                  onLogin={handleAdminLogin}
+                />
+              </AdminPublicRoute>
+            } />
 
-        <Route path="/admin/dashboard" element={
-          <ProtectedAdminRoute>
-            <AdminDashboard 
-              onLogout={handleAdminLogout}
-            />
-          </ProtectedAdminRoute>
-        } />
-
-      </Routes>
+            <Route path="/admin/dashboard" element={
+              <ProtectedAdminRoute>
+                <AdminDashboard 
+                  onLogout={handleAdminLogout}
+                />
+              </ProtectedAdminRoute>
+            } />
+          </Routes>
+      </div>
     </>
   );
 };
