@@ -5,7 +5,7 @@ import {
   Phone,
   Lock,
   CheckCircle,
-  ChevronLeft,
+  ArrowLeft, // Changed ChevronLeft to ArrowLeft for consistency
   Mail,
   MapPin,
   AlertCircle,
@@ -69,7 +69,6 @@ const InputGroup = ({
 }) => {
   const [showPassword, setShowPassword] = useState(false);
   const isPasswordType = type === "password";
-  // Logic: If it's a password field and showPassword is true, make it text. Otherwise keep original type.
   const inputType = isPasswordType ? (showPassword ? "text" : "password") : type;
 
   return (
@@ -118,17 +117,28 @@ const AuthLayout = ({ children, title, subtitle, onBack, illustration }) => (
   <motion.div 
     initial="initial" 
     animate="animate" 
-    className="min-h-screen w-full bg-zinc-50 dark:bg-black flex items-center justify-center p-4 sm:p-6 md:p-8 relative font-sans overflow-hidden"
+    // Added pt-24 to prevent content from hiding behind the fixed header
+    className="min-h-screen w-full bg-zinc-50 dark:bg-black flex items-center justify-center p-4 sm:p-6 md:p-8 pt-24 relative font-sans overflow-hidden"
   >
     <BackgroundAurora />
 
-    {/* Back Button */}
-    <button
-      onClick={onBack}
-      className="absolute top-8 left-8 z-20 flex items-center gap-2 font-bold text-xs uppercase tracking-widest text-zinc-500 hover:text-black dark:hover:text-white transition-colors"
-    >
-      <ChevronLeft size={16} /> Back
-    </button>
+    {/* --- NEW GLASS HEADER (CONSISTENT WITH SALON PAGE) --- */}
+    <header className="absolute top-0 left-0 right-0 z-50 px-6 py-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center justify-between bg-white/70 dark:bg-zinc-900/60 backdrop-blur-md rounded-full px-2 py-2 pr-6 border border-white/50 dark:border-zinc-800 shadow-sm">
+          <button 
+            onClick={onBack} 
+            className="p-3 rounded-full bg-white dark:bg-zinc-900 shadow-sm border border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all active:scale-90 group"
+          >
+            <ArrowLeft size={20} className="text-zinc-600 dark:text-zinc-400 group-hover:-translate-x-1 transition-transform" />
+          </button>
+          <div className="flex flex-col items-end">
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Get Started</span>
+            <span className="text-sm font-bold text-zinc-800 dark:text-white">TrimGo</span>
+          </div>
+        </div>
+      </div>
+    </header>
 
     <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-12 items-center relative z-10">
       
