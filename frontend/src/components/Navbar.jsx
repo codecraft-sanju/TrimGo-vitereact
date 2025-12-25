@@ -76,49 +76,53 @@ const FeaturesMegaMenu = () => (
   </div>
 );
 
-// --- 3D ANIMATION VARIANTS (ULTRA SMOOTH) ---
+// --- 3D ANIMATION VARIANTS (OPTIMIZED FOR 60FPS) ---
 
-// 1. The Sheet (Slide Up with heavy damping for premium feel)
+// 1. The Sheet (The "iOS" feel - tuned physics)
 const sheetVars = {
-  initial: { y: "100%", opacity: 0 },
+  initial: { y: "100%" },
   animate: { 
     y: 0, 
-    opacity: 1,
-    transition: { type: "spring", stiffness: 200, damping: 25, mass: 1 }
+    transition: { 
+      type: "spring", 
+      stiffness: 300, 
+      damping: 30, // Increased damping removes "wobble"
+      mass: 0.8    // Lower mass makes it feel lighter/faster
+    }
   },
   exit: { 
     y: "100%", 
-    opacity: 0,
-    transition: { type: "spring", stiffness: 300, damping: 30 }
+    transition: { 
+      type: "spring", 
+      stiffness: 300, 
+      damping: 30,
+      mass: 0.8
+    }
   }
 };
 
 // 2. The Content Stagger
 const staggerContainerVars = {
   animate: {
-    transition: { staggerChildren: 0.1, delayChildren: 0.2 }
+    transition: { staggerChildren: 0.08, delayChildren: 0.15 }
   },
   exit: {
     transition: { staggerChildren: 0.05, staggerDirection: -1 }
   }
 };
 
-// 3. The 3D Flip Item (The "Alag" Effect)
+// 3. The 3D Flip Item
 const flipItemVars = {
-  initial: { rotateX: 90, y: 20, opacity: 0, filter: "blur(10px)" },
+  initial: { rotateX: 90, y: 20, opacity: 0 },
   animate: { 
     rotateX: 0, 
     y: 0, 
     opacity: 1,
-    filter: "blur(0px)",
-    transition: { type: "spring", stiffness: 100, damping: 20 } 
+    transition: { type: "spring", stiffness: 200, damping: 20 } 
   },
   exit: { 
-    rotateX: -40, 
-    y: -20, 
     opacity: 0, 
-    filter: "blur(10px)",
-    transition: { duration: 0.2 }
+    transition: { duration: 0.15 }
   }
 };
 
@@ -132,8 +136,13 @@ const Navbar = ({ onNavigateLogin }) => {
   useEffect(() => {
     if (isMenuOpen) {
       document.body.style.overflow = 'hidden';
+      // Optional: Prevent iOS overscroll bounce
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
     } else {
       document.body.style.overflow = 'unset';
+      document.body.style.position = '';
+      document.body.style.width = '';
     }
   }, [isMenuOpen]);
 
@@ -256,11 +265,11 @@ const Navbar = ({ onNavigateLogin }) => {
           >
             <AnimatePresence mode="wait" initial={false}>
               {isMenuOpen ? (
-                <motion.div key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }}>
+                <motion.div key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.2 }}>
                   <X size={20} />
                 </motion.div>
               ) : (
-                <motion.div key="menu" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }}>
+                <motion.div key="menu" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.2 }}>
                   <Menu size={20} />
                 </motion.div>
               )}
@@ -269,42 +278,42 @@ const Navbar = ({ onNavigateLogin }) => {
         </div>
       </motion.nav>
 
-      {/* --- AESTHETIC MOBILE MENU --- */}
+      {/* --- AESTHETIC MOBILE MENU (Optimized) --- */}
       <AnimatePresence>
         {isMenuOpen && (
           <>
-            {/* 1. Backdrop Blur (Fades in) - Added onClick to close */}
+            {/* 1. Backdrop Blur */}
             <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.4 }}
+                transition={{ duration: 0.3, ease: "linear" }}
                 onClick={() => setIsMenuOpen(false)}
                 className="fixed inset-0 bg-zinc-950/60 backdrop-blur-sm z-40 cursor-pointer"
             />
 
-            {/* 2. The Main Sheet (Slides Up & DRAGGABLE) */}
+            {/* 2. The Main Sheet */}
             <motion.div 
               variants={sheetVars}
               initial="initial"
               animate="animate"
               exit="exit"
-              // --- DRAG LOGIC ADDED HERE ---
+              style={{ willChange: "transform" }} // PERFORMANCE BOOST
               drag="y" 
               dragConstraints={{ top: 0 }} 
-              dragElastic={{ top: 0, bottom: 0.2 }}
+              dragElastic={{ top: 0.05, bottom: 0.5 }} // Stiffer top to prevent over-pulling
               onDragEnd={(_, { offset, velocity }) => {
-                // Close if dragged down > 100px OR flicked fast
-                if (offset.y > 100 || velocity.y > 100) {
+                // Smart close logic: Close if dragged down far enough OR flicked fast
+                if (offset.y > 100 || velocity.y > 150) {
                   setIsMenuOpen(false);
                 }
               }}
               className="fixed bottom-0 left-0 right-0 h-[92vh] bg-[#0A0A0A] z-50 rounded-t-[2.5rem] overflow-hidden shadow-2xl shadow-black/50 border-t border-white/10 flex flex-col touch-none"
             >
                 {/* Decorative Elements */}
-                {/* Handle Bar - Visual cue for dragging */}
+                {/* Handle Bar */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-10 flex items-center justify-center cursor-grab active:cursor-grabbing z-20">
-                     <div className="w-16 h-1.5 bg-zinc-800 rounded-full" />
+                      <div className="w-16 h-1.5 bg-zinc-800 rounded-full" />
                 </div>
                 
                 <div className="absolute top-[-20%] left-[-20%] w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
@@ -335,7 +344,6 @@ const Navbar = ({ onNavigateLogin }) => {
                         animate="animate"
                         exit="exit"
                         className="flex flex-col gap-3 flex-1 overflow-y-auto no-scrollbar"
-                        // Stop drag propagation here so we can scroll the list without closing the menu
                         onPointerDownCapture={(e) => e.stopPropagation()} 
                     >
                         {/* Featured Card */}
