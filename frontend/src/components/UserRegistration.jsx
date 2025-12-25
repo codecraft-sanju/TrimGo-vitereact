@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion"; // Animation Library
 import {
   User,
   Phone,
@@ -8,195 +9,161 @@ import {
   Mail,
   MapPin,
   AlertCircle,
-  LogIn,
-  // Added Eye and EyeOff icons
   Eye,
   EyeOff,
-  // Added Loader2 for the spinner
   Loader2,
 } from "lucide-react";
 // 1. Import API Helper
 import api from "../utils/api";
 
 /* -------------------------------------------------------------------------- */
-/* CUSTOM STYLES & ANIMATIONS                                                 */
+/* ANIMATION VARIANTS (PREMIUM FEEL)                                          */
 /* -------------------------------------------------------------------------- */
 
-const AnimationStyles = () => (
-  <style>{`
-    @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .animate-fade-in-up {
-      animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-  `}</style>
-);
+const fadeInUp = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.33, 1, 0.68, 1] } }
+};
 
-/* -------------------------------------------------------------------------- */
-/* UI COMPONENTS (No changes here)                                            */
-/* -------------------------------------------------------------------------- */
-
-const BackgroundAurora = () => (
-  <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-zinc-50">
-    <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay"></div>
-    <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-purple-300/20 rounded-full blur-[120px] animate-blob" />
-    <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-emerald-300/20 rounded-full blur-[120px] animate-blob animation-delay-2000" />
-    <div className="absolute top-[40%] left-[40%] w-[40%] h-[40%] bg-blue-300/20 rounded-full blur-[120px] animate-blob animation-delay-4000" />
-  </div>
-);
-
-const NoiseOverlay = () => (
-  <div className="fixed inset-0 z-40 pointer-events-none opacity-[0.04] mix-blend-overlay">
-    <svg className="w-full h-full">
-      <filter id="noise">
-        <feTurbulence
-          type="fractalNoise"
-          baseFrequency="0.80"
-          numOctaves="4"
-          stitchTiles="stitch"
-        />
-      </filter>
-      <rect width="100%" height="100%" filter="url(#noise)" />
-    </svg>
-  </div>
-);
-
-const ShimmerButton = ({
-  children,
-  onClick,
-  className = "",
-  disabled = false,
-}) => {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`group relative overflow-hidden rounded-xl font-bold transition-all duration-300 hover:-translate-y-1 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed bg-zinc-900 text-white shadow-xl shadow-zinc-900/20 hover:shadow-2xl hover:shadow-zinc-900/30 ${className}`}
-      type="submit"
-    >
-      <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent z-10" />
-      <span className="relative z-20 flex items-center justify-center gap-2 px-6 py-3.5">
-        {children}
-      </span>
-    </button>
-  );
+const staggerContainer = {
+  animate: { transition: { staggerChildren: 0.1 } }
 };
 
 /* -------------------------------------------------------------------------- */
-/* LAYOUT & HELPERS (Updated for Best Responsive Layout)                        */
+/* UI COMPONENTS                                                              */
 /* -------------------------------------------------------------------------- */
 
-const AuthLayout = ({ children, title, subtitle, onBack, illustration }) => (
-  <div className="min-h-[100dvh] w-full bg-zinc-50 flex items-center justify-center p-4 sm:p-6 md:p-8 relative font-sans overflow-x-hidden">
-    <AnimationStyles />
-    <BackgroundAurora />
-    <NoiseOverlay />
-
-    {/* DESKTOP NAV: Floating Top Left (Hidden on Mobile) */}
-    <button
-      onClick={onBack}
-      className="hidden md:flex absolute top-8 left-8 items-center gap-2 text-zinc-500 hover:text-zinc-900 transition-all z-20 font-bold bg-white/50 hover:bg-white px-4 py-2 rounded-full backdrop-blur-sm border border-white/50 hover:border-zinc-200 shadow-sm"
-    >
-      <ChevronLeft size={20} /> Home
-    </button>
-
-    {/* MAIN CARD CONTAINER - Added Animation */}
-    <div className="w-full max-w-6xl bg-white/80 backdrop-blur-xl rounded-[2rem] md:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row relative z-10 border border-white/60 animate-fade-in-up">
-      
-      {/* LEFT SIDE: Form Area */}
-      <div className="w-full md:w-1/2 p-6 sm:p-10 md:p-16 flex flex-col justify-center">
-        
-        {/* MOBILE NAV: Inline Top Left (Hidden on Desktop) */}
-        <div className="md:hidden flex justify-start mb-6">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-900 transition-colors font-bold text-sm bg-zinc-100/80 px-3 py-1.5 rounded-full"
-          >
-            <ChevronLeft size={16} /> Back
-          </button>
-        </div>
-
-        <div className="mb-8 md:mb-10">
-          <h2 className="text-3xl md:text-4xl font-black text-zinc-900 mb-2 md:mb-3 tracking-tight">
-            {title}
-          </h2>
-          <p className="text-zinc-500 font-medium text-sm md:text-base">
-            {subtitle}
-          </p>
-        </div>
-        {children}
-      </div>
-
-      {/* RIGHT SIDE: Illustration (Hidden on Mobile) */}
-      <div className="hidden md:flex w-1/2 bg-zinc-900 relative p-12 flex-col justify-between overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
-        {illustration}
-      </div>
-    </div>
+const BackgroundAurora = () => (
+  <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-zinc-50 dark:bg-black transition-colors duration-500">
+    <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-purple-300/10 rounded-full blur-[120px] animate-pulse" />
+    <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-emerald-300/10 rounded-full blur-[120px] animate-pulse" />
   </div>
 );
 
-// --- MODIFIED INPUT GROUP FOR PASSWORD TOGGLE ---
+const ShimmerButton = ({ children, onClick, className = "", disabled = false }) => {
+  return (
+    <motion.button
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      disabled={disabled}
+      className={`group relative overflow-hidden rounded-xl font-bold transition-all duration-300 bg-black dark:bg-white text-white dark:text-black shadow-xl hover:shadow-2xl ${className} disabled:opacity-50 disabled:cursor-not-allowed`}
+      type="submit"
+    >
+      <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent z-10" />
+      <span className="relative z-20 flex items-center justify-center gap-2 px-6 py-4">
+        {disabled ? <Loader2 className="animate-spin" size={20} /> : children}
+      </span>
+    </motion.button>
+  );
+};
+
+// --- PREMIUM INPUT GROUP (WITH FLOATING LABEL & PASSWORD TOGGLE) ---
 const InputGroup = ({
   icon: Icon,
   type,
-  placeholder,
   label,
   name,
   value,
   onChange,
 }) => {
-  // State to toggle password visibility
   const [showPassword, setShowPassword] = useState(false);
-  
-  // Check if this input is meant to be a password field
   const isPasswordType = type === "password";
-  
-  // Dynamic type: if showing password, becomes 'text', else stays as 'password' (or original type)
+  // Logic: If it's a password field and showPassword is true, make it text. Otherwise keep original type.
   const inputType = isPasswordType ? (showPassword ? "text" : "password") : type;
 
   return (
-    <div className="space-y-1.5">
-      <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1">
+    <motion.div variants={fadeInUp} className="relative w-full mb-8 group">
+      {/* Input Field with Underline Style */}
+      <input
+        name={name}
+        value={value}
+        onChange={onChange}
+        type={inputType}
+        placeholder=" " // Required for peer-focus trick
+        className="peer w-full bg-transparent border-b-2 border-zinc-200 dark:border-zinc-800 py-3 pl-0 pr-10 outline-none 
+                   focus:border-black dark:focus:border-white transition-all duration-300 text-zinc-900 dark:text-white font-medium placeholder-transparent"
+      />
+      
+      {/* Floating Label */}
+      <label className="absolute left-0 top-3 text-zinc-400 pointer-events-none transition-all duration-300 uppercase text-[10px] font-bold tracking-widest
+                        peer-focus:-top-4 peer-focus:text-black dark:peer-focus:text-white
+                        peer-[:not(:placeholder-shown)]:-top-4 peer-[:not(:placeholder-shown)]:text-zinc-500">
         {label}
       </label>
-      <div className="relative group">
-        <Icon
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-zinc-900 transition-colors"
-          size={20}
-        />
-        <input
-          name={name}
-          value={value}
-          onChange={onChange}
-          type={inputType}
-          placeholder={placeholder}
-          // Added pr-12 (padding-right) to make room for the eye icon so text doesn't overlap
-          className={`w-full bg-zinc-50 border border-zinc-200 rounded-xl py-4 pl-12 ${isPasswordType ? 'pr-12' : 'pr-4'} text-zinc-900 font-medium focus:outline-none focus:ring-4 focus:ring-zinc-100 focus:border-zinc-900 transition-all placeholder:text-zinc-400 text-sm md:text-base`}
-        />
-        
-        {/* Toggle Button - Only renders if type is password */}
-        {isPasswordType && (
+
+      {/* Right Side Icon logic */}
+      <div className="absolute right-0 top-3 text-zinc-300 group-focus-within:text-black dark:group-focus-within:text-white transition-colors">
+        {isPasswordType ? (
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 focus:outline-none transition-colors"
+            className="focus:outline-none hover:text-zinc-600 dark:hover:text-zinc-300"
           >
             {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
           </button>
+        ) : (
+          <Icon size={20} />
         )}
       </div>
-    </div>
+    </motion.div>
   );
 };
 
 /* -------------------------------------------------------------------------- */
-/* MAIN COMPONENT                                                             */
+/* LAYOUT WRAPPER                                                             */
+/* -------------------------------------------------------------------------- */
+
+const AuthLayout = ({ children, title, subtitle, onBack, illustration }) => (
+  <motion.div 
+    initial="initial" 
+    animate="animate" 
+    className="min-h-screen w-full bg-zinc-50 dark:bg-black flex items-center justify-center p-4 sm:p-6 md:p-8 relative font-sans overflow-hidden"
+  >
+    <BackgroundAurora />
+
+    {/* Back Button */}
+    <button
+      onClick={onBack}
+      className="absolute top-8 left-8 z-20 flex items-center gap-2 font-bold text-xs uppercase tracking-widest text-zinc-500 hover:text-black dark:hover:text-white transition-colors"
+    >
+      <ChevronLeft size={16} /> Back
+    </button>
+
+    <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-12 items-center relative z-10">
+      
+      {/* LEFT SIDE: Form */}
+      <motion.div 
+        variants={staggerContainer}
+        className="w-full p-4 md:p-12 flex flex-col justify-center order-2 md:order-1"
+      >
+        <motion.div variants={fadeInUp} className="mb-10">
+          <h2 className="text-4xl md:text-5xl font-light uppercase tracking-tighter text-zinc-900 dark:text-white mb-3">
+            {title}
+          </h2>
+          <p className="text-zinc-500 dark:text-zinc-400 font-medium">
+            {subtitle}
+          </p>
+        </motion.div>
+        {children}
+      </motion.div>
+
+      {/* RIGHT SIDE: Illustration */}
+      <motion.div variants={fadeInUp} className="hidden md:flex w-full relative p-12 flex-col justify-center order-1 md:order-2 h-full">
+         <div className="relative aspect-square rounded-[3rem] overflow-hidden bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-12 flex flex-col justify-center">
+            {illustration}
+         </div>
+      </motion.div>
+    </div>
+  </motion.div>
+);
+
+/* -------------------------------------------------------------------------- */
+/* MAIN LOGIC COMPONENT                                                       */
 /* -------------------------------------------------------------------------- */
 
 const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }) => {
+  // State from your original code
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -205,29 +172,26 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }
   const [error, setError] = useState("");
   
   const [locationStatus, setLocationStatus] = useState("pending");
-  // New state for location loading
   const [locationLoading, setLocationLoading] = useState(false);
 
+  // Geolocation Logic (Preserved exactly as requested)
   const handleRequestLocation = () => {
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by your browser.");
       return;
     }
 
-    // Start loading
     setLocationLoading(true);
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
         console.log("✅ Location access granted at registration.");
         setLocationStatus("granted");
-        // Stop loading on success
         setLocationLoading(false);
       },
       (err) => {
         console.log("❌ Location access denied:", err.message);
         setLocationStatus("denied");
-        // Stop loading on error
         setLocationLoading(false);
         if (err.code === 1) {
           setError("Please enable location permissions in your browser settings.");
@@ -241,6 +205,7 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }
     handleRequestLocation();
   }, []);
 
+  // Submit Logic (Preserved exactly as requested)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -277,61 +242,60 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }
       subtitle="Join the queue from anywhere."
       onBack={onBack}
       illustration={
-        <>
-          <div className="relative z-10">
-            <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-8 border border-white/20">
-              <User className="text-white" size={32} />
+        // Updated Illustration to match Premium Theme
+        <div className="h-full flex flex-col justify-center">
+          <div className="relative z-10 mb-8">
+            <div className="w-16 h-16 bg-white/10 dark:bg-black/50 backdrop-blur-md rounded-2xl flex items-center justify-center mb-8 border border-zinc-200 dark:border-white/10 shadow-lg">
+              <User className="text-zinc-900 dark:text-white" size={32} />
             </div>
-            <h3 className="text-4xl font-bold text-white mb-4 leading-tight">
-              Your time is
-              <br />
-              too valuable
-              <br />
+            <h3 className="text-4xl font-light text-zinc-900 dark:text-white mb-4 leading-tight tracking-tight">
+              Your time is <br />
+              <span className="font-bold italic">too valuable</span> <br />
               to wait.
             </h3>
           </div>
-          <div className="bg-zinc-800/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl relative z-10">
+          <div className="bg-white/50 dark:bg-zinc-800/50 backdrop-blur-md border border-zinc-200 dark:border-white/10 p-6 rounded-3xl relative z-10 shadow-xl">
             <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-green-400 to-emerald-600 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
                 <CheckCircle className="text-white" size={24} />
               </div>
               <div>
-                <p className="text-white font-bold">Booking Confirmed</p>
-                <p className="text-zinc-400 text-sm">You are #3 in line</p>
+                <p className="text-zinc-900 dark:text-white font-bold">Booking Confirmed</p>
+                <p className="text-zinc-500 text-sm">You are #3 in line</p>
               </div>
             </div>
-            <div className="h-2 w-full bg-zinc-700 rounded-full overflow-hidden">
-              <div className="h-full w-2/3 bg-green-500 rounded-full"></div>
+            <div className="h-2 w-full bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
+              <div className="h-full w-2/3 bg-emerald-500 rounded-full"></div>
             </div>
           </div>
-        </>
+        </div>
       }
     >
-      <form className="space-y-4 md:space-y-5" onSubmit={handleSubmit}>
+      <form className="w-full" onSubmit={handleSubmit}>
         
-        {/* Location Button */}
-        <div 
+        {/* Location Button - Re-styled for Premium Look but same logic */}
+        <motion.div 
+          variants={fadeInUp}
           onClick={!locationLoading ? handleRequestLocation : undefined}
-          className={`group flex items-center justify-between p-3 md:p-4 rounded-xl border transition-all cursor-pointer ${
+          className={`group flex items-center justify-between p-4 rounded-3xl border transition-all cursor-pointer mb-8 ${
             locationStatus === "granted" 
-            ? "bg-emerald-50 border-emerald-100" 
-            : "bg-zinc-50 border-zinc-200 hover:border-zinc-300"
+            ? "bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800" 
+            : "bg-zinc-50 dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
           } ${locationLoading ? "opacity-75 cursor-wait" : ""}`}
         >
-          <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-              locationStatus === "granted" ? "bg-emerald-500 text-white" : "bg-zinc-200 text-zinc-500"
+          <div className="flex items-center gap-4">
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-colors ${
+              locationStatus === "granted" ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "bg-zinc-200 dark:bg-zinc-800 text-zinc-500"
             }`}>
-              {/* Show Loader if loading, otherwise show MapPin */}
               {locationLoading ? (
-                <Loader2 size={18} className="animate-spin text-zinc-500" />
+                <Loader2 size={20} className="animate-spin" />
               ) : (
-                <MapPin size={18} />
+                <MapPin size={20} />
               )}
             </div>
             <div>
-              <p className={`text-xs font-bold uppercase tracking-wider ${
-                locationStatus === "granted" ? "text-emerald-700" : "text-zinc-500"
+              <p className={`text-xs font-black uppercase tracking-widest ${
+                locationStatus === "granted" ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-400"
               }`}>
                 {locationLoading 
                   ? "Locating..." 
@@ -340,34 +304,35 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }
                     : "Enable Location"
                 }
               </p>
-              <p className="text-[10px] text-zinc-400 leading-tight">
+              <p className="text-[10px] text-zinc-400 leading-tight mt-1">
                 {locationLoading ? "Please wait..." : "Required for live queue tracking"}
               </p>
             </div>
           </div>
           
-          {/* Right side status/button */}
+          {/* Status Indicator */}
           {!locationLoading && locationStatus !== "granted" && (
-            <span className="text-[10px] font-bold px-2 py-1 rounded bg-white shadow-sm group-hover:bg-zinc-900 group-hover:text-white transition-colors">
+            <span className="text-[10px] font-bold px-3 py-1.5 rounded-full bg-black dark:bg-white text-white dark:text-black shadow-sm group-hover:scale-105 transition-transform">
               Allow
             </span>
           )}
           {!locationLoading && locationStatus === "granted" && (
-            <CheckCircle className="text-emerald-500" size={18} />
+            <CheckCircle className="text-emerald-500" size={20} />
           )}
-        </div>
+        </motion.div>
 
+        {/* Error Display */}
         {error && (
-          <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-500 text-sm font-medium flex items-center gap-2 animate-pulse">
+          <motion.div variants={fadeInUp} className="mb-6 p-4 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-800 rounded-xl text-red-500 dark:text-red-400 text-sm font-medium flex items-center gap-2">
             <AlertCircle size={16} />
             {error}
-          </div>
+          </motion.div>
         )}
 
+        {/* Inputs */}
         <InputGroup
           icon={User}
           type="text"
-          placeholder="enter your full name"
           label="Full Name"
           name="name"
           value={name}
@@ -377,7 +342,6 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }
         <InputGroup
           icon={Mail}
           type="email"
-          placeholder="you@gmail.com"
           label="Email"
           name="email"
           value={email}
@@ -387,7 +351,6 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }
         <InputGroup
           icon={Phone}
           type="tel"
-          placeholder="enter your contact no."
           label="Mobile Number"
           name="phone"
           value={phone}
@@ -397,29 +360,32 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }
         <InputGroup
           icon={Lock}
           type="password"
-          placeholder="••••••••"
           label="Password"
           name="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <ShimmerButton className="w-full py-4 mt-4" disabled={loading}>
-          {loading ? "Creating Account..." : "Create Free Account"}
-        </ShimmerButton>
+        {/* Submit Button */}
+        <div className="pt-2">
+           <ShimmerButton className="w-full" disabled={loading}>
+             {loading ? "Creating Account..." : "Create Free Account"}
+           </ShimmerButton>
+        </div>
 
-        <div className="pt-2 text-center">
-            <p className="text-zinc-500 text-sm">
+        {/* Login Link */}
+        <motion.div variants={fadeInUp} className="pt-6 text-center">
+            <p className="text-zinc-500 text-sm font-medium">
                 Already have an account?{" "}
                 <button 
                     type="button" 
                     onClick={onNavigateLogin}
-                    className="font-bold text-zinc-900 hover:underline hover:text-black transition-colors"
+                    className="font-bold text-zinc-900 dark:text-white hover:underline hover:text-black transition-colors"
                 >
                     Log in here
                 </button>
             </p>
-        </div>
+        </motion.div>
 
       </form>
     </AuthLayout>
