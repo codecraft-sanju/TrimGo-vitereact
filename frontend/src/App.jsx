@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { Bell, Ticket, X, CheckCircle, Sparkles, Scissors } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion"; 
+import { motion, AnimatePresence } from "framer-motion"; // Required: npm install framer-motion
 
 // --- API & COMPONENTS IMPORTS ---
 import api from "./utils/api";
@@ -19,7 +19,10 @@ import LandingPage from "./components/LandingPage";
 import ReferralPage from "./components/ReferralPage";
 
 // ----------------------------------------------------------------------
-// 0. ULTRA-PREMIUM AESTHETIC LOADER (Fixed & Responsive)
+// 0. ULTRA-PREMIUM AESTHETIC LOADER (The "Editorial" Look)
+// ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
+// 0. DUAL-MODE PREMIUM LOADER (Desktop: Cinematic | Mobile: Minimalist)
 // ----------------------------------------------------------------------
 const PremiumPreloader = ({ onLoadingComplete }) => {
   const [count, setCount] = useState(0);
@@ -34,7 +37,6 @@ const PremiumPreloader = ({ onLoadingComplete }) => {
       setCount((prev) => {
         if (prev >= 100) {
           clearInterval(timer);
-          // Wait a brief moment at 100% before triggering the exit
           setTimeout(onLoadingComplete, 800); 
           return 100;
         }
@@ -47,7 +49,7 @@ const PremiumPreloader = ({ onLoadingComplete }) => {
     return () => clearInterval(timer);
   }, [onLoadingComplete]);
 
-  // Letter animation variants
+  // Desktop Text Variants
   const letterVariants = {
     hidden: { y: 100, opacity: 0 },
     visible: (i) => ({
@@ -56,7 +58,7 @@ const PremiumPreloader = ({ onLoadingComplete }) => {
       transition: {
         delay: i * 0.05,
         duration: 0.8,
-        ease: [0.215, 0.61, 0.355, 1], // Cubic-bezier for "pop"
+        ease: [0.215, 0.61, 0.355, 1],
       },
     }),
   };
@@ -66,86 +68,134 @@ const PremiumPreloader = ({ onLoadingComplete }) => {
       initial={{ y: 0 }}
       exit={{ 
         y: "-100%", 
-        transition: { 
-            duration: 1.0, 
-            ease: [0.83, 0, 0.17, 1] // Custom Easing for smooth "Curtain Lift"
-        } 
+        transition: { duration: 1.0, ease: [0.83, 0, 0.17, 1] } 
       }}
-      className="fixed inset-0 z-[9999] bg-neutral-950 text-white flex flex-col justify-between p-6 md:p-10 overflow-hidden"
+      className="fixed inset-0 z-[9999] bg-neutral-950 text-white overflow-hidden"
     >
-      {/* Background: Solid Color ensures app doesn't show through */}
+      {/* Shared Background Assets */}
       <div className="absolute inset-0 bg-neutral-950 z-[-1]" />
-      
-      {/* Noise Texture (Subtle) */}
       <div className="absolute inset-0 opacity-[0.05] pointer-events-none mix-blend-overlay">
          <div className="w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
       </div>
 
-      {/* Top Header */}
-      <div className="w-full flex justify-between items-start z-10 opacity-60">
-        <span className="text-[10px] md:text-sm font-light tracking-[0.2em] uppercase">Est. 2024</span>
-        <Scissors size={20} className="animate-spin-slow opacity-80" strokeWidth={1} />
-      </div>
-
-      {/* Center Content: Massive Typography (Responsive) */}
-      <div className="relative z-10 flex flex-col items-center justify-center flex-grow">
-        <div className="overflow-hidden flex items-center justify-center gap-1 md:gap-2">
-            {/* Staggered Text Reveal */}
-            {["T", "R", "I", "M", "G", "O"].map((char, index) => (
-              <motion.span
-                key={index}
-                custom={index}
-                variants={letterVariants}
-                initial="hidden"
-                animate="visible"
-                // UPDATED: Text sizes are now responsive using viewport units and breakpoints
-                className="text-5xl sm:text-7xl md:text-9xl lg:text-[11rem] font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-b from-white via-neutral-200 to-neutral-600"
-              >
-                {char}
-              </motion.span>
-            ))}
-        </div>
-        
-        {/* Subtitle */}
-        <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8, duration: 1 }}
-            className="mt-4 md:mt-8 text-center"
-        >
-             <p className="text-[10px] md:text-sm font-medium tracking-[0.4em] text-neutral-500 uppercase">
-               Queue Management System
-             </p>
-        </motion.div>
-      </div>
-
-      {/* Bottom Footer: The Counter & Bar */}
-      <div className="w-full z-10">
-        <div className="flex justify-between items-end mb-4">
-            <div className="flex flex-col">
-                <span className="text-[10px] text-neutral-500 uppercase tracking-widest mb-1">Status</span>
-                <span className="text-xs md:text-sm font-medium text-emerald-400">
-                    {count < 100 ? "Loading Assets..." : "System Ready"}
-                </span>
-            </div>
-            
-            {/* Huge Number Counter */}
-            <div className="text-5xl md:text-8xl font-thin tracking-tighter leading-none tabular-nums text-white">
-                {count}
-                <span className="text-2xl md:text-4xl text-neutral-600 font-normal">%</span>
-            </div>
+      {/* =========================================
+          MOBILE LAYOUT (< md screens) 
+          Style: Minimal, Centered, Breathing Icon
+          Performance: High (No heavy layout shifts)
+      ========================================= */}
+      <div className="md:hidden w-full h-full flex flex-col items-center justify-center relative p-8">
+        {/* Top Floating Status */}
+        <div className="absolute top-10 w-full flex justify-center opacity-40">
+           <span className="text-[10px] tracking-[0.3em] uppercase font-light">Loading System</span>
         </div>
 
-        {/* Ultra Thin Progress Line */}
-        <div className="w-full h-[1px] bg-neutral-800 relative overflow-hidden">
-            <motion.div 
-                className="absolute top-0 left-0 h-full bg-white"
+        {/* Center Minimal Animation */}
+        <div className="flex flex-col items-center gap-6 z-10">
+           {/* Breathing Icon Circle */}
+           <motion.div 
+             animate={{ 
+               scale: [1, 1.05, 1], 
+               opacity: [0.8, 1, 0.8],
+               boxShadow: ["0px 0px 0px rgba(255,255,255,0)", "0px 0px 20px rgba(255,255,255,0.1)", "0px 0px 0px rgba(255,255,255,0)"]
+             }}
+             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+             className="w-20 h-20 rounded-full border border-neutral-800 bg-neutral-900/50 flex items-center justify-center backdrop-blur-sm"
+           >
+              <Scissors size={32} className="text-white opacity-90" strokeWidth={1.5} />
+           </motion.div>
+
+           {/* Brand Name - Static & Clean */}
+           <div className="text-center">
+              <h1 className="text-3xl font-bold tracking-[0.2em] text-white mb-1">TRIMGO</h1>
+              <div className="h-[1px] w-12 bg-neutral-700 mx-auto"></div>
+           </div>
+        </div>
+
+        {/* Bottom Progress Number */}
+        <div className="absolute bottom-12 flex flex-col items-center gap-2">
+           <span className="text-4xl font-mono font-light tracking-tighter text-neutral-400">
+             {count}
+           </span>
+           <div className="w-32 h-[2px] bg-neutral-900 rounded-full overflow-hidden">
+              <motion.div 
+                className="h-full bg-white"
                 initial={{ width: "0%" }}
                 animate={{ width: `${count}%` }}
-                transition={{ ease: "linear", duration: 0.2 }}
-            />
+                transition={{ ease: "linear", duration: 0.1 }}
+              />
+           </div>
         </div>
       </div>
+
+
+      {/* =========================================
+          DESKTOP LAYOUT (>= md screens)
+          Style: Cinematic, Big Typography (Your Original)
+      ========================================= */}
+      <div className="hidden md:flex flex-col justify-between w-full h-full p-10">
+        
+        {/* Top Header */}
+        <div className="w-full flex justify-between items-start z-10 opacity-60">
+          <span className="text-sm font-light tracking-[0.2em] uppercase">Est. 2024</span>
+          <Scissors size={20} className="animate-spin-slow opacity-80" strokeWidth={1} />
+        </div>
+
+        {/* Center Content: Massive Typography */}
+        <div className="relative z-10 flex flex-col items-center justify-center flex-grow">
+          <div className="overflow-hidden flex items-center justify-center gap-2">
+             {["T", "R", "I", "M", "G", "O"].map((char, index) => (
+               <motion.span
+                 key={index}
+                 custom={index}
+                 variants={letterVariants}
+                 initial="hidden"
+                 animate="visible"
+                 className="text-[11rem] font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-b from-white via-neutral-200 to-neutral-600"
+               >
+                 {char}
+               </motion.span>
+             ))}
+          </div>
+          
+          <motion.div 
+             initial={{ opacity: 0, y: 20 }}
+             animate={{ opacity: 1, y: 0 }}
+             transition={{ delay: 0.8, duration: 1 }}
+             className="mt-8 text-center"
+          >
+               <p className="text-sm font-medium tracking-[0.4em] text-neutral-500 uppercase">
+                 Queue Management System
+               </p>
+          </motion.div>
+        </div>
+
+        {/* Bottom Footer */}
+        <div className="w-full z-10">
+          <div className="flex justify-between items-end mb-4">
+             <div className="flex flex-col">
+                 <span className="text-[10px] text-neutral-500 uppercase tracking-widest mb-1">Status</span>
+                 <span className="text-sm font-medium text-emerald-400">
+                     {count < 100 ? "Loading Assets..." : "System Ready"}
+                 </span>
+             </div>
+             
+             <div className="text-8xl font-thin tracking-tighter leading-none tabular-nums text-white">
+                 {count}
+                 <span className="text-4xl text-neutral-600 font-normal">%</span>
+             </div>
+          </div>
+
+          <div className="w-full h-[1px] bg-neutral-800 relative overflow-hidden">
+             <motion.div 
+                 className="absolute top-0 left-0 h-full bg-white"
+                 initial={{ width: "0%" }}
+                 animate={{ width: `${count}%` }}
+                 transition={{ ease: "linear", duration: 0.2 }}
+             />
+          </div>
+        </div>
+      </div>
+
     </motion.div>
   );
 };
@@ -286,7 +336,6 @@ const AppContent = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Authenticate in the background while loader is running
         const [userRes, salonRes] = await Promise.allSettled([
           api.get("/auth/me"),
           api.get("/salon/me")
@@ -309,6 +358,7 @@ const AppContent = () => {
       } catch (err) {
         console.log("Auth session check completed with no active session.");
       } finally {
+        // Stop the auth loading spinner logic, but the preloader handles the visuals
         setAuthLoading(false);
       }
     };
@@ -410,8 +460,8 @@ const AppContent = () => {
   return (
     <>
       {/* AESTHETIC PRELOADER OVERLAY 
-        - Z-Index 9999 ensures it's above everything.
-        - AnimatePresence allows the exit animation to finish before removal.
+        The AnimatePresence allows the "Exit" animation (sliding up) to finish 
+        before the component is removed from DOM.
       */}
       <AnimatePresence mode="wait">
         {showPreloader && (
@@ -420,10 +470,10 @@ const AppContent = () => {
       </AnimatePresence>
 
       {/* APP CONTENT 
-         - We keep 'h-screen overflow-hidden' while loading to prevent scrolling behind the loader.
-         - The application is technically mounted so data loads, but hidden by the loader's z-index.
+         We hide the content scroll while preloader is active, 
+         but we render it so it's ready underneath the overlay.
       */}
-      <div className={`transition-opacity duration-700 ${showPreloader ? "h-screen overflow-hidden" : "opacity-100"}`}>
+      <div className={showPreloader ? "h-screen overflow-hidden" : ""}>
         
         {!showPreloader && toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         
