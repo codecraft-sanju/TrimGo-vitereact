@@ -382,7 +382,7 @@ const Navbar = ({ onNavigateLogin }) => {
                             </motion.a>
                         ))}
                         
-                        {/* Spacing for bottom actions visibility when scrolling */}
+                       
                         <div className="h-24"></div>
                     </motion.div>
 
