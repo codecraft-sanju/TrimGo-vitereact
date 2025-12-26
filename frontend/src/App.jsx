@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { Bell, Ticket, X, CheckCircle, Sparkles, Scissors } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion"; // Required: npm install framer-motion
+import { motion, AnimatePresence } from "framer-motion"; 
 
 // --- API & COMPONENTS IMPORTS ---
 import api from "./utils/api";
@@ -19,13 +19,13 @@ import LandingPage from "./components/LandingPage";
 import ReferralPage from "./components/ReferralPage";
 
 // ----------------------------------------------------------------------
-// 0. ULTRA-PREMIUM AESTHETIC LOADER (The "Editorial" Look)
+// 0. ULTRA-PREMIUM AESTHETIC LOADER (Fixed & Responsive)
 // ----------------------------------------------------------------------
 const PremiumPreloader = ({ onLoadingComplete }) => {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
-    // Determine loading speed
+    // Duration: 2.5 seconds total loading time
     const duration = 2500; 
     const steps = 100;
     const intervalTime = duration / steps;
@@ -34,10 +34,11 @@ const PremiumPreloader = ({ onLoadingComplete }) => {
       setCount((prev) => {
         if (prev >= 100) {
           clearInterval(timer);
-          setTimeout(onLoadingComplete, 1000); // Wait for exit animation
+          // Wait a brief moment at 100% before triggering the exit
+          setTimeout(onLoadingComplete, 800); 
           return 100;
         }
-        // Organic loading rhythm (sometimes fast, sometimes slow)
+        // Organic loading rhythm
         const jump = Math.random() > 0.8 ? Math.floor(Math.random() * 10) + 5 : 1;
         return Math.min(prev + jump, 100);
       });
@@ -63,23 +64,32 @@ const PremiumPreloader = ({ onLoadingComplete }) => {
   return (
     <motion.div
       initial={{ y: 0 }}
-      exit={{ y: "-100%", transition: { duration: 1.2, ease: [0.76, 0, 0.24, 1] } }} // The "Curtain" Slide
-      className="fixed inset-0 z-[9999] bg-neutral-950 text-white flex flex-col justify-between p-6 md:p-12 overflow-hidden"
+      exit={{ 
+        y: "-100%", 
+        transition: { 
+            duration: 1.0, 
+            ease: [0.83, 0, 0.17, 1] // Custom Easing for smooth "Curtain Lift"
+        } 
+      }}
+      className="fixed inset-0 z-[9999] bg-neutral-950 text-white flex flex-col justify-between p-6 md:p-10 overflow-hidden"
     >
-      {/* Background Noise Texture */}
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay">
+      {/* Background: Solid Color ensures app doesn't show through */}
+      <div className="absolute inset-0 bg-neutral-950 z-[-1]" />
+      
+      {/* Noise Texture (Subtle) */}
+      <div className="absolute inset-0 opacity-[0.05] pointer-events-none mix-blend-overlay">
          <div className="w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
       </div>
 
       {/* Top Header */}
       <div className="w-full flex justify-between items-start z-10 opacity-60">
-        <span className="text-xs md:text-sm font-light tracking-[0.2em] uppercase">Est. 2024</span>
+        <span className="text-[10px] md:text-sm font-light tracking-[0.2em] uppercase">Est. 2024</span>
         <Scissors size={20} className="animate-spin-slow opacity-80" strokeWidth={1} />
       </div>
 
-      {/* Center Content: Massive Typography */}
-      <div className="relative z-10 flex flex-col items-center justify-center h-full">
-        <div className="overflow-hidden flex items-center justify-center">
+      {/* Center Content: Massive Typography (Responsive) */}
+      <div className="relative z-10 flex flex-col items-center justify-center flex-grow">
+        <div className="overflow-hidden flex items-center justify-center gap-1 md:gap-2">
             {/* Staggered Text Reveal */}
             {["T", "R", "I", "M", "G", "O"].map((char, index) => (
               <motion.span
@@ -88,7 +98,8 @@ const PremiumPreloader = ({ onLoadingComplete }) => {
                 variants={letterVariants}
                 initial="hidden"
                 animate="visible"
-                className="text-7xl sm:text-8xl md:text-[10rem] font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-b from-white via-neutral-200 to-neutral-600"
+                // UPDATED: Text sizes are now responsive using viewport units and breakpoints
+                className="text-5xl sm:text-7xl md:text-9xl lg:text-[11rem] font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-b from-white via-neutral-200 to-neutral-600"
               >
                 {char}
               </motion.span>
@@ -97,13 +108,13 @@ const PremiumPreloader = ({ onLoadingComplete }) => {
         
         {/* Subtitle */}
         <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8, duration: 1 }}
-            className="mt-4 md:mt-8 overflow-hidden"
+            className="mt-4 md:mt-8 text-center"
         >
-             <p className="text-xs md:text-sm font-medium tracking-[0.4em] text-neutral-500 uppercase">
-                Queue Management System
+             <p className="text-[10px] md:text-sm font-medium tracking-[0.4em] text-neutral-500 uppercase">
+               Queue Management System
              </p>
         </motion.div>
       </div>
@@ -112,14 +123,14 @@ const PremiumPreloader = ({ onLoadingComplete }) => {
       <div className="w-full z-10">
         <div className="flex justify-between items-end mb-4">
             <div className="flex flex-col">
-                <span className="text-xs text-neutral-500 uppercase tracking-widest mb-1">Status</span>
-                <span className="text-sm font-medium text-emerald-400">
-                    {count < 100 ? "Loading Assets..." : "Ready"}
+                <span className="text-[10px] text-neutral-500 uppercase tracking-widest mb-1">Status</span>
+                <span className="text-xs md:text-sm font-medium text-emerald-400">
+                    {count < 100 ? "Loading Assets..." : "System Ready"}
                 </span>
             </div>
             
             {/* Huge Number Counter */}
-            <div className="text-6xl md:text-8xl font-thin tracking-tighter leading-none tabular-nums text-white">
+            <div className="text-5xl md:text-8xl font-thin tracking-tighter leading-none tabular-nums text-white">
                 {count}
                 <span className="text-2xl md:text-4xl text-neutral-600 font-normal">%</span>
             </div>
@@ -275,6 +286,7 @@ const AppContent = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        // Authenticate in the background while loader is running
         const [userRes, salonRes] = await Promise.allSettled([
           api.get("/auth/me"),
           api.get("/salon/me")
@@ -297,7 +309,6 @@ const AppContent = () => {
       } catch (err) {
         console.log("Auth session check completed with no active session.");
       } finally {
-        // Stop the auth loading spinner logic, but the preloader handles the visuals
         setAuthLoading(false);
       }
     };
@@ -399,8 +410,8 @@ const AppContent = () => {
   return (
     <>
       {/* AESTHETIC PRELOADER OVERLAY 
-        The AnimatePresence allows the "Exit" animation (sliding up) to finish 
-        before the component is removed from DOM.
+        - Z-Index 9999 ensures it's above everything.
+        - AnimatePresence allows the exit animation to finish before removal.
       */}
       <AnimatePresence mode="wait">
         {showPreloader && (
@@ -409,10 +420,10 @@ const AppContent = () => {
       </AnimatePresence>
 
       {/* APP CONTENT 
-         We hide the content scroll while preloader is active, 
-         but we render it so it's ready underneath the overlay.
+         - We keep 'h-screen overflow-hidden' while loading to prevent scrolling behind the loader.
+         - The application is technically mounted so data loads, but hidden by the loader's z-index.
       */}
-      <div className={showPreloader ? "h-screen overflow-hidden" : ""}>
+      <div className={`transition-opacity duration-700 ${showPreloader ? "h-screen overflow-hidden" : "opacity-100"}`}>
         
         {!showPreloader && toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         
