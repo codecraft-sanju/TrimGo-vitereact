@@ -274,11 +274,11 @@ const Navbar = ({ onNavigateLogin }) => {
         </div>
       </motion.nav>
 
-      {/* --- AESTHETIC MOBILE MENU (Optimized) --- */}
+     
       <AnimatePresence>
         {isMenuOpen && (
           <>
-            {/* 1. Backdrop Blur */}
+          
             <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
