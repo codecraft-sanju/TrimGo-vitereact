@@ -401,7 +401,7 @@ const Navbar = ({ onNavigateLogin }) => {
                             onClick={handleGetApp}
                             className="py-4 rounded-2xl bg-white text-zinc-950 font-bold shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] transition-shadow"
                         >
-                            Get App
+                            Get 
                         </button>
                     </motion.div>
 
