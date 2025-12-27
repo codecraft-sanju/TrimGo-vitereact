@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { 
-  Menu, X, ArrowRight, Sparkles, ChevronDown, 
+  Menu, X, ArrowRight, ChevronDown, 
   BarChart3, Users, Clock, Zap
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -78,25 +78,22 @@ const FeaturesMegaMenu = () => (
 
 // --- 3D ANIMATION VARIANTS (OPTIMIZED FOR MOBILE PERFORMANCE) ---
 
-// 1. The Sheet (The "iOS" feel - tuned physics)
+// 1. The Sheet - Switched to Tween for predictable, glitch-free sliding on phones
 const sheetVars = {
   initial: { y: "100%" },
   animate: { 
     y: 0, 
     transition: { 
-      // Changed to be tighter and faster (Snappy feel)
-      type: "spring", 
-      stiffness: 400, 
-      damping: 40, 
-      mass: 0.5 
+      // Using cubic-bezier for an "iOS-like" smooth feel without heavy spring calculations
+      ease: [0.32, 0.72, 0, 1],
+      duration: 0.6
     }
   },
   exit: { 
     y: "100%", 
     transition: { 
-      // Using Ease instead of spring for exit reduces "laggy tail" effect
-      duration: 0.3,
-      ease: [0.32, 0.72, 0, 1] 
+      ease: [0.32, 0.72, 0, 1],
+      duration: 0.4
     }
   }
 };
@@ -104,16 +101,16 @@ const sheetVars = {
 // 2. The Content Stagger
 const staggerContainerVars = {
   animate: {
-    transition: { staggerChildren: 0.05, delayChildren: 0.1 } // Faster stagger
+    transition: { staggerChildren: 0.05, delayChildren: 0.2 } 
   },
   exit: {
     transition: { staggerChildren: 0.02, staggerDirection: -1 }
   }
 };
 
-// 3. The 3D Flip Item
+// 3. The Item Slide - Simplified for FPS
 const flipItemVars = {
-  initial: { opacity: 0, y: 10 }, // Removed rotateX (expensive on mobile)
+  initial: { opacity: 0, y: 20 },
   animate: { 
     opacity: 1,
     y: 0, 
@@ -135,14 +132,13 @@ const Navbar = ({ onNavigateLogin }) => {
   useEffect(() => {
     if (isMenuOpen) {
       document.body.style.overflow = 'hidden';
-      // iOS specific fix to prevent background scroll
-      document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
+      // On mobile, preventing touchmove can sometimes help, but overflow:hidden is usually enough
     } else {
       document.body.style.overflow = 'unset';
-      document.body.style.position = '';
-      document.body.style.width = '';
     }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
   }, [isMenuOpen]);
 
   const navLinks = [
@@ -176,7 +172,7 @@ const Navbar = ({ onNavigateLogin }) => {
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 260, damping: 20 }}
         className={`fixed top-4 sm:top-6 left-1/2 -translate-x-1/2 w-[92%] sm:w-[95%] max-w-6xl z-50 transition-all duration-300
-          ${isMenuOpen ? "bg-transparent pointer-events-none" : "bg-white/70 backdrop-blur-xl backdrop-saturate-150 border border-white/50 shadow-lg shadow-zinc-200/20 pointer-events-auto"}
+          ${isMenuOpen ? "bg-transparent pointer-events-none delay-100" : "bg-white/70 backdrop-blur-xl backdrop-saturate-150 border border-white/50 shadow-lg shadow-zinc-200/20 pointer-events-auto"}
           rounded-full px-4 sm:px-6 py-2 sm:py-3 flex justify-between items-center transform-gpu`}
       >
         <div className={`relative z-50 transition-opacity duration-300 ${isMenuOpen ? "opacity-0" : "opacity-100"}`}>
@@ -256,7 +252,7 @@ const Navbar = ({ onNavigateLogin }) => {
             </motion.button>
           </div>
 
-          {/* Toggle Button - Modified: Hides when open, only shows Menu icon when closed */}
+          {/* Toggle Button */}
           <motion.button 
             initial={{ opacity: 1, scale: 1 }}
             animate={{ 
@@ -268,36 +264,32 @@ const Navbar = ({ onNavigateLogin }) => {
             onClick={() => setIsMenuOpen(true)}
             className="md:hidden p-3 rounded-full bg-white text-zinc-900 shadow-zinc-200/50 shadow-lg relative z-[60] transition-all"
           >
-             <Menu size={20} />
+              <Menu size={20} />
           </motion.button>
         </div>
       </motion.nav>
 
-     
+      
       <AnimatePresence>
         {isMenuOpen && (
           <>
-          
-            {/* PERFORMANCE FIX: 
-               Replaced backdrop-blur-sm with simple opacity. 
-               Blur on large overlays causes massive lag on Android/iOS web.
-            */}
+            {/* Backdrop - Uses pure opacity instead of blur for performance */}
             <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.3 }}
                 onClick={() => setIsMenuOpen(false)}
-                className="fixed inset-0 bg-zinc-950/80 z-40 cursor-pointer"
+                className="fixed inset-0 bg-zinc-950/60 z-40 cursor-pointer backdrop-blur-[2px]"
             />
 
-            {/* 2. The Main Sheet */}
+            {/* Mobile Sheet */}
             <motion.div 
               variants={sheetVars}
               initial="initial"
               animate="animate"
               exit="exit"
-              style={{ willChange: "transform" }} // FORCE GPU ACCELERATION
+              style={{ willChange: "transform" }} // FORCE GPU
               drag="y" 
               dragConstraints={{ top: 0 }} 
               dragElastic={{ top: 0.05, bottom: 0.5 }} 
@@ -306,27 +298,35 @@ const Navbar = ({ onNavigateLogin }) => {
                   setIsMenuOpen(false);
                 }
               }}
-              // Removed backdrop-blur inside the moving sheet to prevent jitter
-              className="fixed bottom-0 left-0 right-0 h-[92vh] bg-[#0A0A0A] z-50 rounded-t-[2.5rem] overflow-hidden shadow-2xl shadow-black/50 border-t border-white/10 flex flex-col touch-none"
+              className="fixed bottom-0 left-0 right-0 h-[92vh] bg-[#0A0A0A] z-50 rounded-t-[2.5rem] overflow-hidden shadow-2xl shadow-black border-t border-white/10 flex flex-col touch-none"
             >
-                {/* Decorative Elements (Optimized: Using opacity instead of blur for glow) */}
+                {/* OPTIMIZED DECORATIVE ELEMENTS 
+                   Replaced heavy `blur` filters with Radial Gradients.
+                   This creates the same look but runs 60FPS on mobile.
+                */}
                 
                 {/* Handle Bar */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-10 flex items-center justify-center cursor-grab active:cursor-grabbing z-20">
                       <div className="w-16 h-1.5 bg-zinc-800 rounded-full" />
                 </div>
                 
-                {/* Static Glows (Pointer events none for performance) */}
-                <div className="absolute top-[-20%] left-[-20%] w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[80px] pointer-events-none transform-gpu" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-rose-600/5 rounded-full blur-[60px] pointer-events-none transform-gpu" />
+                {/* Static Glows - CSS Gradient (Fast) vs Blur (Slow) */}
+                <div 
+                  className="absolute top-[-20%] left-[-20%] w-[600px] h-[600px] rounded-full pointer-events-none opacity-20" 
+                  style={{ background: 'radial-gradient(circle, rgba(79, 70, 229, 1) 0%, transparent 70%)' }}
+                />
+                <div 
+                  className="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] rounded-full pointer-events-none opacity-10" 
+                  style={{ background: 'radial-gradient(circle, rgba(225, 29, 72, 1) 0%, transparent 70%)' }}
+                />
 
-                <div className="p-8 pt-16 h-full flex flex-col pointer-events-auto">
+                <div className="p-8 pt-16 h-full flex flex-col pointer-events-auto relative z-10">
                     
                     {/* Header inside Menu */}
                     <motion.div 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
+                        transition={{ delay: 0.3, duration: 0.3 }}
                         className="flex items-center justify-between mb-8 select-none"
                     >
                           <div className="flex items-center gap-3">
@@ -345,7 +345,7 @@ const Navbar = ({ onNavigateLogin }) => {
 
                     </motion.div>
 
-                    {/* Navigation Links with Optimized Cascade */}
+                    {/* Navigation Links */}
                     <motion.div 
                         variants={staggerContainerVars}
                         initial="initial"
@@ -394,7 +394,6 @@ const Navbar = ({ onNavigateLogin }) => {
                     {/* Bottom Action */}
                     <motion.div 
                         variants={flipItemVars}
-                        // Removed backdrop-blur here too for performance
                         className="absolute bottom-8 left-8 right-8 pt-6 border-t border-white/5 grid grid-cols-2 gap-4 bg-[#0A0A0A]"
                     >
                         <button 
