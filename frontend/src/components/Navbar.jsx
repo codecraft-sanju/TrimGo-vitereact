@@ -76,7 +76,7 @@ const FeaturesMegaMenu = () => (
   </div>
 );
 
-// --- 3D ANIMATION VARIANTS (OPTIMIZED FOR 60FPS) ---
+// --- 3D ANIMATION VARIANTS (OPTIMIZED FOR MOBILE PERFORMANCE) ---
 
 // 1. The Sheet (The "iOS" feel - tuned physics)
 const sheetVars = {
@@ -84,19 +84,19 @@ const sheetVars = {
   animate: { 
     y: 0, 
     transition: { 
+      // Changed to be tighter and faster (Snappy feel)
       type: "spring", 
-      stiffness: 300, 
-      damping: 30, // Increased damping removes "wobble"
-      mass: 0.8    // Lower mass makes it feel lighter/faster
+      stiffness: 400, 
+      damping: 40, 
+      mass: 0.5 
     }
   },
   exit: { 
     y: "100%", 
     transition: { 
-      type: "spring", 
-      stiffness: 300, 
-      damping: 30,
-      mass: 0.8
+      // Using Ease instead of spring for exit reduces "laggy tail" effect
+      duration: 0.3,
+      ease: [0.32, 0.72, 0, 1] 
     }
   }
 };
@@ -104,25 +104,24 @@ const sheetVars = {
 // 2. The Content Stagger
 const staggerContainerVars = {
   animate: {
-    transition: { staggerChildren: 0.08, delayChildren: 0.15 }
+    transition: { staggerChildren: 0.05, delayChildren: 0.1 } // Faster stagger
   },
   exit: {
-    transition: { staggerChildren: 0.05, staggerDirection: -1 }
+    transition: { staggerChildren: 0.02, staggerDirection: -1 }
   }
 };
 
 // 3. The 3D Flip Item
 const flipItemVars = {
-  initial: { rotateX: 90, y: 20, opacity: 0 },
+  initial: { opacity: 0, y: 10 }, // Removed rotateX (expensive on mobile)
   animate: { 
-    rotateX: 0, 
-    y: 0, 
     opacity: 1,
-    transition: { type: "spring", stiffness: 200, damping: 20 } 
+    y: 0, 
+    transition: { duration: 0.4, ease: "easeOut" } 
   },
   exit: { 
     opacity: 0, 
-    transition: { duration: 0.15 }
+    transition: { duration: 0.1 }
   }
 };
 
@@ -136,7 +135,7 @@ const Navbar = ({ onNavigateLogin }) => {
   useEffect(() => {
     if (isMenuOpen) {
       document.body.style.overflow = 'hidden';
-      // Optional: Prevent iOS overscroll bounce
+      // iOS specific fix to prevent background scroll
       document.body.style.position = 'fixed';
       document.body.style.width = '100%';
     } else {
@@ -279,13 +278,17 @@ const Navbar = ({ onNavigateLogin }) => {
         {isMenuOpen && (
           <>
           
+            {/* PERFORMANCE FIX: 
+               Replaced backdrop-blur-sm with simple opacity. 
+               Blur on large overlays causes massive lag on Android/iOS web.
+            */}
             <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.3, ease: "linear" }}
+                transition={{ duration: 0.2 }}
                 onClick={() => setIsMenuOpen(false)}
-                className="fixed inset-0 bg-zinc-950/60 backdrop-blur-sm z-40 cursor-pointer"
+                className="fixed inset-0 bg-zinc-950/80 z-40 cursor-pointer"
             />
 
             {/* 2. The Main Sheet */}
@@ -294,30 +297,32 @@ const Navbar = ({ onNavigateLogin }) => {
               initial="initial"
               animate="animate"
               exit="exit"
-              style={{ willChange: "transform" }} // PERFORMANCE BOOST
+              style={{ willChange: "transform" }} // FORCE GPU ACCELERATION
               drag="y" 
               dragConstraints={{ top: 0 }} 
-              dragElastic={{ top: 0.05, bottom: 0.5 }} // Stiffer top to prevent over-pulling
+              dragElastic={{ top: 0.05, bottom: 0.5 }} 
               onDragEnd={(_, { offset, velocity }) => {
-                // Smart close logic: Close if dragged down far enough OR flicked fast
                 if (offset.y > 100 || velocity.y > 150) {
                   setIsMenuOpen(false);
                 }
               }}
+              // Removed backdrop-blur inside the moving sheet to prevent jitter
               className="fixed bottom-0 left-0 right-0 h-[92vh] bg-[#0A0A0A] z-50 rounded-t-[2.5rem] overflow-hidden shadow-2xl shadow-black/50 border-t border-white/10 flex flex-col touch-none"
             >
-                {/* Decorative Elements */}
+                {/* Decorative Elements (Optimized: Using opacity instead of blur for glow) */}
+                
                 {/* Handle Bar */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-10 flex items-center justify-center cursor-grab active:cursor-grabbing z-20">
                       <div className="w-16 h-1.5 bg-zinc-800 rounded-full" />
                 </div>
                 
-                <div className="absolute top-[-20%] left-[-20%] w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-rose-600/5 rounded-full blur-[100px] pointer-events-none" />
+                {/* Static Glows (Pointer events none for performance) */}
+                <div className="absolute top-[-20%] left-[-20%] w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[80px] pointer-events-none transform-gpu" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-rose-600/5 rounded-full blur-[60px] pointer-events-none transform-gpu" />
 
                 <div className="p-8 pt-16 h-full flex flex-col pointer-events-auto">
                     
-                    {/* Header inside Menu (With New Close Button) */}
+                    {/* Header inside Menu */}
                     <motion.div 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -329,18 +334,18 @@ const Navbar = ({ onNavigateLogin }) => {
                              <span className="text-white text-xl font-bold">TrimGo</span>
                           </div>
                           
-                          {/* --- NEW CLOSE BUTTON INSIDE DARK THEME --- */}
+                          {/* Close Button */}
                           <motion.button 
                             whileTap={{ scale: 0.9 }}
                             onClick={() => setIsMenuOpen(false)}
-                            className="p-3 bg-zinc-900 border border-zinc-800 rounded-full text-white hover:bg-zinc-800 transition-colors shadow-lg shadow-black/20"
+                            className="p-3 bg-zinc-900 border border-zinc-800 rounded-full text-white hover:bg-zinc-800 transition-colors shadow-lg"
                           >
                             <X size={20} />
                           </motion.button>
 
                     </motion.div>
 
-                    {/* Navigation Links with 3D Cascade */}
+                    {/* Navigation Links with Optimized Cascade */}
                     <motion.div 
                         variants={staggerContainerVars}
                         initial="initial"
@@ -382,14 +387,15 @@ const Navbar = ({ onNavigateLogin }) => {
                             </motion.a>
                         ))}
                         
-                       
+                        
                         <div className="h-24"></div>
                     </motion.div>
 
-                    {/* Bottom Action - Absolute positioned to stay at bottom */}
+                    {/* Bottom Action */}
                     <motion.div 
                         variants={flipItemVars}
-                        className="absolute bottom-8 left-8 right-8 pt-6 border-t border-white/5 grid grid-cols-2 gap-4 bg-[#0A0A0A]/90 backdrop-blur-md"
+                        // Removed backdrop-blur here too for performance
+                        className="absolute bottom-8 left-8 right-8 pt-6 border-t border-white/5 grid grid-cols-2 gap-4 bg-[#0A0A0A]"
                     >
                         <button 
                             onClick={onNavigateLogin}
