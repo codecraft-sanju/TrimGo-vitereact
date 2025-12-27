@@ -168,15 +168,18 @@ const Navbar = ({ onNavigateLogin }) => {
 
       {/* --- DESKTOP NAV --- */}
       <motion.nav 
-        initial={{ y: -100, opacity: 0 }}
+        // --- MODIFIED HERE: REMOVED DELAY ANIMATION ---
+        // Pehle yaha y: -100 tha, ab y: 0 hai taaki turant dikhe
+        initial={{ y: 0, opacity: 1 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 260, damping: 20 }}
+        transition={{ duration: 0 }} // No transition time, instant appear
+        // ---------------------------------------------
         className={`fixed top-4 sm:top-6 left-1/2 -translate-x-1/2 w-[92%] sm:w-[95%] max-w-6xl z-50 transition-all duration-300
           ${isMenuOpen ? "bg-transparent pointer-events-none delay-100" : "bg-white/70 backdrop-blur-xl backdrop-saturate-150 border border-white/50 shadow-lg shadow-zinc-200/20 pointer-events-auto"}
           rounded-full px-4 sm:px-6 py-2 sm:py-3 flex justify-between items-center transform-gpu`}
       >
         <div className={`relative z-50 transition-opacity duration-300 ${isMenuOpen ? "opacity-0" : "opacity-100"}`}>
-           <Logo />
+            <Logo />
         </div>
         
         {/* Desktop Links */}
