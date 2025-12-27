@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Sparkles, X } from 'lucide-react';
+import { RefreshCw, Sparkles, X, Tag } from 'lucide-react'; // Tag icon add kiya hai decoration ke liye
 import { motion, AnimatePresence } from 'framer-motion';
 
 const UpdateNotification = () => {
   const [showUpdate, setShowUpdate] = useState(false);
+  const [versionLabel, setVersionLabel] = useState(''); // Yahan naya version store karenge
 
   useEffect(() => {
     // 1. Version Check Function
@@ -15,17 +16,23 @@ const UpdateNotification = () => {
         if (!response.ok) return;
 
         const meta = await response.json();
-        const latestVersion = meta.buildDate;
-        const currentVersion = localStorage.getItem('appVersion');
+        
+        // meta.json se data nikala
+        const latestDate = meta.buildDate;
+        const latestVersion = meta.version; // Yeh tumhare script se aa raha hai (e.g., "1.0.2")
 
-        // Agar user pehli baar aaya hai, toh current version save kar lo (popup mat dikhao)
-        if (!currentVersion) {
-          localStorage.setItem('appVersion', latestVersion);
+        const currentVersionDate = localStorage.getItem('appVersionDate');
+
+        // Agar user pehli baar aaya hai, toh current data save kar lo (popup mat dikhao)
+        if (!currentVersionDate) {
+          localStorage.setItem('appVersionDate', latestDate);
+          localStorage.setItem('appVersionLabel', latestVersion);
           return;
         }
 
-        // Agar version match nahi hua -> Update available hai
-        if (latestVersion && latestVersion !== Number(currentVersion)) {
+        // Agar date match nahi hua -> Update available hai
+        if (latestDate && latestDate !== Number(currentVersionDate)) {
+           setVersionLabel(latestVersion); // State update kiya taaki UI mein dikhe
            setShowUpdate(true);
         }
       } catch (error) {
@@ -50,7 +57,10 @@ const UpdateNotification = () => {
     try {
       const response = await fetch(`/meta.json?t=${new Date().getTime()}`);
       const meta = await response.json();
-      localStorage.setItem('appVersion', meta.buildDate);
+      
+      localStorage.setItem('appVersionDate', meta.buildDate);
+      localStorage.setItem('appVersionLabel', meta.version);
+      
       window.location.reload();
     } catch (e) {
       window.location.reload(); // Fallback
@@ -58,25 +68,24 @@ const UpdateNotification = () => {
   };
 
   const handleClose = () => {
-     setShowUpdate(false);
+      setShowUpdate(false);
   };
 
   return (
     <AnimatePresence>
       {showUpdate && (
         <>
-            {/* UPDATED: Overlay Background (Optional - makes focus better) */}
+            {/* UPDATED: Overlay Background */}
             <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/40 z-[9998] backdrop-blur-[2px]"
+                className="fixed inset-0 bg-black/60 z-[9998] backdrop-blur-[2px]"
                 onClick={handleClose}
             />
 
             {/* UPDATED: Centered Modal Container */}
             <motion.div
-            // x: "-50%", y: "-50%" is crucial for perfect centering with Framer Motion
             initial={{ opacity: 0, scale: 0.9, x: "-50%", y: "-50%" }}
             animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
             exit={{ opacity: 0, scale: 0.9, x: "-50%", y: "-50%" }}
@@ -84,7 +93,7 @@ const UpdateNotification = () => {
             className="fixed top-1/2 left-1/2 z-[9999] w-[90%] max-w-[380px]"
             >
             {/* Glass Container */}
-            <div className="relative overflow-hidden bg-neutral-900/90 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl p-1">
+            <div className="relative overflow-hidden bg-neutral-900 border border-white/10 shadow-2xl rounded-2xl p-1">
                 
                 {/* Shimmer Effect (Golden/Premium Glow) */}
                 <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-yellow-400/50 to-transparent animate-[shimmer_3s_infinite]" />
@@ -96,15 +105,20 @@ const UpdateNotification = () => {
                     <div className="absolute inset-0 bg-yellow-400/10 blur-lg rounded-full"></div>
                 </div>
 
-               
+                
                 <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                    <h4 className="text-white font-semibold text-base tracking-wide">Update Available</h4>
-                    <span className="flex h-2 w-2 relative shrink-0">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                    </span>
+                    <div className="flex items-center justify-between mb-1">
+                        <h4 className="text-white font-semibold text-base tracking-wide">Update Available</h4>
+                        
+                        {/* NEW: Version Badge */}
+                        {versionLabel && (
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-yellow-400/10 border border-yellow-400/20 rounded text-[10px] text-yellow-400 font-bold uppercase tracking-wider">
+                                <Tag size={10} />
+                                v {versionLabel}
+                            </div>
+                        )}
                     </div>
+                    
                     <p className="text-neutral-400 text-sm font-medium leading-snug">
                     A new version of TrimGo is ready.
                     </p>
