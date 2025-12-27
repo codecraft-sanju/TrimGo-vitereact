@@ -18,33 +18,45 @@ import { NoiseOverlay } from "./components/SharedUI";
 import LandingPage from "./components/LandingPage";
 import ReferralPage from "./components/ReferralPage";
 
+// --- NEW IMPORT: UPDATE NOTIFICATION ---
+import UpdateNotification from "./components/UpdateNotification";
+
 // ----------------------------------------------------------------------
-// 0. ULTRA-PREMIUM AESTHETIC LOADER (The "Editorial" Look)
+// 0. ULTRA-PREMIUM AESTHETIC LOADER (Smart Logic: Handshake with Data)
 // ----------------------------------------------------------------------
-const PremiumPreloader = ({ onLoadingComplete }) => {
+const PremiumPreloader = ({ onLoadingComplete, dataLoaded }) => {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
-    // Determine loading speed
-    const duration = 2500; 
-    const steps = 100;
-    const intervalTime = duration / steps;
+    // Pacing logic: 
+    // Agar data nahi aaya hai to normal speed se 99% tak jao.
+    // Agar data aa gaya hai to super fast complete karo.
+    const intervalTime = 30; 
 
     const timer = setInterval(() => {
       setCount((prev) => {
-        if (prev >= 100) {
+        // SCENARIO 1: Animation Complete & Data Ready
+        if (prev === 100) {
           clearInterval(timer);
-          setTimeout(onLoadingComplete, 1000); // Wait for exit animation
+          setTimeout(onLoadingComplete, 500); // Sirf 0.5s ka finish feel
           return 100;
         }
-        // Organic loading rhythm (sometimes fast, sometimes slow)
-        const jump = Math.random() > 0.8 ? Math.floor(Math.random() * 10) + 5 : 1;
+
+        // SCENARIO 2: Reached 99% but Data is NOT ready (Wait here)
+        if (prev === 99 && !dataLoaded) {
+          return 99; 
+        }
+
+        // SCENARIO 3: Increment logic
+        // Agar dataLoaded true hai, to jump bada lo (fast finish)
+        const jump = dataLoaded ? 5 : 1; 
+        
         return Math.min(prev + jump, 100);
       });
     }, intervalTime);
 
     return () => clearInterval(timer);
-  }, [onLoadingComplete]);
+  }, [onLoadingComplete, dataLoaded]);
 
   // Letter animation variants
   const letterVariants = {
@@ -55,7 +67,7 @@ const PremiumPreloader = ({ onLoadingComplete }) => {
       transition: {
         delay: i * 0.05,
         duration: 0.8,
-        ease: [0.215, 0.61, 0.355, 1], // Cubic-bezier for "pop"
+        ease: [0.215, 0.61, 0.355, 1], 
       },
     }),
   };
@@ -63,7 +75,7 @@ const PremiumPreloader = ({ onLoadingComplete }) => {
   return (
     <motion.div
       initial={{ y: 0 }}
-      exit={{ y: "-100%", transition: { duration: 1.2, ease: [0.76, 0, 0.24, 1] } }} // The "Curtain" Slide
+      exit={{ y: "-100%", transition: { duration: 1.0, ease: [0.76, 0, 0.24, 1] } }} 
       className="fixed inset-0 z-[9999] bg-neutral-950 text-white flex flex-col justify-between p-6 md:p-12 overflow-hidden"
     >
       {/* Background Noise Texture */}
@@ -103,7 +115,7 @@ const PremiumPreloader = ({ onLoadingComplete }) => {
             className="mt-4 md:mt-8 overflow-hidden"
         >
              <p className="text-xs md:text-sm font-medium tracking-[0.4em] text-neutral-500 uppercase">
-                Queue Management System
+               Queue Management System
              </p>
         </motion.div>
       </div>
@@ -114,7 +126,10 @@ const PremiumPreloader = ({ onLoadingComplete }) => {
             <div className="flex flex-col">
                 <span className="text-xs text-neutral-500 uppercase tracking-widest mb-1">Status</span>
                 <span className="text-sm font-medium text-emerald-400">
-                    {count < 100 ? "Loading Assets..." : "Ready"}
+                    {count < 99 
+                      ? "Initializing..." 
+                      : (!dataLoaded ? "Syncing with Server..." : "Ready to Launch")
+                    }
                 </span>
             </div>
             
@@ -262,6 +277,8 @@ const AppContent = () => {
   // AUTH STATES
   const [currentUser, setCurrentUser] = useState(null);
   const [currentSalon, setCurrentSalon] = useState(null);
+  
+  // Important: We start with authLoading TRUE
   const [authLoading, setAuthLoading] = useState(true); 
   
   // PRELOADER STATE
@@ -297,7 +314,8 @@ const AppContent = () => {
       } catch (err) {
         console.log("Auth session check completed with no active session.");
       } finally {
-        // Stop the auth loading spinner logic, but the preloader handles the visuals
+        // CRITICAL: This MUST execute regardless of success or error.
+        // This flips the switch for the Preloader to finish from 99% -> 100%
         setAuthLoading(false);
       }
     };
@@ -398,13 +416,21 @@ const AppContent = () => {
 
   return (
     <>
+      {/* NEW: Update Notification (Always active)
+        This will check for version updates from meta.json
+      */}
+      <UpdateNotification />
+
       {/* AESTHETIC PRELOADER OVERLAY 
-        The AnimatePresence allows the "Exit" animation (sliding up) to finish 
-        before the component is removed from DOM.
+        Passed 'dataLoaded' prop.
+        The preloader now waits for !authLoading before finishing.
       */}
       <AnimatePresence mode="wait">
         {showPreloader && (
-          <PremiumPreloader onLoadingComplete={() => setShowPreloader(false)} />
+          <PremiumPreloader 
+            dataLoaded={!authLoading} 
+            onLoadingComplete={() => setShowPreloader(false)} 
+          />
         )}
       </AnimatePresence>
 
