@@ -372,7 +372,12 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
             <div className="w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center border border-zinc-700 text-zinc-400 hover:text-white cursor-pointer transition">
               <Bell size={16} />
             </div>
-            <div className="w-8 h-8 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-full shadow-lg shadow-purple-500/20"></div>
+            {/* UPDATED PROFILE IMAGE SECTION */}
+            <img 
+              src="/TG logo new.jpg" 
+              alt="Profile" 
+              className="w-8 h-8 rounded-full object-cover border border-zinc-700 shadow-lg shadow-purple-500/20"
+            />
           </div>
         </header>
 
@@ -636,7 +641,7 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                                   </td>
 
                                 </tr>
-                              )})
+                              )})}
                             )}
                         </tbody>
                         </table>
