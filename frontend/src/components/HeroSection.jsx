@@ -1,18 +1,28 @@
-import React, { useState } from "react";
-import { Building2, Clock, TrendingUp, Star, Scissors, Zap } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Building2, Clock, TrendingUp, Star, Scissors } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 /* ---------------------------------
-   1. ADVANCED KINETIC TRANSITION (UPDATED)
-   (Now includes Logo, Branding & System Status)
+   1. ADVANCED KINETIC TRANSITION (OPTIMIZED FOR MOBILE)
 ---------------------------------- */
 const KineticTransition = ({ type, onComplete }) => {
-  const columns = 5; 
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Mobile detection to reduce load
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Mobile: 3 columns (Faster), Desktop: 5 columns (Premium feel)
+  const columns = isMobile ? 3 : 5; 
   
   // Define content based on type
   const content = type === 'queue' 
-    ? { title: "QUEUE SYSTEM", sub: "INITIALIZING USER PROTOCOL...", color: "text-emerald-400" }
-    : { title: "PARTNER HUB", sub: "ESTABLISHING SECURE CONNECTION...", color: "text-purple-400" };
+    ? { title: "QUEUE SYSTEM", sub: "INITIALIZING...", color: "text-emerald-400" }
+    : { title: "PARTNER HUB", sub: "CONNECTING...", color: "text-purple-400" };
 
   return (
     <motion.div 
@@ -21,8 +31,8 @@ const KineticTransition = ({ type, onComplete }) => {
       animate="animate"
       exit="exit"
     >
-      {/* BACKGROUND NOISE */}
-      <div className="absolute inset-0 z-50 opacity-[0.07] pointer-events-none mix-blend-overlay">
+      {/* BACKGROUND NOISE - HIDDEN ON MOBILE FOR PERFORMANCE */}
+      <div className="hidden md:block absolute inset-0 z-50 opacity-[0.07] pointer-events-none mix-blend-overlay">
          <div className="w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
       </div>
 
@@ -31,28 +41,30 @@ const KineticTransition = ({ type, onComplete }) => {
         className="absolute z-[60] flex flex-col items-center justify-center text-center gap-6"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.2, duration: 0.4 }}
+        transition={{ delay: 0.1, duration: 0.3 }} // Faster on mobile
       >
          {/* 1. Animated Logo Icon */}
          <div className="relative">
+            {/* Simplify rotation for mobile */}
             <motion.div 
-                animate={{ rotate: 360 }}
-                transition={{ duration: 2, ease: "linear", repeat: Infinity }}
-                className="absolute inset-0 rounded-full border-2 border-dashed border-white/20"
+               animate={{ rotate: 360 }}
+               transition={{ duration: 3, ease: "linear", repeat: Infinity }}
+               className="absolute inset-0 rounded-full border-2 border-dashed border-white/20"
             />
-            <div className="w-24 h-24 bg-zinc-900 rounded-2xl border border-zinc-800 flex items-center justify-center shadow-2xl relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <Scissors size={40} className="text-white relative z-10" />
+            <div className="w-20 h-20 md:w-24 md:h-24 bg-zinc-900 rounded-2xl border border-zinc-800 flex items-center justify-center shadow-2xl relative overflow-hidden group">
+                {/* Remove hover effect on mobile */}
+                <div className="hidden md:block absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <Scissors size={isMobile ? 32 : 40} className="text-white relative z-10" />
             </div>
          </div>
 
          {/* 2. Brand & Module Text */}
          <div className="flex flex-col gap-1">
-            <h2 className="text-5xl md:text-7xl font-black text-white tracking-tighter uppercase mix-blend-difference">
+            <h2 className="text-4xl md:text-7xl font-black text-white tracking-tighter uppercase md:mix-blend-difference">
                TRIMGO
             </h2>
             <div className="flex items-center justify-center gap-3">
-                <span className={`text-xs font-bold tracking-[0.3em] ${content.color}`}>
+                <span className={`text-[10px] md:text-xs font-bold tracking-[0.2em] md:tracking-[0.3em] ${content.color}`}>
                     {content.title}
                 </span>
                 <span className="w-1 h-1 rounded-full bg-white/50" />
@@ -63,13 +75,14 @@ const KineticTransition = ({ type, onComplete }) => {
          </div>
 
          {/* 3. Loading Bar & Status */}
-         <div className="w-64 flex flex-col gap-2">
+         <div className="w-48 md:w-64 flex flex-col gap-2">
              <div className="h-1 w-full bg-zinc-800 rounded-full overflow-hidden">
                  <motion.div 
-                    initial={{ width: "0%" }}
-                    animate={{ width: "100%" }}
-                    transition={{ duration: 0.8, ease: "easeInOut", delay: 0.2 }}
-                    className={`h-full ${type === 'queue' ? 'bg-emerald-500' : 'bg-purple-500'}`}
+                   initial={{ width: "0%" }}
+                   animate={{ width: "100%" }}
+                   // Snappier transition for mobile
+                   transition={{ duration: isMobile ? 0.5 : 0.8, ease: "easeInOut", delay: 0.1 }}
+                   className={`h-full ${type === 'queue' ? 'bg-emerald-500' : 'bg-purple-500'}`}
                  />
              </div>
              <p className="text-[10px] text-zinc-400 font-mono text-right animate-pulse">
@@ -79,33 +92,35 @@ const KineticTransition = ({ type, onComplete }) => {
       </motion.div>
 
       {/* --- THE SHUTTERS (Background Wipe) --- */}
+      {/* Added will-change-transform for hardware acceleration */}
       {[...Array(columns)].map((_, i) => (
         <motion.div
           key={i}
-          className="relative h-full bg-zinc-950 border-r border-zinc-900/50"
+          className="relative h-full bg-zinc-950 border-r border-zinc-900/50 will-change-transform"
           style={{ width: `${100 / columns}vw` }}
           variants={{
             initial: { y: "100%" },
             animate: { 
                 y: "0%",
-                transition: {
-                    duration: 0.8,
+                transition: { 
+                    duration: isMobile ? 0.5 : 0.8, // Faster duration on mobile
                     ease: [0.76, 0, 0.24, 1], 
-                    delay: i * 0.04
+                    delay: i * (isMobile ? 0.02 : 0.04) // Less staggered delay on mobile
                 }
             },
             exit: {
                 y: "-100%",
-                transition: {
-                    duration: 0.5,
+                transition: { 
+                    duration: 0.4,
                     ease: [0.76, 0, 0.24, 1],
-                    delay: i * 0.04
+                    delay: i * (isMobile ? 0.02 : 0.04)
                 }
             }
           }}
           onAnimationComplete={() => {
             if (i === columns - 1) {
-                setTimeout(onComplete, 800); // Thoda time badhaya taki log animation dekh sake
+                // Reduced timeout for mobile users who want speed
+                setTimeout(onComplete, isMobile ? 400 : 800); 
             }
           }}
         />
