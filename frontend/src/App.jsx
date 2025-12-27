@@ -24,41 +24,52 @@ import UpdateNotification from "./components/UpdateNotification";
 // ----------------------------------------------------------------------
 // 0. ULTRA-PREMIUM AESTHETIC LOADER (Smart Logic: Handshake with Data)
 // ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
+// 0. ULTRA-PREMIUM AESTHETIC LOADER (Optimized for Mobile & Desktop)
+// ----------------------------------------------------------------------
 const PremiumPreloader = ({ onLoadingComplete, dataLoaded }) => {
   const [count, setCount] = useState(0);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
-    // Pacing logic: 
-    // Agar data nahi aaya hai to normal speed se 99% tak jao.
-    // Agar data aa gaya hai to super fast complete karo.
-    const intervalTime = 30; 
+    // Resize listener to detect mobile/desktop dynamically
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+
+    // Pacing logic:
+    // Mobile pe thoda slow update (45ms) taaki UI thread block na ho
+    // Desktop pe fast update (30ms) for premium feel
+    const intervalTime = isMobile ? 45 : 30; 
 
     const timer = setInterval(() => {
       setCount((prev) => {
         // SCENARIO 1: Animation Complete & Data Ready
         if (prev === 100) {
           clearInterval(timer);
-          setTimeout(onLoadingComplete, 500); // Sirf 0.5s ka finish feel
+          setTimeout(onLoadingComplete, 500); 
           return 100;
         }
 
-        // SCENARIO 2: Reached 99% but Data is NOT ready (Wait here)
+        // SCENARIO 2: Reached 99% but Data is NOT ready
         if (prev === 99 && !dataLoaded) {
           return 99; 
         }
 
         // SCENARIO 3: Increment logic
-        // Agar dataLoaded true hai, to jump bada lo (fast finish)
-        const jump = dataLoaded ? 5 : 1; 
+        // Agar data aa gaya hai to super fast jump, warna slow increments
+        const jump = dataLoaded ? (isMobile ? 8 : 5) : 1; 
         
         return Math.min(prev + jump, 100);
       });
     }, intervalTime);
 
-    return () => clearInterval(timer);
-  }, [onLoadingComplete, dataLoaded]);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [onLoadingComplete, dataLoaded, isMobile]);
 
-  // Letter animation variants
+  // Letter animation variants (Optimized)
   const letterVariants = {
     hidden: { y: 100, opacity: 0 },
     visible: (i) => ({
@@ -76,16 +87,19 @@ const PremiumPreloader = ({ onLoadingComplete, dataLoaded }) => {
     <motion.div
       initial={{ y: 0 }}
       exit={{ y: "-100%", transition: { duration: 1.0, ease: [0.76, 0, 0.24, 1] } }} 
-      className="fixed inset-0 z-[9999] bg-neutral-950 text-white flex flex-col justify-between p-6 md:p-12 overflow-hidden"
+      className="fixed inset-0 z-[9999] bg-neutral-950 text-white flex flex-col justify-between p-6 md:p-12 overflow-hidden will-change-transform"
     >
-      {/* Background Noise Texture */}
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay">
+      {/* FIX FOR LAG: 
+         Noise Overlay hidden on mobile (`hidden`) and shown on desktop (`md:block`).
+         Mobile phones struggle with mix-blend-overlay on large areas.
+      */}
+      <div className="hidden md:block absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay">
          <div className="w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
       </div>
 
       {/* Top Header */}
       <div className="w-full flex justify-between items-start z-10 opacity-60">
-        <span className="text-xs md:text-sm font-light tracking-[0.2em] uppercase">Est. 2024</span>
+        <span className="text-xs md:text-sm font-light tracking-[0.2em] uppercase">Est. 2026</span>
         <Scissors size={20} className="animate-spin-slow opacity-80" strokeWidth={1} />
       </div>
 
@@ -100,7 +114,8 @@ const PremiumPreloader = ({ onLoadingComplete, dataLoaded }) => {
                 variants={letterVariants}
                 initial="hidden"
                 animate="visible"
-                className="text-7xl sm:text-8xl md:text-[10rem] font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-b from-white via-neutral-200 to-neutral-600"
+                // text-size ko thoda control kiya mobile ke liye taaki layout shift na ho
+                className="text-6xl sm:text-8xl md:text-[10rem] font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-b from-white via-neutral-200 to-neutral-600 will-change-transform"
               >
                 {char}
               </motion.span>
@@ -114,7 +129,7 @@ const PremiumPreloader = ({ onLoadingComplete, dataLoaded }) => {
             transition={{ delay: 0.8, duration: 1 }}
             className="mt-4 md:mt-8 overflow-hidden"
         >
-             <p className="text-xs md:text-sm font-medium tracking-[0.4em] text-neutral-500 uppercase">
+             <p className="text-[10px] md:text-sm font-medium tracking-[0.4em] text-neutral-500 uppercase text-center">
                Queue Management System
              </p>
         </motion.div>
@@ -124,11 +139,11 @@ const PremiumPreloader = ({ onLoadingComplete, dataLoaded }) => {
       <div className="w-full z-10">
         <div className="flex justify-between items-end mb-4">
             <div className="flex flex-col">
-                <span className="text-xs text-neutral-500 uppercase tracking-widest mb-1">Status</span>
+                <span className="text-[10px] md:text-xs text-neutral-500 uppercase tracking-widest mb-1">Status</span>
                 <span className="text-sm font-medium text-emerald-400">
                     {count < 99 
                       ? "Initializing..." 
-                      : (!dataLoaded ? "Syncing with Server..." : "Ready to Launch")
+                      : (!dataLoaded ? "Syncing..." : "Ready")
                     }
                 </span>
             </div>
