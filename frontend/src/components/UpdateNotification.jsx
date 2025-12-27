@@ -1,49 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Sparkles, X, Tag } from 'lucide-react'; // Tag icon add kiya hai decoration ke liye
+import { RefreshCw, X, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const UpdateNotification = () => {
   const [showUpdate, setShowUpdate] = useState(false);
-  const [versionLabel, setVersionLabel] = useState(''); // Yahan naya version store karenge
+  const [versionLabel, setVersionLabel] = useState('');
 
   useEffect(() => {
-    // 1. Version Check Function
     const checkVersion = async () => {
       try {
-        // Cache-busting (?t=...) bahut zaruri hai taaki browser purana file na uthaye
         const response = await fetch(`/meta.json?t=${new Date().getTime()}`);
-        
         if (!response.ok) return;
 
         const meta = await response.json();
-        
-        // meta.json se data nikala
         const latestDate = meta.buildDate;
-        const latestVersion = meta.version; // Yeh tumhare script se aa raha hai (e.g., "1.0.2")
-
+        const latestVersion = meta.version; 
         const currentVersionDate = localStorage.getItem('appVersionDate');
 
-        // Agar user pehli baar aaya hai, toh current data save kar lo (popup mat dikhao)
         if (!currentVersionDate) {
           localStorage.setItem('appVersionDate', latestDate);
           localStorage.setItem('appVersionLabel', latestVersion);
           return;
         }
 
-        // Agar date match nahi hua -> Update available hai
         if (latestDate && latestDate !== Number(currentVersionDate)) {
-           setVersionLabel(latestVersion); // State update kiya taaki UI mein dikhe
+           setVersionLabel(latestVersion);
            setShowUpdate(true);
         }
       } catch (error) {
-        console.error('Auto-Update check failed (silent)', error);
+        console.error('Silent update check failed', error);
       }
     };
 
-    // 2. Checks: Load par, Window focus par, aur har 2 minute mein
     checkVersion();
-    
-    const interval = setInterval(checkVersion, 2 * 60 * 1000); // 2 mins
+    const interval = setInterval(checkVersion, 2 * 60 * 1000);
     window.addEventListener('focus', checkVersion);
 
     return () => {
@@ -53,17 +43,14 @@ const UpdateNotification = () => {
   }, []);
 
   const handleRefresh = async () => {
-    // Reload karne se pehle naya version save karte hain
     try {
       const response = await fetch(`/meta.json?t=${new Date().getTime()}`);
       const meta = await response.json();
-      
       localStorage.setItem('appVersionDate', meta.buildDate);
       localStorage.setItem('appVersionLabel', meta.version);
-      
       window.location.reload();
     } catch (e) {
-      window.location.reload(); // Fallback
+      window.location.reload();
     }
   };
 
@@ -75,77 +62,107 @@ const UpdateNotification = () => {
     <AnimatePresence>
       {showUpdate && (
         <>
-            {/* UPDATED: Overlay Background */}
+            {/* 1. Backdrop Blur & Darken */}
             <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/60 z-[9998] backdrop-blur-[2px]"
+                transition={{ duration: 0.3 }}
+                className="fixed inset-0 bg-black/80 z-[9998] backdrop-blur-sm"
                 onClick={handleClose}
             />
 
-            {/* UPDATED: Centered Modal Container */}
+            {/* 2. Main Card Container */}
             <motion.div
-            initial={{ opacity: 0, scale: 0.9, x: "-50%", y: "-50%" }}
-            animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
-            exit={{ opacity: 0, scale: 0.9, x: "-50%", y: "-50%" }}
-            transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
-            className="fixed top-1/2 left-1/2 z-[9999] w-[90%] max-w-[380px]"
+                initial={{ opacity: 0, scale: 0.9, y: "50%", x: "-50%" }}
+                animate={{ opacity: 1, scale: 1, y: "-50%", x: "-50%" }}
+                exit={{ opacity: 0, scale: 0.95, y: "-40%", x: "-50%" }}
+                transition={{ 
+                    type: "spring", 
+                    stiffness: 300, 
+                    damping: 25,
+                    duration: 0.4 
+                }}
+                className="fixed top-1/2 left-1/2 z-[9999] w-[92%] max-w-[360px]"
             >
-            {/* Glass Container */}
-            <div className="relative overflow-hidden bg-neutral-900 border border-white/10 shadow-2xl rounded-2xl p-1">
-                
-                {/* Shimmer Effect (Golden/Premium Glow) */}
-                <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-yellow-400/50 to-transparent animate-[shimmer_3s_infinite]" />
-                
-                <div className="flex items-center gap-4 p-4">
-                {/* Icon Box */}
-                <div className="relative flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-950 border border-white/5 shadow-inner shrink-0">
-                    <Sparkles size={20} className="text-yellow-400 animate-pulse" />
-                    <div className="absolute inset-0 bg-yellow-400/10 blur-lg rounded-full"></div>
-                </div>
-
-                
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                        <h4 className="text-white font-semibold text-base tracking-wide">Update Available</h4>
-                        
-                        {/* NEW: Version Badge */}
-                        {versionLabel && (
-                            <div className="flex items-center gap-1 px-2 py-0.5 bg-yellow-400/10 border border-yellow-400/20 rounded text-[10px] text-yellow-400 font-bold uppercase tracking-wider">
-                                <Tag size={10} />
-                                v {versionLabel}
-                            </div>
-                        )}
-                    </div>
+                {/* 3. The Aesthetic Card */}
+                <div className="relative group overflow-hidden bg-[#050505] rounded-[28px] border border-white/10 shadow-[0_0_50px_-12px_rgba(255,255,255,0.1)]">
                     
-                    <p className="text-neutral-400 text-sm font-medium leading-snug">
-                    A new version of TrimGo is ready.
-                    </p>
-                </div>
-                </div>
+                    {/* Background Gradient Spotlights */}
+                    <div className="absolute -top-20 -right-20 w-40 h-40 bg-blue-500/20 blur-[60px] rounded-full pointer-events-none" />
+                    <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-500/20 blur-[60px] rounded-full pointer-events-none" />
 
-                {/* Buttons Row */}
-                <div className="flex items-center gap-2 mt-1 px-2 pb-2">
-                <button 
-                    onClick={handleRefresh}
-                    className="flex-1 flex items-center justify-center gap-2 bg-white text-black text-sm font-bold py-3 rounded-xl hover:bg-neutral-200 transition-all active:scale-95 group"
-                >
-                    <RefreshCw size={16} className="group-hover:rotate-180 transition-transform duration-500" />
-                    Update Now
-                </button>
-                
-                <button 
-                    onClick={handleClose}
-                    className="px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-neutral-400 hover:text-white transition-colors active:scale-95"
-                >
-                    <X size={18} />
-                </button>
-                </div>
+                    {/* Content Wrapper */}
+                    <div className="relative p-6 flex flex-col items-center text-center">
+                        
+                        {/* --- NEW CUSTOM TG LOGO --- */}
+                        <div className="relative mb-5">
+                            {/* Outer Glow Ring */}
+                            <div className="absolute inset-0 bg-white/20 blur-xl rounded-full scale-150 opacity-0 group-hover:opacity-40 transition-opacity duration-700"></div>
+                            
+                            {/* Logo Box */}
+                            <div className="relative h-16 w-16 bg-black rounded-2xl border border-white/15 shadow-2xl flex items-center justify-center overflow-hidden">
+                                {/* Diagonal Shine on Logo */}
+                                <div className="absolute inset-0 bg-gradient-to-tr from-white/5 via-white/10 to-transparent pointer-events-none"></div>
+                                
+                                {/* TG Text Branding */}
+                                <span className="font-sans text-2xl font-black text-white tracking-tighter" style={{ fontFamily: 'Inter, sans-serif' }}>
+                                    TG
+                                </span>
+                            </div>
 
-                
-                <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
-            </div>
+                            {/* Version Badge Floating */}
+                            {versionLabel && (
+                                <motion.div 
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    className="absolute -bottom-2 -right-2 bg-white text-black text-[10px] font-bold px-2 py-0.5 rounded-full border border-black shadow-lg"
+                                >
+                                    {versionLabel}
+                                </motion.div>
+                            )}
+                        </div>
+
+                        {/* Text Content */}
+                        <h3 className="text-xl font-bold text-white mb-2 tracking-tight">
+                            Update Available
+                        </h3>
+                        <p className="text-neutral-400 text-sm leading-relaxed mb-6 font-medium">
+                            A fresh version of TrimGo is ready. <br/> Better performance & new features.
+                        </p>
+
+                        {/* Action Buttons */}
+                        <div className="w-full space-y-3">
+                            {/* Primary Button (White) */}
+                            <button 
+                                onClick={handleRefresh}
+                                className="relative w-full overflow-hidden bg-white text-black font-bold text-sm py-3.5 rounded-xl transition-transform active:scale-95 flex items-center justify-center gap-2 group/btn hover:shadow-[0_0_20px_rgba(255,255,255,0.3)]"
+                            >
+                                <span className="relative z-10 flex items-center gap-2">
+                                    <RefreshCw size={16} className="group-hover/btn:rotate-180 transition-transform duration-700" />
+                                    Update Now
+                                </span>
+                                {/* Subtle sheen on button */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-neutral-100/50 to-transparent translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-700" />
+                            </button>
+
+                            {/* Secondary Button (Ghost) */}
+                            <button 
+                                onClick={handleClose}
+                                className="w-full py-3 text-neutral-500 text-xs font-semibold tracking-wide hover:text-neutral-300 transition-colors flex items-center justify-center gap-1 group/close"
+                            >
+                                <X size={14} />
+                                <span>Dismiss</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Cinematic Grain Overlay (Texture) */}
+                    <div className="absolute inset-0 opacity-[0.04] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay"></div>
+                    
+                    {/* Border Shimmer Animation */}
+                    <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/50 to-transparent animate-[shimmer_2s_infinite]" />
+                </div>
             </motion.div>
         </>
       )}
