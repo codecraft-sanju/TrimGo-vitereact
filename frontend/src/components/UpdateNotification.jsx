@@ -96,7 +96,7 @@ const UpdateNotification = () => {
                     <div className="absolute inset-0 bg-yellow-400/10 blur-lg rounded-full"></div>
                 </div>
 
-                {/* Text Content */}
+               
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                     <h4 className="text-white font-semibold text-base tracking-wide">Update Available</h4>
