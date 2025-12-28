@@ -173,16 +173,15 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
   // 🔥 Active Ticket State
   const [activeTicket, setActiveTicket] = useState(null);
   const [canceling, setCanceling] = useState(false);
-  
-  // 🔥 Route Calculation State
-  const [calculatingRoute, setCalculatingRoute] = useState(false);
+  const [calculatingRoute, setCalculatingRoute] = useState(false); // Loader for Directions button
 
   const [userLocation, setUserLocation] = useState(null); 
   const [heading, setHeading] = useState(0); 
   const [routeDestination, setRouteDestination] = useState(null); 
   const watchId = useRef(null); 
   
-  const mapSectionRef = useRef(null);
+  // 🔥 Specific Ref for the Map Section to ensure smooth scrolling
+  const mapRef = useRef(null);
 
   // --- LENIS SMOOTH SCROLL ---
   useEffect(() => {
@@ -265,50 +264,67 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
     );
   };
  
-  // 🔥 FIX: UPDATED ROUTE HANDLER WITH LOADER
+  // Generic Route Handler (From Card)
   const handleRoute = (salon) => {
-    // Start Loading UI
+    if (!userLocation) {
+        alert("Please enable location first to get directions.");
+        startLocationTracking();
+        return;
+    }
+
+    if(!salon.latitude || !salon.longitude) {
+        alert("Salon location not found on map.");
+        return;
+    }
+
+    setRouteDestination({
+        lat: Number(salon.latitude),
+        lng: Number(salon.longitude)
+    });
+
+    if (mapRef.current) {
+        mapRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+        window.scrollTo({ top: 100, behavior: 'smooth' });
+    }
+  };
+
+  // 🔥 SPECIAL FUNCTION: HANDLE DIRECTION FROM ACTIVE TICKET CARD
+  const handleTicketDirection = (salon) => {
     setCalculatingRoute(true);
 
-    // Short timeout to allow UI to update and ensure data availability check feels responsive
+    if (!userLocation) {
+        alert("Please allow location access to get directions.");
+        startLocationTracking();
+        setCalculatingRoute(false);
+        return;
+    }
+
+    if (!salon || !salon.latitude || !salon.longitude) {
+        alert("Location data for this salon is missing.");
+        setCalculatingRoute(false);
+        return;
+    }
+
+    // Set Destination State - This triggers the map to draw the line
+    setRouteDestination({
+        lat: parseFloat(salon.latitude),
+        lng: parseFloat(salon.longitude)
+    });
+
+    // Scroll to Map Section
     setTimeout(() => {
-        if (!userLocation) {
-            alert("Please enable location first to get directions.");
-            startLocationTracking();
-            setCalculatingRoute(false);
-            return;
-        }
-
-        // Safety check
-        if(!salon || !salon.latitude || !salon.longitude) {
-            alert("Salon location data missing. Cannot calculate route.");
-            setCalculatingRoute(false);
-            return;
-        }
-
-        // Set destination
-        setRouteDestination({
-            lat: Number(salon.latitude),
-            lng: Number(salon.longitude)
-        });
-
-        // Scroll directly to the MAP section
-        if (mapSectionRef.current) {
-            mapSectionRef.current.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'center' 
-            });
+        if (mapRef.current) {
+            mapRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
         } else {
-            window.scrollTo({ top: 100, behavior: 'smooth' });
+            // Fallback
+            const mapEl = document.getElementById("map-section");
+            if (mapEl) mapEl.scrollIntoView({ behavior: "smooth", block: "center" });
         }
-
-        // Stop loader after scrolling initiates (simulating calculation time)
-        setTimeout(() => {
-            setCalculatingRoute(false);
-        }, 1500);
-        
-    }, 500); 
+        setCalculatingRoute(false);
+    }, 500); // Small delay to let UI settle
   };
+
 
   // --- SOCKETS & INITIAL DATA ---
   useEffect(() => {
@@ -627,7 +643,8 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
             </div>
           </div>
 
-          <div ref={mapSectionRef} className="scroll-mt-28 transition-all duration-500">
+          {/* 🔥 MAP CONTAINER WITH REF AND ID FOR SCROLLING */}
+          <div ref={mapRef} id="map-section" className="scroll-mt-28 transition-all duration-500">
             <MapSalon 
                 salons={sortedSalons} 
                 userLocation={userLocation}
@@ -784,13 +801,13 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                 </div>
                 
                 <div className="flex gap-3">
-                    {/* 🔥 FIX: UPDATED DIRECTION BUTTON WITH LOADER & FUNCTIONALITY */}
+                    {/* 🔥 UPDATED: Uses special function handleTicketDirection */}
                     <button 
-                        onClick={() => handleRoute(activeTicket.salonId)}
+                        onClick={() => handleTicketDirection(activeTicket.salonId)}
                         disabled={calculatingRoute}
-                        className="flex-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 bg-white/10 hover:bg-white/20 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {calculatingRoute ? (
+                         {calculatingRoute ? (
                              <>
                                 <Loader2 size={16} className="animate-spin" />
                                 <span>Loading...</span>
@@ -805,7 +822,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                     <button 
                         onClick={handleCancelTicket}
                         disabled={canceling || calculatingRoute}
-                        className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 active:scale-95"
+                        className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
                     >
                         {canceling ? <Loader2 size={16} className="animate-spin"/> : <X size={16} />}
                         Cancel
