@@ -178,6 +178,9 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
   const [heading, setHeading] = useState(0); 
   const [routeDestination, setRouteDestination] = useState(null); 
   const watchId = useRef(null); 
+  
+  // 🔥 NEW: Ref for Map Section to scroll to it
+  const mapSectionRef = useRef(null);
 
   // --- LENIS SMOOTH SCROLL ---
   useEffect(() => {
@@ -260,6 +263,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
     );
   };
  
+  // 🔥 IMPROVED ROUTE HANDLER
   const handleRoute = (salon) => {
     if (!userLocation) {
         alert("Please enable location first to get directions.");
@@ -267,17 +271,24 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         return;
     }
 
-    if(!salon.latitude || !salon.longitude) {
-        alert("Salon location not found on map.");
+    // Safety check for backend data
+    if(!salon || !salon.latitude || !salon.longitude) {
+        alert("Salon location data is missing. Cannot calculate route.");
         return;
     }
 
+    // Set destination
     setRouteDestination({
         lat: Number(salon.latitude),
         lng: Number(salon.longitude)
     });
 
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // 🔥 Scroll to Map so user sees the route!
+    if (mapSectionRef.current) {
+        mapSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   // --- SOCKETS & INITIAL DATA ---
@@ -598,14 +609,17 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
             </div>
           </div>
 
-          <MapSalon 
-            salons={sortedSalons} 
-            userLocation={userLocation}
-            heading={heading} 
-            onSelect={(s) => handleOpenBooking(s)} 
-            routeDestination={routeDestination} 
-            onRouteClick={handleRoute}
-          />
+          {/* 🔥 ATTACH REF HERE SO WE CAN SCROLL TO IT */}
+          <div ref={mapSectionRef}>
+            <MapSalon 
+                salons={sortedSalons} 
+                userLocation={userLocation}
+                heading={heading} 
+                onSelect={(s) => handleOpenBooking(s)} 
+                routeDestination={routeDestination} 
+                onRouteClick={handleRoute}
+            />
+          </div>
 
           <div className="flex flex-col md:flex-row gap-4 mt-6">
             <div className="relative flex-1">
@@ -753,16 +767,17 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                 </div>
                 
                 <div className="flex gap-3">
+                    {/* 🔥 FIXED DIRECTION BUTTON */}
                     <button 
                         onClick={() => handleRoute(activeTicket.salonId)}
-                        className="flex-1 bg-white/10 hover:bg-white/20 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                        className="flex-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 active:scale-95"
                     >
-                        <Navigation size={16} /> Directions
+                        <Navigation size={16} fill="currentColor" /> Directions
                     </button>
                     <button 
                         onClick={handleCancelTicket}
                         disabled={canceling}
-                        className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                        className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 active:scale-95"
                     >
                         {canceling ? <Loader2 size={16} className="animate-spin"/> : <X size={16} />}
                         Cancel
