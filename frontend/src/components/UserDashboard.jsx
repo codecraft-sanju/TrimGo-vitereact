@@ -13,10 +13,11 @@ import {
   Navigation, 
   Crosshair, 
   Menu,
-  Gift // Keep Gift icon for the button
+  Gift,
+  BadgeCheck // <--- Imported for Verified Badge
 } from "lucide-react";
 import { io } from "socket.io-client"; 
-import Lenis from 'lenis'; // IMPORT LENIS HERE
+import Lenis from 'lenis'; 
 import api from "../utils/api"; 
 
 // Imports
@@ -26,11 +27,16 @@ import AIConcierge from "./AIConcierge";
 
 /* ---------------------------------
    HELPER: HAVERSINE DISTANCE FORMULA
+   (Fixed: Now fully included)
 ---------------------------------- */
+const deg2rad = (deg) => {
+  return deg * (Math.PI / 180);
+};
+
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
   if (!lat1 || !lon1 || !lat2 || !lon2) return null;
 
-  const R = 6371; 
+  const R = 6371; // Radius of the earth in km
   const dLat = deg2rad(lat2 - lat1);
   const dLon = deg2rad(lon2 - lon1);
   const a =
@@ -38,16 +44,12 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
     Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
     Math.sin(dLon / 2) * Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  const d = R * c; 
+  const d = R * c; // Distance in km
   
   if (d < 1) {
     return `${Math.round(d * 1000)} m`; 
   }
   return `${d.toFixed(1)} km`; 
-};
-
-const deg2rad = (deg) => {
-  return deg * (Math.PI / 180);
 };
 
 /* ---------------------------------
@@ -176,7 +178,7 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick, onReferral
   useEffect(() => {
     const lenis = new Lenis({
       duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // standard pleasant easing
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), 
       smoothWheel: true,
       wheelMultiplier: 1,
     });
@@ -192,8 +194,8 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick, onReferral
       lenis.destroy();
     };
   }, []);
-  // ------------------------------------------
 
+  // --- LOCATION TRACKING ---
   const startLocationTracking = () => {
     if (!navigator.geolocation) {
         alert("Geolocation is not supported by your browser.");
@@ -252,7 +254,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick, onReferral
         } 
     );
   };
-
  
   const handleRoute = (salon) => {
     if (!userLocation) {
@@ -340,7 +341,8 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick, onReferral
   const salonsWithDistance = useMemo(() => {
       return salons.map(salon => {
           let distStr = null;
-          if (userLocation && salon.latitude && salon.longitude) {
+          // SAFEGUARD: Ensure calculateDistance exists and location data is valid
+          if (typeof calculateDistance === 'function' && userLocation && salon.latitude && salon.longitude) {
               distStr = calculateDistance(userLocation.lat, userLocation.lng, salon.latitude, salon.longitude);
           }
           return { ...salon, distance: distStr };
@@ -450,7 +452,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick, onReferral
           <div className="flex items-center gap-4">
             <div className="hidden md:flex items-center gap-4">
               
-              {/* --- NEW: Earn Rewards Button (Desktop) --- */}
               <button 
                 onClick={onReferralClick}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100 text-xs font-bold hover:bg-indigo-100 transition-colors"
@@ -470,8 +471,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick, onReferral
             </div>
 
             <div className="md:hidden flex items-center gap-3">
-              
-              {/* --- NEW: Earn Rewards Icon (Mobile) --- */}
               <button 
                 onClick={onReferralClick}
                 className="w-8 h-8 flex items-center justify-center rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100 active:scale-95"
@@ -504,8 +503,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick, onReferral
               origin-top-right transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1)
               ${isMobileMenuOpen ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-90 -translate-y-4 invisible pointer-events-none'}
           `}>
-              
-              {/* --- NEW: Mobile Menu Item --- */}
               <button 
                 onClick={() => { onReferralClick(); setIsMobileMenuOpen(false); }}
                 className="w-full flex items-center justify-start gap-3 px-4 py-3 rounded-xl font-bold text-sm border border-transparent hover:bg-zinc-50 text-zinc-700"
@@ -535,8 +532,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick, onReferral
 
       <main className="max-w-6xl mx-auto px-4 pt-24 sm:pt-24 pb-16 relative z-10">
         
-        {/* --- BANNER REMOVED FROM HERE --- */}
-
         <div className="mb-8 sm:mb-10">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
             <div>
@@ -583,10 +578,18 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick, onReferral
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center flex-wrap gap-2 mb-1">
-                          <h2 className="text-base sm:text-lg font-bold text-zinc-900">{salon.salonName}</h2>
+                          <h2 className="text-base sm:text-lg font-bold text-zinc-900 line-clamp-1">{salon.salonName}</h2>
+                          
+                          {/* 🔥 VERIFIED BADGE IMPLEMENTATION 🔥 */}
+                          {salon.verified && (
+                             <div className="flex items-center justify-center" title="Verified Partner">
+                                <BadgeCheck size={18} className="text-blue-500 fill-white ml-0.5 shrink-0" />
+                             </div>
+                          )}
+
                           {salon.isOnline ? 
-                            <span className="px-2 py-0.5 rounded-md bg-emerald-500 text-[9px] font-bold text-white">OPEN</span> : 
-                            <span className="px-2 py-0.5 rounded-md bg-red-500 text-[9px] font-bold text-white">CLOSED</span>
+                            <span className="px-2 py-0.5 rounded-md bg-emerald-500 text-[9px] font-bold text-white ml-2">OPEN</span> : 
+                            <span className="px-2 py-0.5 rounded-md bg-red-500 text-[9px] font-bold text-white ml-2">CLOSED</span>
                           }
                         </div>
                         <div className="flex items-center gap-2 text-[11px] text-zinc-500">

@@ -3,7 +3,7 @@ import {
   ShieldCheck, User, Lock, LayoutDashboard, Store, Users, CreditCard,
   LogOut, Globe2, Bell, DollarSign, Activity, Clock, Download, Zap,
   CheckCircle, AlertTriangle, Star, Ban, Settings, Search, Mail, Phone, 
-  Calendar, MapPin, Menu, X, Tag, Gift, Trash2
+  Calendar, MapPin, Menu, X, Tag, Gift, Trash2, Loader2 // <--- Added Loader2
 } from "lucide-react";
 import api from "../utils/api";
 import { io } from "socket.io-client"; 
@@ -27,19 +27,36 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 // ==========================================
-// 1. ADMIN LOGIN COMPONENT
+// 1. ADMIN LOGIN COMPONENT (SECURE VERSION)
 // ==========================================
 export const AdminLogin = ({ onBack, onLogin }) => {
   const [creds, setCreds] = useState({ username: "", password: "" });
+  const [loading, setLoading] = useState(false); // Loading state
   
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const adminUser = import.meta.env.VITE_ADMIN_USERNAME;
-    const adminPass = import.meta.env.VITE_ADMIN_PASSWORD;
-    if(creds.username === adminUser && creds.password === adminPass) {
-       onLogin();
-    } else {
-       alert("Invalid Founder Credentials");
+
+    if(!creds.username || !creds.password) {
+        alert("Please fill all fields");
+        return;
+    }
+
+    setLoading(true);
+
+    try {
+        // 🔥 SECURITY FIX: Send credentials to Backend
+        const { data } = await api.post("/admin/login", creds);
+
+        if(data.success) {
+           onLogin(); // Dashboard Access Granted
+        } else {
+           alert("Invalid Access Credentials");
+        }
+    } catch (error) {
+        console.error("Login Error:", error);
+        alert(error.response?.data?.message || "Login Failed.");
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -54,11 +71,11 @@ export const AdminLogin = ({ onBack, onLogin }) => {
             <ShieldCheck className="text-white" size={32} />
           </div>
           <h2 className="text-2xl font-black text-white">Founder Access</h2>
-          <p className="text-zinc-500 text-sm mt-1">TrimGo</p>
+          <p className="text-zinc-500 text-sm mt-1">TrimGo Secure Gateway</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="bg-black/40 border border-zinc-800 rounded-xl p-1 flex items-center">
+          <div className="bg-black/40 border border-zinc-800 rounded-xl p-1 flex items-center focus-within:border-zinc-600 transition-colors">
             <User className="text-zinc-500 ml-3 flex-shrink-0" size={18} />
             <input 
               type="text" 
@@ -68,7 +85,7 @@ export const AdminLogin = ({ onBack, onLogin }) => {
               onChange={(e) => setCreds({...creds, username: e.target.value})}
             />
           </div>
-          <div className="bg-black/40 border border-zinc-800 rounded-xl p-1 flex items-center">
+          <div className="bg-black/40 border border-zinc-800 rounded-xl p-1 flex items-center focus-within:border-zinc-600 transition-colors">
             <Lock className="text-zinc-500 ml-3 flex-shrink-0" size={18} />
             <input 
               type="password" 
@@ -78,8 +95,11 @@ export const AdminLogin = ({ onBack, onLogin }) => {
               onChange={(e) => setCreds({...creds, password: e.target.value})}
             />
           </div>
-          <button className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-zinc-200 transition mt-4 shadow-lg hover:shadow-white/10 active:scale-95 transform duration-150">
-            Enter God Mode
+          <button 
+            disabled={loading}
+            className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-zinc-200 transition mt-4 shadow-lg hover:shadow-white/10 active:scale-95 transform duration-150 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? <Loader2 className="animate-spin" size={20} /> : "Enter God Mode"}
           </button>
         </form>
         
@@ -248,7 +268,6 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
   const deleteUser = async (id) => {
     if(window.confirm("⚠️ DANGER: Are you sure you want to PERMANENTLY delete this user? This cannot be undone.")) {
         try {
-            // NOTE: Make sure your backend has router.delete('/admin/delete-user/:id', ...)
             const { data } = await api.delete(`/admin/delete-user/${id}`); 
             
             if(data.success) {
@@ -338,8 +357,8 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
               onClick={() => setActiveTab(item.id)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                 activeTab === item.id 
-                  ? "bg-indigo-600/10 text-indigo-400 border border-indigo-600/20" 
-                  : "text-zinc-400 hover:text-white hover:bg-white/5"
+                ? "bg-indigo-600/10 text-indigo-400 border border-indigo-600/20" 
+                : "text-zinc-400 hover:text-white hover:bg-white/5"
               }`}
             >
               <item.icon size={18} />
@@ -662,3 +681,4 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
     </div>
   );
 };
+export default AdminDashboard;

@@ -3,7 +3,8 @@ import {
     getDashboardStats, 
     toggleSalonStatus, 
     deleteSalon ,
-     deleteUser
+     deleteUser,
+     adminLogin
    
 } from "../Controllers/adminController.js";
 
@@ -14,8 +15,9 @@ const router = express.Router();
 
 // 1. Get Dashboard Stats (Revenue, Users, Salons, Live Activity)
 router.get("/dashboard", getDashboardStats);
+router.post("/login", adminLogin);
 
-// 2. Verify or Ban Salon (Status Toggle)
+
 // URL Example: /api/admin/verify/65a123...
 router.put("/verify/:id", toggleSalonStatus);
 
