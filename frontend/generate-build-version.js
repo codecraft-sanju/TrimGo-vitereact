@@ -7,7 +7,7 @@ const appVersion = packageJson.version;
 
 
 const releaseNotes = [
-  "cancel button added on userdashboard",
+  "direction button improve",
   "Fixed scrolling issue on mobile.",
   "Performance improvements in Salon Queue."
 ];

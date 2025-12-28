@@ -178,6 +178,9 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
   const [heading, setHeading] = useState(0); 
   const [routeDestination, setRouteDestination] = useState(null); 
   const watchId = useRef(null); 
+  
+  // 🔥 FIX 1: Map ke liye ek Reference banaya
+  const mapSectionRef = useRef(null);
 
   // --- LENIS SMOOTH SCROLL ---
   useEffect(() => {
@@ -260,6 +263,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
     );
   };
  
+  // 🔥 FIX 2: IMPROVED ROUTE HANDLER
   const handleRoute = (salon) => {
     if (!userLocation) {
         alert("Please enable location first to get directions.");
@@ -267,17 +271,28 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         return;
     }
 
-    if(!salon.latitude || !salon.longitude) {
-        alert("Salon location not found on map.");
+    // Safety check: Agar salon ka data poora nahi hai
+    if(!salon || !salon.latitude || !salon.longitude) {
+        alert("Salon location data missing. Cannot calculate route.");
         return;
     }
 
+    // Set destination
     setRouteDestination({
         lat: Number(salon.latitude),
         lng: Number(salon.longitude)
     });
 
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // 🔥 MAIN FIX: Scroll directly to the MAP section
+    if (mapSectionRef.current) {
+        mapSectionRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+        });
+    } else {
+        // Fallback agar ref fail ho jaye
+        window.scrollTo({ top: 100, behavior: 'smooth' });
+    }
   };
 
   // --- SOCKETS & INITIAL DATA ---
@@ -598,14 +613,17 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
             </div>
           </div>
 
-          <MapSalon 
-            salons={sortedSalons} 
-            userLocation={userLocation}
-            heading={heading} 
-            onSelect={(s) => handleOpenBooking(s)} 
-            routeDestination={routeDestination} 
-            onRouteClick={handleRoute}
-          />
+          {/* 🔥 FIX 3: MAP CONTAINER MEIN REF LAGAYA */}
+          <div ref={mapSectionRef} className="scroll-mt-28 transition-all duration-500">
+            <MapSalon 
+                salons={sortedSalons} 
+                userLocation={userLocation}
+                heading={heading} 
+                onSelect={(s) => handleOpenBooking(s)} 
+                routeDestination={routeDestination} 
+                onRouteClick={handleRoute}
+            />
+          </div>
 
           <div className="flex flex-col md:flex-row gap-4 mt-6">
             <div className="relative flex-1">
@@ -753,16 +771,17 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                 </div>
                 
                 <div className="flex gap-3">
+                    {/* 🔥 FIX 4: IMPROVED DIRECTION BUTTON ON BLACK CARD */}
                     <button 
                         onClick={() => handleRoute(activeTicket.salonId)}
-                        className="flex-1 bg-white/10 hover:bg-white/20 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                        className="flex-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 active:scale-95"
                     >
-                        <Navigation size={16} /> Directions
+                        <Navigation size={16} fill="currentColor" /> Directions
                     </button>
                     <button 
                         onClick={handleCancelTicket}
                         disabled={canceling}
-                        className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                        className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 active:scale-95"
                     >
                         {canceling ? <Loader2 size={16} className="animate-spin"/> : <X size={16} />}
                         Cancel
