@@ -173,13 +173,15 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
   // 🔥 Active Ticket State
   const [activeTicket, setActiveTicket] = useState(null);
   const [canceling, setCanceling] = useState(false);
+  
+  // 🔥 Route Calculation State
+  const [calculatingRoute, setCalculatingRoute] = useState(false);
 
   const [userLocation, setUserLocation] = useState(null); 
   const [heading, setHeading] = useState(0); 
   const [routeDestination, setRouteDestination] = useState(null); 
   const watchId = useRef(null); 
   
-  // 🔥 FIX 1: Map ke liye ek Reference banaya
   const mapSectionRef = useRef(null);
 
   // --- LENIS SMOOTH SCROLL ---
@@ -263,36 +265,49 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
     );
   };
  
-  // 🔥 FIX 2: IMPROVED ROUTE HANDLER
+  // 🔥 FIX: UPDATED ROUTE HANDLER WITH LOADER
   const handleRoute = (salon) => {
-    if (!userLocation) {
-        alert("Please enable location first to get directions.");
-        startLocationTracking();
-        return;
-    }
+    // Start Loading UI
+    setCalculatingRoute(true);
 
-    // Safety check: Agar salon ka data poora nahi hai
-    if(!salon || !salon.latitude || !salon.longitude) {
-        alert("Salon location data missing. Cannot calculate route.");
-        return;
-    }
+    // Short timeout to allow UI to update and ensure data availability check feels responsive
+    setTimeout(() => {
+        if (!userLocation) {
+            alert("Please enable location first to get directions.");
+            startLocationTracking();
+            setCalculatingRoute(false);
+            return;
+        }
 
-    // Set destination
-    setRouteDestination({
-        lat: Number(salon.latitude),
-        lng: Number(salon.longitude)
-    });
+        // Safety check
+        if(!salon || !salon.latitude || !salon.longitude) {
+            alert("Salon location data missing. Cannot calculate route.");
+            setCalculatingRoute(false);
+            return;
+        }
 
-    // 🔥 MAIN FIX: Scroll directly to the MAP section
-    if (mapSectionRef.current) {
-        mapSectionRef.current.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center' 
+        // Set destination
+        setRouteDestination({
+            lat: Number(salon.latitude),
+            lng: Number(salon.longitude)
         });
-    } else {
-        // Fallback agar ref fail ho jaye
-        window.scrollTo({ top: 100, behavior: 'smooth' });
-    }
+
+        // Scroll directly to the MAP section
+        if (mapSectionRef.current) {
+            mapSectionRef.current.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center' 
+            });
+        } else {
+            window.scrollTo({ top: 100, behavior: 'smooth' });
+        }
+
+        // Stop loader after scrolling initiates (simulating calculation time)
+        setTimeout(() => {
+            setCalculatingRoute(false);
+        }, 1500);
+        
+    }, 500); 
   };
 
   // --- SOCKETS & INITIAL DATA ---
@@ -327,7 +342,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
     // 🔥 Socket Listeners for Ticket Status
     socket.on("request_accepted", (ticket) => {
         setActiveTicket(ticket);
-        // Maybe show a toast notification here
     });
 
     socket.on("request_rejected", () => {
@@ -613,7 +627,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
             </div>
           </div>
 
-          {/* 🔥 FIX 3: MAP CONTAINER MEIN REF LAGAYA */}
           <div ref={mapSectionRef} className="scroll-mt-28 transition-all duration-500">
             <MapSalon 
                 salons={sortedSalons} 
@@ -771,16 +784,27 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                 </div>
                 
                 <div className="flex gap-3">
-                    {/* 🔥 FIX 4: IMPROVED DIRECTION BUTTON ON BLACK CARD */}
+                    {/* 🔥 FIX: UPDATED DIRECTION BUTTON WITH LOADER & FUNCTIONALITY */}
                     <button 
                         onClick={() => handleRoute(activeTicket.salonId)}
-                        className="flex-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 active:scale-95"
+                        disabled={calculatingRoute}
+                        className="flex-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <Navigation size={16} fill="currentColor" /> Directions
+                        {calculatingRoute ? (
+                             <>
+                                <Loader2 size={16} className="animate-spin" />
+                                <span>Loading...</span>
+                             </>
+                        ) : (
+                             <>
+                                <Navigation size={16} fill="currentColor" /> 
+                                <span>Directions</span>
+                             </>
+                        )}
                     </button>
                     <button 
                         onClick={handleCancelTicket}
-                        disabled={canceling}
+                        disabled={canceling || calculatingRoute}
                         className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 active:scale-95"
                     >
                         {canceling ? <Loader2 size={16} className="animate-spin"/> : <X size={16} />}
