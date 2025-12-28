@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { Bell, Ticket, X, CheckCircle, Sparkles, Scissors } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion"; // Required: npm install framer-motion
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion"; 
 
 // --- API & COMPONENTS IMPORTS ---
 import api from "./utils/api";
@@ -12,64 +12,44 @@ import { UserProfile } from "./components/UserProfile";
 import { AdminLogin, AdminDashboard } from "./components/AdminDashboard";
 import SalonDashboard from "./components/SalonDashboard";
 import UserDashboard from "./components/UserDashboard";
-import { NoiseOverlay } from "./components/SharedUI";
+import { NoiseOverlay } from "./components/SharedUI"; // Ensure this handles mobile visibility inside itself or parent
 
 // Import Pages
 import LandingPage from "./components/LandingPage";
 import ReferralPage from "./components/ReferralPage";
-
-// --- NEW IMPORT: UPDATE NOTIFICATION ---
 import UpdateNotification from "./components/UpdateNotification";
 
 // ----------------------------------------------------------------------
-// 0. ULTRA-PREMIUM AESTHETIC LOADER (Smart Logic: Handshake with Data)
-// ----------------------------------------------------------------------
-// ----------------------------------------------------------------------
-// 0. ULTRA-PREMIUM AESTHETIC LOADER (Optimized for Mobile & Desktop)
+// OPTIMIZED PREMIUM PRELOADER (Glitch-Free & Mobile Smooth)
 // ----------------------------------------------------------------------
 const PremiumPreloader = ({ onLoadingComplete, dataLoaded }) => {
-  const [count, setCount] = useState(0);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const count = useMotionValue(0);
+  const rounded = useTransform(count, (latest) => Math.round(latest));
+  const [isFinished, setIsFinished] = useState(false);
 
   useEffect(() => {
-    // Resize listener to detect mobile/desktop dynamically
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
+    // 1. Start slow animation to 85% (Simulate loading)
+    // Duration is long (10s) so it never hits 100% on its own.
+    const controls = animate(count, 85, { duration: 10, ease: "circOut" });
 
-    // Pacing logic:
-    // Mobile pe thoda slow update (45ms) taaki UI thread block na ho
-    // Desktop pe fast update (30ms) for premium feel
-    const intervalTime = isMobile ? 45 : 30; 
-
-    const timer = setInterval(() => {
-      setCount((prev) => {
-        // SCENARIO 1: Animation Complete & Data Ready
-        if (prev === 100) {
-          clearInterval(timer);
-          setTimeout(onLoadingComplete, 500); 
-          return 100;
+    // 2. Watch for real data to be ready
+    if (dataLoaded) {
+      controls.stop(); // Stop the slow fake loading
+      // Quick jump to 100% when data is actually ready
+      animate(count, 100, {
+        duration: 0.8,
+        ease: "easeInOut",
+        onComplete: () => {
+          setIsFinished(true);
+          setTimeout(onLoadingComplete, 600); // Small delay to admire the 100%
         }
-
-        // SCENARIO 2: Reached 99% but Data is NOT ready
-        if (prev === 99 && !dataLoaded) {
-          return 99; 
-        }
-
-        // SCENARIO 3: Increment logic
-        // Agar data aa gaya hai to super fast jump, warna slow increments
-        const jump = dataLoaded ? (isMobile ? 8 : 5) : 1; 
-        
-        return Math.min(prev + jump, 100);
       });
-    }, intervalTime);
+    }
 
-    return () => {
-      clearInterval(timer);
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [onLoadingComplete, dataLoaded, isMobile]);
+    return () => controls.stop();
+  }, [dataLoaded, count, onLoadingComplete]);
 
-  // Letter animation variants (Optimized)
+  // Letter animation variants
   const letterVariants = {
     hidden: { y: 100, opacity: 0 },
     visible: (i) => ({
@@ -86,13 +66,10 @@ const PremiumPreloader = ({ onLoadingComplete, dataLoaded }) => {
   return (
     <motion.div
       initial={{ y: 0 }}
-      exit={{ y: "-100%", transition: { duration: 1.0, ease: [0.76, 0, 0.24, 1] } }} 
-      className="fixed inset-0 z-[9999] bg-neutral-950 text-white flex flex-col justify-between p-6 md:p-12 overflow-hidden will-change-transform"
+      exit={{ y: "-100%", transition: { duration: 0.8, ease: [0.76, 0, 0.24, 1] } }} 
+      className="fixed inset-0 z-[9999] bg-neutral-950 text-white flex flex-col justify-between p-6 md:p-12 overflow-hidden"
     >
-      {/* FIX FOR LAG: 
-         Noise Overlay hidden on mobile (`hidden`) and shown on desktop (`md:block`).
-         Mobile phones struggle with mix-blend-overlay on large areas.
-      */}
+      {/* Noise Overlay - Optimized: CSS only, no calculations */}
       <div className="hidden md:block absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay">
          <div className="w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
       </div>
@@ -106,7 +83,6 @@ const PremiumPreloader = ({ onLoadingComplete, dataLoaded }) => {
       {/* Center Content: Massive Typography */}
       <div className="relative z-10 flex flex-col items-center justify-center h-full">
         <div className="overflow-hidden flex items-center justify-center">
-            {/* Staggered Text Reveal */}
             {["T", "R", "I", "M", "G", "O"].map((char, index) => (
               <motion.span
                 key={index}
@@ -114,19 +90,17 @@ const PremiumPreloader = ({ onLoadingComplete, dataLoaded }) => {
                 variants={letterVariants}
                 initial="hidden"
                 animate="visible"
-                // text-size ko thoda control kiya mobile ke liye taaki layout shift na ho
-                className="text-6xl sm:text-8xl md:text-[10rem] font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-b from-white via-neutral-200 to-neutral-600 will-change-transform"
+                className="text-6xl sm:text-8xl md:text-[10rem] font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-b from-white via-neutral-200 to-neutral-600"
               >
                 {char}
               </motion.span>
             ))}
         </div>
         
-        {/* Subtitle */}
         <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.8, duration: 1 }}
+            transition={{ delay: 0.5, duration: 1 }}
             className="mt-4 md:mt-8 overflow-hidden"
         >
              <p className="text-[10px] md:text-sm font-medium tracking-[0.4em] text-neutral-500 uppercase text-center">
@@ -141,27 +115,22 @@ const PremiumPreloader = ({ onLoadingComplete, dataLoaded }) => {
             <div className="flex flex-col">
                 <span className="text-[10px] md:text-xs text-neutral-500 uppercase tracking-widest mb-1">Status</span>
                 <span className="text-sm font-medium text-emerald-400">
-                    {count < 99 
-                      ? "Initializing..." 
-                      : (!dataLoaded ? "Syncing..." : "Ready")
-                    }
+                    {!isFinished ? (dataLoaded ? "Finalizing..." : "Loading resources...") : "Ready"}
                 </span>
             </div>
             
-            {/* Huge Number Counter */}
-            <div className="text-6xl md:text-8xl font-thin tracking-tighter leading-none tabular-nums text-white">
-                {count}
+            {/* Huge Number Counter using Framer Motion (No Re-renders) */}
+            <div className="flex items-baseline text-6xl md:text-8xl font-thin tracking-tighter leading-none text-white">
+                <motion.span>{rounded}</motion.span>
                 <span className="text-2xl md:text-4xl text-neutral-600 font-normal">%</span>
             </div>
         </div>
 
-        {/* Ultra Thin Progress Line */}
+        {/* Smooth Progress Line */}
         <div className="w-full h-[1px] bg-neutral-800 relative overflow-hidden">
             <motion.div 
                 className="absolute top-0 left-0 h-full bg-white"
-                initial={{ width: "0%" }}
-                animate={{ width: `${count}%` }}
-                transition={{ ease: "linear", duration: 0.2 }}
+                style={{ width: useTransform(count, (value) => `${value}%`) }}
             />
         </div>
       </div>
@@ -314,13 +283,25 @@ const AppContent = () => {
 
         if (userRes.status === "fulfilled" && userRes.value.data.success) {
           setCurrentUser(userRes.value.data.user);
-          await fetchActiveTicket();
+          // Fetch ticket immediately if user exists
+          try {
+             const { data } = await api.get("/queue/my-ticket");
+             if(data.success && data.ticket) {
+                 setActiveTicket({
+                     salonName: data.ticket.salonId.salonName,
+                     number: data.ticket.queueNumber,
+                     eta: data.ticket.totalTime,
+                     status: data.ticket.status
+                 });
+             }
+          } catch(e) { console.log("No ticket"); }
         }
 
         if (salonRes.status === "fulfilled" && salonRes.value.data.success) {
           setCurrentSalon(salonRes.value.data.salon);
         }
         
+        // Load Salons quietly
         const salonListRes = await api.get("/salon/all");
         if(salonListRes.data.success) {
           setSalons(salonListRes.data.salons);
@@ -329,33 +310,15 @@ const AppContent = () => {
       } catch (err) {
         console.log("Auth session check completed with no active session.");
       } finally {
-        // CRITICAL: This MUST execute regardless of success or error.
-        // This flips the switch for the Preloader to finish from 99% -> 100%
+        // DATA LOADED SIGNAL
         setAuthLoading(false);
       }
     };
     checkAuth();
   }, []);
 
-  const fetchActiveTicket = async () => {
-      try {
-          const { data } = await api.get("/queue/my-ticket");
-          if(data.success && data.ticket) {
-              setActiveTicket({
-                  salonName: data.ticket.salonId.salonName,
-                  number: data.ticket.queueNumber,
-                  eta: data.ticket.totalTime,
-                  status: data.ticket.status
-              });
-          }
-      } catch (error) {
-          console.log("No active ticket found.");
-      }
-  };
-
   const handleUserLoginSuccess = (userData) => {
     setCurrentUser(userData);
-    fetchActiveTicket();
     showToast(`Welcome, ${userData.name}!`);
     navigate("/dashboard/user");
   };
@@ -431,14 +394,13 @@ const AppContent = () => {
 
   return (
     <>
-      {/* NEW: Update Notification (Always active)
-        This will check for version updates from meta.json
-      */}
       <UpdateNotification />
 
       {/* AESTHETIC PRELOADER OVERLAY 
-        Passed 'dataLoaded' prop.
-        The preloader now waits for !authLoading before finishing.
+         We pass `dataLoaded={!authLoading}`. 
+         The Preloader handles the visual logic:
+         - Waits if data isn't ready.
+         - Finishes fast if data IS ready.
       */}
       <AnimatePresence mode="wait">
         {showPreloader && (
@@ -449,11 +411,7 @@ const AppContent = () => {
         )}
       </AnimatePresence>
 
-      {/* APP CONTENT 
-         We hide the content scroll while preloader is active, 
-         but we render it so it's ready underneath the overlay.
-      */}
-      <div className={showPreloader ? "h-screen overflow-hidden" : ""}>
+      <div className={showPreloader ? "h-screen overflow-hidden" : "min-h-screen bg-neutral-50"}>
         
         {!showPreloader && toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         
@@ -466,6 +424,7 @@ const AppContent = () => {
             />
         )}
 
+        {/* Content Rendered but Hidden underneath Preloader until ready */}
         <Routes>
             <Route path="/" element={
               <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>

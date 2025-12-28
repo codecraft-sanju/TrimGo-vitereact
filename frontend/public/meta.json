@@ -1,4 +1,9 @@
 {
-  "version": "0.0.0",
-  "buildDate": 1766816361395
+  "version": "1.1.0",
+  "buildDate": 1766917210164,
+  "notes": [
+    "Added new 'Cinematic' Loading Screen.",
+    "Fixed scrolling issue on mobile.",
+    "Performance improvements in Salon Queue."
+  ]
 }

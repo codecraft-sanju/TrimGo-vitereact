@@ -2,9 +2,7 @@ import User from "../Models/User.js";
 import Salon from "../Models/Salon.js";
 import Ticket from "../Models/Ticket.js";
 
-/* -------------------------------------------------------------------------- */
-/* 1. ADMIN LOGIN (SECURE)                                                    */
-/* -------------------------------------------------------------------------- */
+
 export const adminLogin = async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -30,9 +28,7 @@ export const adminLogin = async (req, res) => {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/* 2. GET DASHBOARD STATS                                                     */
-/* -------------------------------------------------------------------------- */
+
 export const getDashboardStats = async (req, res) => {
   try {
     // Basic Counts
