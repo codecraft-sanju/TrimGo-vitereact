@@ -7,7 +7,7 @@ const appVersion = packageJson.version;
 
 
 const releaseNotes = [
-  "Added new 'Cinematic' Loading Screen.",
+  "salon dashboard change",
   "Fixed scrolling issue on mobile.",
   "Performance improvements in Salon Queue."
 ];

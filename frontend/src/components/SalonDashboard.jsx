@@ -4,7 +4,7 @@ import {
   Bell, DollarSign, TrendingUp, Clock, CheckCircle, Scissors,
   Play, CheckSquare, X, Camera, Mail, Phone, MapPin, User,
   Armchair, UserCheck, Plus, Trash2, Menu, Save, Edit3, Power,
-  AlertTriangle, Sparkles, Zap, ArrowRight, UserPlus // <--- Added UserPlus for Walk-in
+  AlertTriangle, Sparkles, Zap, ArrowRight, UserPlus, Home, LayoutDashboard
 } from "lucide-react";
 import api from "../utils/api";
 import { io } from "socket.io-client";
@@ -27,7 +27,7 @@ const SUGGESTED_SERVICES = [
 
 // --- SUB-COMPONENTS ---
 
-// 1. WALK-IN MODAL (NEW)
+// 1. WALK-IN MODAL (Responsive)
 const WalkInModal = ({ isOpen, onClose, services, onConfirm }) => {
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -36,7 +36,6 @@ const WalkInModal = ({ isOpen, onClose, services, onConfirm }) => {
   if (!isOpen) return null;
 
   const toggleService = (service) => {
-    // Check by name because IDs might differ in structure
     const exists = selectedServices.find(s => s.name === service.name);
     if (exists) {
       setSelectedServices(prev => prev.filter(s => s.name !== service.name));
@@ -59,9 +58,9 @@ const WalkInModal = ({ isOpen, onClose, services, onConfirm }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
-      <div className="relative w-full max-w-md bg-zinc-900 border border-white/10 rounded-2xl p-6 shadow-2xl animate-in fade-in zoom-in-95">
+      <div className="relative w-full max-w-md bg-zinc-900 border-t sm:border border-white/10 rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl animate-in slide-in-from-bottom-10 fade-in duration-300">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-xl font-bold text-white flex items-center gap-2">
             <UserPlus className="text-emerald-400" /> Add Walk-in Client
@@ -75,7 +74,7 @@ const WalkInModal = ({ isOpen, onClose, services, onConfirm }) => {
             <input 
               type="text" 
               placeholder="e.g. Rahul Sharma"
-              className="w-full bg-zinc-950 border border-white/10 rounded-xl p-3 text-white focus:border-emerald-500 outline-none"
+              className="w-full bg-zinc-950 border border-white/10 rounded-xl p-3 text-white focus:border-emerald-500 outline-none placeholder:text-zinc-700"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -86,7 +85,7 @@ const WalkInModal = ({ isOpen, onClose, services, onConfirm }) => {
             <input 
               type="number" 
               placeholder="e.g. 9876543210"
-              className="w-full bg-zinc-950 border border-white/10 rounded-xl p-3 text-white focus:border-emerald-500 outline-none"
+              className="w-full bg-zinc-950 border border-white/10 rounded-xl p-3 text-white focus:border-emerald-500 outline-none placeholder:text-zinc-700"
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
             />
@@ -95,7 +94,7 @@ const WalkInModal = ({ isOpen, onClose, services, onConfirm }) => {
           <div>
             <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Select Services</label>
             <div className="max-h-40 overflow-y-auto custom-scrollbar border border-white/5 rounded-xl bg-zinc-950 p-2 space-y-2">
-              {services.map((s, i) => {
+              {services.length > 0 ? services.map((s, i) => {
                 const isSelected = selectedServices.some(sel => sel.name === s.name);
                 return (
                   <div 
@@ -107,13 +106,13 @@ const WalkInModal = ({ isOpen, onClose, services, onConfirm }) => {
                     <span className="text-xs opacity-70">₹{s.price}</span>
                   </div>
                 );
-              })}
+              }) : <p className="text-zinc-600 text-xs p-2 text-center">No services available. Add in settings.</p>}
             </div>
           </div>
 
           <button 
             onClick={handleSubmit}
-            className="w-full py-3.5 bg-white text-black font-bold rounded-xl hover:bg-emerald-400 transition-colors mt-2"
+            className="w-full py-3.5 bg-white text-black font-bold rounded-xl hover:bg-emerald-400 transition-colors mt-2 active:scale-95 transform"
           >
             Add to Queue
           </button>
@@ -123,6 +122,7 @@ const WalkInModal = ({ isOpen, onClose, services, onConfirm }) => {
   );
 };
 
+// 2. PROFILE MODAL
 const ProfileModal = ({ isOpen, onClose, salon, profileImage, onImageUpload }) => {
   const fileInputRef = useRef(null);
   if (!isOpen) return null;
@@ -159,7 +159,7 @@ const ProfileModal = ({ isOpen, onClose, salon, profileImage, onImageUpload }) =
             </div>
             <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
           </div>
-          <h3 className="text-2xl font-black text-white mb-1">{salon?.salonName || "TrimGo Salon"}</h3>
+          <h3 className="text-2xl font-black text-white mb-1 text-center">{salon?.salonName || "TrimGo Salon"}</h3>
           <p className="text-emerald-400 text-sm font-medium mb-8">@{salon?.ownerName?.replace(/\s/g, '').toLowerCase() || "sanjaychoudhary"}</p>
         </div>
       </div>
@@ -167,6 +167,7 @@ const ProfileModal = ({ isOpen, onClose, salon, profileImage, onImageUpload }) =
   );
 };
 
+// 3. ASSIGNMENT MODAL
 const AssignmentModal = ({ isOpen, onClose, customer, availableChairs, staffList, onConfirm }) => {
   const [selectedChair, setSelectedChair] = useState("");
   const [selectedStaff, setSelectedStaff] = useState("");
@@ -186,11 +187,16 @@ const AssignmentModal = ({ isOpen, onClose, customer, availableChairs, staffList
   const customerName = customer.userId?.name || customer.guestName || "Walk-in Customer";
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
-      <div className="relative w-full max-w-sm bg-zinc-900 border border-white/10 rounded-2xl p-6 shadow-2xl">
-        <h3 className="text-lg font-bold text-white mb-1">Start Service</h3>
-        <p className="text-zinc-400 text-sm mb-6">For <span className="text-white font-medium">{customerName}</span></p>
+      <div className="relative w-full max-w-sm bg-zinc-900 border-t sm:border border-white/10 rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl animate-in slide-in-from-bottom-10 fade-in">
+        <div className="flex justify-between items-start mb-6">
+            <div>
+                <h3 className="text-lg font-bold text-white mb-1">Start Service</h3>
+                <p className="text-zinc-400 text-sm">For <span className="text-white font-medium">{customerName}</span></p>
+            </div>
+            <button onClick={onClose}><X size={20} className="text-zinc-500"/></button>
+        </div>
 
         <div className="space-y-4">
           <div>
@@ -212,13 +218,13 @@ const AssignmentModal = ({ isOpen, onClose, customer, availableChairs, staffList
           <div>
             <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Assign Staff</label>
             <select 
-              className="w-full bg-zinc-950 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-emerald-500"
+              className="w-full bg-zinc-950 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-emerald-500 appearance-none"
               onChange={(e) => setSelectedStaff(e.target.value)}
               value={selectedStaff}
             >
               <option value="">Select Staff Member</option>
-              {staffList.map(s => (
-                <option key={s.id || s.name} value={s.name}>{s.name}</option>
+              {staffList.map((s, i) => (
+                <option key={i} value={s.name}>{s.name}</option>
               ))}
             </select>
           </div>
@@ -226,7 +232,7 @@ const AssignmentModal = ({ isOpen, onClose, customer, availableChairs, staffList
           <button 
             onClick={handleSubmit}
             disabled={!selectedChair || !selectedStaff}
-            className="w-full py-3 mt-4 bg-white text-black font-bold rounded-xl hover:bg-emerald-400 disabled:opacity-50 disabled:hover:bg-white transition-colors"
+            className="w-full py-3.5 mt-4 bg-white text-black font-bold rounded-xl hover:bg-emerald-400 disabled:opacity-50 disabled:hover:bg-white transition-colors active:scale-95"
           >
             Start Service
           </button>
@@ -259,12 +265,9 @@ const SalonDashboard = ({ salon, onLogout }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // UI States
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   const [assignmentModal, setAssignmentModal] = useState({ isOpen: false, customer: null });
-  
-  // 🔥 NEW STATE: Walk-in Modal
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
 
   // --- 1. INITIAL FETCH & SOCKET ---
@@ -382,7 +385,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
     } catch (error) { alert("Error completing service"); }
   };
 
-  // 🔥 NEW: Handle Walk-in Submission
+  // Handle Walk-in Submission
   const handleAddWalkIn = async (customerData) => {
     try {
         const totalPrice = customerData.services.reduce((sum, s) => sum + Number(s.price), 0);
@@ -398,7 +401,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
 
         const { data } = await api.post("/queue/add-walkin", payload);
         if(data.success) {
-            // Queue will update via socket, but we can also update locally for instant feedback
             setActiveQueue(prev => [...prev, data.ticket]);
         }
     } catch (error) {
@@ -407,7 +409,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
     }
   };
 
-  // --- SETTINGS HANDLERS (Advanced) ---
+  // --- SETTINGS HANDLERS ---
   const fillServiceSuggestion = (s) => {
       setNewService({ name: s.name, price: s.price, time: s.time, category: s.category });
   };
@@ -457,10 +459,11 @@ const SalonDashboard = ({ salon, onLogout }) => {
 
   const isServicesEmpty = services.length === 0;
 
+  // --- RENDER ---
   return (
-    <div className="min-h-screen w-full bg-zinc-950 font-sans text-white overflow-hidden flex selection:bg-emerald-500 selection:text-white">
+    <div className="flex h-screen w-full bg-zinc-950 font-sans text-white overflow-hidden selection:bg-emerald-500 selection:text-white">
       
-      {/* 1. Walk-in Modal */}
+      {/* --- MODALS --- */}
       <WalkInModal 
         isOpen={isWalkInOpen}
         onClose={() => setIsWalkInOpen(false)}
@@ -485,20 +488,20 @@ const SalonDashboard = ({ salon, onLogout }) => {
         onConfirm={handleStartService}
       />
 
+      {/* --- BACKGROUND EFFECTS --- */}
       <div className="fixed inset-0 z-0 pointer-events-none">
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900 via-zinc-950 to-black"></div>
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px] animate-pulse-slow"></div>
       </div>
 
-      {/* Sidebar */}
-      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 border-r border-white/5 bg-zinc-900/95 lg:bg-zinc-900/40 backdrop-blur-xl transform transition-transform duration-300 ease-in-out flex flex-col ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      {/* --- DESKTOP SIDEBAR (Hidden on Mobile) --- */}
+      <aside className="hidden lg:flex w-64 border-r border-white/5 bg-zinc-900/40 backdrop-blur-xl flex-col z-20">
         <div className="h-20 flex items-center px-6 border-b border-white/5 gap-3">
            <div className="w-10 h-10 bg-white text-black rounded-xl flex items-center justify-center font-bold text-sm shadow-[0_0_20px_rgba(255,255,255,0.3)]">TG</div>
            <span className="font-bold text-lg">TrimGo</span>
-           <button onClick={() => setIsMobileMenuOpen(false)} className="ml-auto lg:hidden text-zinc-400 hover:text-white"><X size={20} /></button>
         </div>
-        <nav className="flex-1 py-8 flex flex-col gap-2 px-3 overflow-y-auto">
-           {[ { id: 'dashboard', icon: Grid, label: "Dashboard" }, { id: 'settings', icon: Settings, label: "Settings" } ].map((item) => (
+        <nav className="flex-1 py-6 flex flex-col gap-2 px-3">
+           {[ { id: 'dashboard', icon: LayoutDashboard, label: "Dashboard" }, { id: 'settings', icon: Settings, label: "Settings" } ].map((item) => (
              <button key={item.id} onClick={() => setActiveTab(item.id)} className={`flex items-center p-3 rounded-xl cursor-pointer transition-all w-full text-left ${activeTab === item.id ? 'bg-white/10 text-white shadow-lg shadow-white/5 border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
                <item.icon size={20} strokeWidth={2} />
                <span className="ml-3 font-medium">{item.label}</span>
@@ -514,288 +517,301 @@ const SalonDashboard = ({ salon, onLogout }) => {
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 relative z-10 flex flex-col h-screen overflow-hidden">
+      {/* --- MAIN CONTENT AREA --- */}
+      <main className="flex-1 flex flex-col relative z-10 h-full overflow-hidden">
         
-        {/* Header */}
-        <header className="h-20 border-b border-white/5 bg-zinc-900/30 backdrop-blur-md flex items-center justify-between px-4 lg:px-8 shrink-0">
-           <div className="flex items-center gap-4">
-             <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 text-zinc-400 hover:text-white rounded-lg hover:bg-white/5">
-                <Menu size={24} />
-             </button>
+        {/* --- HEADER (Responsive) --- */}
+        <header className="h-16 lg:h-20 border-b border-white/5 bg-zinc-900/60 backdrop-blur-md flex items-center justify-between px-4 lg:px-8 shrink-0 z-30">
+           <div className="flex items-center gap-3">
+             {/* Logo for Mobile */}
+             <div className="lg:hidden w-8 h-8 bg-white text-black rounded-lg flex items-center justify-center font-bold text-xs">TG</div>
              <div className="flex flex-col">
-               <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+               <h1 className="text-lg lg:text-xl font-bold text-white tracking-tight truncate max-w-[150px] sm:max-w-none">
                  {salon?.salonName || "My Salon"}
-                 <ChevronRight size={16} className="text-zinc-600 hidden sm:block"/>
-                 <span className="text-zinc-400 font-normal text-sm hidden sm:block">
-                    {activeTab === 'dashboard' ? 'Live Operations' : 'Setup & Menu'}
-                 </span>
                </h1>
-               <p className="text-xs text-zinc-500 font-mono mt-0.5">{currentTime.toLocaleDateString()}</p>
+               <div className="flex items-center gap-2">
+                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                 <p className="text-[10px] lg:text-xs text-zinc-400 font-mono">{currentTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+               </div>
              </div>
            </div>
 
-           <div className="flex items-center gap-3 sm:gap-4">
-             <div onClick={toggleOnlineStatus} className={`cursor-pointer px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border flex items-center gap-2 transition-all ${isOnline ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
-                 <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`}></span>
-                 <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider hidden sm:block">{isOnline ? 'Online' : 'Offline'}</span>
-             </div>
-             <div onClick={() => setIsProfileOpen(true)} className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-tr from-zinc-700 to-zinc-600 p-0.5 cursor-pointer hover:scale-105 transition overflow-hidden">
+           <div className="flex items-center gap-3">
+             <button onClick={toggleOnlineStatus} className={`px-3 py-1.5 rounded-full border flex items-center gap-2 transition-all active:scale-95 ${isOnline ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}>
+                 <Power size={14} />
+                 <span className="text-[10px] font-bold uppercase hidden sm:block">{isOnline ? 'Online' : 'Offline'}</span>
+             </button>
+             <div onClick={() => setIsProfileOpen(true)} className="w-9 h-9 rounded-full bg-gradient-to-tr from-zinc-700 to-zinc-600 p-0.5 cursor-pointer hover:scale-105 transition overflow-hidden">
                 {profileImage ? <img src={profileImage} alt="Profile" className="w-full h-full rounded-full object-cover" /> : <div className="w-full h-full rounded-full bg-zinc-900 flex items-center justify-center text-xs font-bold text-white">TG</div>}
              </div>
            </div>
         </header>
 
-        {/* Dashboard Workspace */}
-        <div className="flex-1 overflow-y-auto p-4 lg:p-6 scrollbar-hide">
+        {/* --- SCROLLABLE CONTENT --- */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6 pb-24 lg:pb-6 custom-scrollbar">
            
-           {/* VIEW: DASHBOARD */}
+           {/* === VIEW: DASHBOARD === */}
            {activeTab === 'dashboard' && (
-             <>
-                {/* 1. SETUP WARNING BANNER (Onboarding) */}
-                {isServicesEmpty && (
-                    <div className="mb-6 bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 p-6 rounded-3xl flex flex-col md:flex-row items-center justify-between animate-pulse">
-                        <div className="mb-4 md:mb-0">
-                            <h3 className="text-xl font-bold text-orange-400 flex items-center gap-2">
-                                <AlertTriangle className="text-orange-500" /> Setup Incomplete
-                            </h3>
-                            <p className="text-zinc-400 text-sm mt-1 max-w-xl">
-                                Your service menu is empty. Customers cannot see your salon or book appointments until you add at least one service.
-                            </p>
-                        </div>
-                        <button 
-                            onClick={() => setActiveTab('settings')}
-                            className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl transition-all shadow-lg shadow-orange-500/20 flex items-center gap-2"
-                        >
-                            Go to Setup <ArrowRight size={16} />
-                        </button>
+             <div className="max-w-7xl mx-auto space-y-6">
+               
+               {/* 1. SETUP WARNING (If Empty) */}
+               {isServicesEmpty && (
+                   <div className="bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 p-4 lg:p-6 rounded-2xl lg:rounded-3xl flex flex-col md:flex-row items-center justify-between gap-4 animate-pulse">
+                       <div className="text-center md:text-left">
+                           <h3 className="text-lg font-bold text-orange-400 flex items-center justify-center md:justify-start gap-2">
+                               <AlertTriangle size={18} /> Setup Incomplete
+                           </h3>
+                           <p className="text-zinc-400 text-xs mt-1">Add services to make your salon visible.</p>
+                       </div>
+                       <button onClick={() => setActiveTab('settings')} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-orange-500/20 w-full md:w-auto">
+                           Fix Now
+                       </button>
+                   </div>
+               )}
+
+               {/* 2. STATS GRID (Responsive) */}
+               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                 <div className="bg-zinc-900/50 border border-white/5 rounded-2xl p-4 flex flex-col justify-between h-24 lg:h-32">
+                     <div className="flex justify-between items-start">
+                        <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400"><DollarSign size={18}/></div>
+                        <span className="text-[10px] text-zinc-500 font-bold uppercase">Today</span>
+                     </div>
+                     <h3 className="text-2xl font-black text-white">₹{stats.revenue}</h3>
+                 </div>
+                 <div className="bg-zinc-900/50 border border-white/5 rounded-2xl p-4 flex flex-col justify-between h-24 lg:h-32">
+                     <div className="flex justify-between items-start">
+                        <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400"><Armchair size={18}/></div>
+                        <span className="text-[10px] text-zinc-500 font-bold uppercase">Active</span>
+                     </div>
+                     <h3 className="text-2xl font-black text-white">{chairs.filter(c => c.status === 'occupied').length} / {chairs.length}</h3>
+                 </div>
+                 <div className="bg-zinc-900/50 border border-white/5 rounded-2xl p-4 flex flex-col justify-between h-24 lg:h-32">
+                     <div className="flex justify-between items-start">
+                        <div className="p-2 bg-yellow-500/10 rounded-lg text-yellow-400"><Users size={18}/></div>
+                        <span className="text-[10px] text-zinc-500 font-bold uppercase">Waiting</span>
+                     </div>
+                     <h3 className="text-2xl font-black text-white">{activeQueue.length}</h3>
+                 </div>
+                 <div className="bg-zinc-900/50 border border-white/5 rounded-2xl p-4 flex flex-col justify-between h-24 lg:h-32">
+                     <div className="flex justify-between items-start">
+                        <div className="p-2 bg-purple-500/10 rounded-lg text-purple-400"><CheckCircle size={18}/></div>
+                        <span className="text-[10px] text-zinc-500 font-bold uppercase">Done</span>
+                     </div>
+                     <h3 className="text-2xl font-black text-white">{stats.customers}</h3>
+                 </div>
+               </div>
+
+               {/* 3. NEW REQUESTS (Prominent if active) */}
+               {requests.length > 0 && (
+                 <div className="animate-in fade-in slide-in-from-top-4">
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-bold text-sm text-zinc-300 flex items-center gap-2"><Bell className="text-yellow-500 animate-bounce" size={16}/> New Requests ({requests.length})</h3>
                     </div>
-                )}
-
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-                  <div className="col-span-2 lg:col-span-1 group relative bg-zinc-900/50 hover:bg-zinc-900/80 border border-white/5 rounded-3xl p-4 sm:p-6 transition-all">
-                      <div className="flex items-end gap-2">
-                        <h3 className="text-2xl sm:text-3xl font-black text-white">₹{stats.revenue}</h3>
-                        <span className="text-xs text-emerald-400 font-bold mb-1.5 flex items-center gap-1"><TrendingUp size={10}/> Daily</span>
-                      </div>
-                      <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mt-1">Revenue</p>
-                  </div>
-                  <div className="group relative bg-zinc-900/50 hover:bg-zinc-900/80 border border-white/5 rounded-3xl p-4 sm:p-6 transition-all">
-                      <h3 className="text-2xl sm:text-3xl font-black text-white">{chairs.filter(c => c.status === 'occupied').length} / {chairs.length}</h3>
-                      <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mt-1">Busy Chairs</p>
-                  </div>
-                  <div className="group relative bg-zinc-900/50 hover:bg-zinc-900/80 border border-white/5 rounded-3xl p-4 sm:p-6 transition-all">
-                      <h3 className="text-2xl sm:text-3xl font-black text-white">{activeQueue.length}</h3>
-                      <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mt-1">Waiting</p>
-                  </div>
-                  <div className="group relative bg-zinc-900/50 hover:bg-zinc-900/80 border border-white/5 rounded-3xl p-4 sm:p-6 transition-all">
-                      <h3 className="text-2xl sm:text-3xl font-black text-white">{stats.customers}</h3>
-                      <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mt-1">Done</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:h-[calc(100vh-320px)] lg:min-h-[500px]">
-                  <div className="flex flex-col bg-zinc-900/30 border border-white/5 rounded-3xl overflow-hidden backdrop-blur-sm min-h-[300px] lg:h-full">
-                      <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/5">
-                        <h3 className="font-bold text-sm text-zinc-100 flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-yellow-500"></div> New Requests
-                        </h3>
-                        <span className="text-xs font-bold bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-md">{requests.length}</span>
-                      </div>
-                      <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
-                        {requests.length === 0 ? <div className="h-40 lg:h-full flex flex-col items-center justify-center text-zinc-600 gap-2"><Bell size={32} className="opacity-20"/><p className="text-sm">No new requests</p></div> : requests.map(req => (
-                            <div key={req._id} className="bg-zinc-900 border border-white/10 p-4 rounded-2xl animate-in fade-in slide-in-from-bottom-2">
-                               <div className="flex justify-between items-start mb-3">
-                                 <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${getAvatarGradient(req.userId?.name)} flex items-center justify-center text-sm font-bold shadow-lg`}>{req.userId?.name?.charAt(0) || "U"}</div>
-                                    <div>
-                                      <h4 className="font-bold text-sm text-white">{req.userId?.name || "User"}</h4>
-                                      <p className="text-xs text-zinc-400">{req.services[0]?.name} {req.services.length > 1 && `+${req.services.length - 1}`}</p>
-                                    </div>
-                                 </div>
-                                 <span className="text-[10px] font-mono text-zinc-500 bg-zinc-950 px-2 py-1 rounded">{new Date(req.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                               </div>
-                               <div className="flex items-center justify-between mt-3 gap-2">
-                                 <div className="text-xs font-bold text-zinc-300">₹{req.totalPrice}</div>
-                                 <button onClick={() => handleAcceptRequest(req)} className="px-4 py-2 rounded-lg bg-white text-black text-xs font-bold hover:bg-emerald-400 transition-all">Accept</button>
-                               </div>
+                    <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide">
+                        {requests.map(req => (
+                            <div key={req._id} className="snap-center min-w-[280px] sm:min-w-[320px] bg-zinc-900 border border-yellow-500/30 p-4 rounded-2xl shadow-lg relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-yellow-500"></div>
+                                <div className="flex items-center gap-3 mb-3">
+                                   <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${getAvatarGradient(req.userId?.name)} flex items-center justify-center text-sm font-bold`}>{req.userId?.name?.charAt(0) || "U"}</div>
+                                   <div>
+                                     <h4 className="font-bold text-sm text-white">{req.userId?.name}</h4>
+                                     <p className="text-xs text-zinc-400">{req.services[0]?.name} {req.services.length > 1 && `+${req.services.length - 1}`}</p>
+                                   </div>
+                                </div>
+                                <div className="flex items-center justify-between mt-2">
+                                    <span className="text-sm font-bold text-white">₹{req.totalPrice}</span>
+                                    <button onClick={() => handleAcceptRequest(req)} className="px-4 py-2 bg-white text-black text-xs font-bold rounded-lg hover:bg-emerald-400 transition-colors">Accept</button>
+                                </div>
                             </div>
                         ))}
-                      </div>
-                  </div>
+                    </div>
+                 </div>
+               )}
 
-                  <div className="flex flex-col bg-zinc-900/30 border border-white/5 rounded-3xl overflow-hidden backdrop-blur-sm min-h-[300px] lg:h-full">
-                      <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/5">
-                        <h3 className="font-bold text-sm text-zinc-100 flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-blue-500"></div> Waiting Queue
-                        </h3>
-                        {/* 🔥 NEW: Add Walk-in Button */}
+               {/* 4. MAIN OPERATIONAL AREA */}
+               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-auto lg:h-[600px]">
+                 
+                 {/* LEFT: QUEUE LIST */}
+                 <div className="lg:col-span-4 bg-zinc-900/30 border border-white/5 rounded-3xl overflow-hidden flex flex-col h-[400px] lg:h-full">
+                    <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between sticky top-0 backdrop-blur-sm z-10">
+                        <h3 className="font-bold text-sm text-zinc-100">Waiting Queue</h3>
                         <div className="flex items-center gap-2">
-                            <button 
-                                onClick={() => setIsWalkInOpen(true)}
-                                className="flex items-center gap-1 bg-zinc-800 hover:bg-white hover:text-black text-xs font-bold text-zinc-300 px-2 py-1.5 rounded-lg transition-colors border border-white/10"
-                            >
-                                <UserPlus size={14} /> 
-                                <span className="hidden sm:inline">Add Walk-in</span>
-                            </button>
                             <span className="text-xs font-bold bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-md">{activeQueue.length}</span>
                         </div>
-                      </div>
-                      <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
-                        {activeQueue.length === 0 ? <div className="h-40 lg:h-full flex flex-col items-center justify-center text-zinc-600 gap-2"><Users size={32} className="opacity-20"/><p className="text-sm">Queue is empty</p></div> : activeQueue.map((cust, idx) => (
-                            <div key={cust._id} className="relative group bg-zinc-900 border border-white/10 hover:border-blue-500/50 p-4 rounded-2xl transition-all">
-                               {cust.isGuest && <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-zinc-800 text-[9px] text-zinc-400 rounded uppercase font-bold tracking-wider">WALK-IN</div>}
-                               
-                               <div className="flex items-center justify-between">
-                                 <div className="flex items-center gap-3">
-                                    <span className="text-lg font-black text-zinc-700 w-6">#{cust.queueNumber}</span>
-                                    <div>
-                                      {/* 🔥 SAFE NAME DISPLAY (User vs Guest) */}
-                                      <h4 className="font-bold text-sm text-white">{cust.userId?.name || cust.guestName || "Guest"}</h4>
-                                      <p className="text-xs text-zinc-400">{cust.services[0]?.name}</p>
-                                    </div>
-                                 </div>
-                                 <button onClick={() => openAssignmentModal(cust)} className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-emerald-400 transition border border-white/5">
-                                    <Play size={14} fill="currentColor" />
-                                 </button>
-                               </div>
-                            </div>
-                        ))}
-                      </div>
-                  </div>
-
-                  <div className="flex flex-col bg-zinc-900/30 border border-white/5 rounded-3xl overflow-hidden backdrop-blur-sm relative min-h-[400px] lg:h-full">
-                      <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/5">
-                        <h3 className="font-bold text-sm text-zinc-100 flex items-center gap-2"><Scissors size={14} className="text-emerald-400"/> Service Floor</h3>
-                        <div className="flex items-center gap-2"><span className="text-[10px] text-zinc-500 font-bold uppercase">{chairs.length} Chairs</span></div>
-                      </div>
-                      <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                           {chairs.map((chair) => (
-                             <div key={chair.id} className={`relative rounded-2xl p-4 border transition-all ${chair.status === 'occupied' ? 'bg-gradient-to-b from-zinc-900 to-zinc-900/50 border-emerald-500/30' : 'bg-zinc-900 border-white/5 border-dashed'}`}>
-                                <div className="flex justify-between items-start mb-4">
-                                   <div className="flex items-center gap-2">
-                                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${chair.status === 'occupied' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-600'}`}><Armchair size={16} /></div>
-                                      <div>
-                                         <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">{chair.name}</h4>
-                                         <p className={`text-[10px] font-bold ${chair.status === 'occupied' ? 'text-emerald-400' : 'text-zinc-600'}`}>{chair.status === 'occupied' ? 'ACTIVE' : 'EMPTY'}</p>
-                                      </div>
-                                   </div>
-                                   {chair.assignedStaff && <div className="flex items-center gap-1 bg-zinc-950 px-2 py-1 rounded border border-white/5"><UserCheck size={10} className="text-zinc-400"/><span className="text-[10px] font-medium text-zinc-300">{chair.assignedStaff}</span></div>}
-                                </div>
-                                {chair.status === 'occupied' && chair.currentCustomer ? (
-                                  <>
-                                    <div className="flex items-center gap-3 mb-4">
-                                      <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${getAvatarGradient(chair.currentCustomer.userId?.name || chair.currentCustomer.guestName)} flex items-center justify-center text-sm font-bold`}>
-                                        {(chair.currentCustomer.userId?.name || chair.currentCustomer.guestName || "G").charAt(0)}
-                                      </div>
-                                      <div>
-                                        {/* 🔥 SAFE NAME DISPLAY (User vs Guest) */}
-                                        <h5 className="font-bold text-white text-sm">{chair.currentCustomer.userId?.name || chair.currentCustomer.guestName || "Guest"}</h5>
-                                        <p className="text-xs text-emerald-400">{chair.currentCustomer.services[0]?.name}</p>
-                                      </div>
-                                    </div>
-                                    <button onClick={() => handleCompleteService(chair.id)} className="w-full py-2 bg-white text-black text-xs font-bold rounded-lg hover:bg-emerald-400 transition-colors flex items-center justify-center gap-2"><CheckSquare size={14}/> Complete</button>
-                                  </>
-                                ) : (
-                                  <div className="h-20 flex flex-col items-center justify-center text-zinc-700 gap-1"><p className="text-xs font-medium">Ready for customer</p>{activeQueue.length > 0 && <button onClick={() => openAssignmentModal(activeQueue[0])} className="text-[10px] font-bold text-blue-400 hover:underline">Assign Next</button>}</div>
-                                )}
-                             </div>
-                           ))}
-                        </div>
-                      </div>
-                  </div>
-                </div>
-             </>
-           )}
-
-           {/* VIEW: SETTINGS (SERVICE MANAGER) */}
-           {activeTab === 'settings' && (
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-2">
-                
-                {/* 1. Services Manager */}
-                <div className="bg-zinc-900/50 border border-white/5 rounded-3xl p-6">
-                   <h3 className="font-bold text-lg text-white mb-4 flex items-center gap-2"><Scissors className="text-emerald-400" size={20}/> Manage Services</h3>
-                   
-                   {/* QUICK ADD SUGGESTIONS (NEW) */}
-                   <div className="mb-6">
-                      <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2 flex items-center gap-1"><Zap size={10} className="text-yellow-400"/> Quick Add (Click to fill)</p>
-                      <div className="flex flex-wrap gap-2">
-                          {SUGGESTED_SERVICES.map((s, i) => (
-                              <button 
-                                key={i}
-                                onClick={() => fillServiceSuggestion(s)}
-                                className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-white/5 rounded-lg text-xs text-zinc-300 transition-colors flex items-center gap-1"
-                              >
-                                {s.name} <span className="opacity-50">• ₹{s.price}</span>
-                              </button>
-                          ))}
-                      </div>
-                   </div>
-
-                   {/* MANUAL INPUT */}
-                   <div className="space-y-3 mb-6 bg-zinc-900/80 p-4 rounded-2xl border border-white/5">
-                      <div className="grid grid-cols-3 gap-2">
-                         <input type="text" placeholder="Service Name (e.g. Haircut)" className="col-span-3 bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none transition-all focus:ring-1 focus:ring-emerald-500/50" value={newService.name} onChange={(e) => setNewService({...newService, name: e.target.value})} />
-                         <input type="number" placeholder="Price (₹)" className="bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.price} onChange={(e) => setNewService({...newService, price: e.target.value})} />
-                         <input type="number" placeholder="Time (min)" className="bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.time} onChange={(e) => setNewService({...newService, time: e.target.value})} />
-                         <button onClick={handleAddService} className="bg-emerald-500 text-white rounded-xl flex items-center justify-center hover:bg-emerald-400 font-bold shadow-lg shadow-emerald-500/20 transition-all active:scale-95"><Plus size={20}/></button>
-                      </div>
-                   </div>
-
-                   {/* LIST OF SERVICES */}
-                   <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
-                      {services.length === 0 ? (
-                          <div className="text-zinc-500 text-center text-sm py-8 border-2 border-dashed border-zinc-800 rounded-xl bg-zinc-900/30">
-                              No services added yet.<br/>Select from Quick Add above.
-                          </div>
-                      ) : (
-                          services.map((s, i) => (
-                            <div key={i} className="flex items-center justify-between p-3 bg-zinc-900 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
-                                <div><h4 className="font-bold text-sm text-white">{s.name}</h4><p className="text-xs text-zinc-400">₹{s.price} • {s.time} mins</p></div>
-                                <button onClick={() => handleDeleteService(i)} className="p-2 text-zinc-500 hover:text-red-400 hover:bg-white/5 rounded-lg transition-colors"><Trash2 size={16}/></button>
-                            </div>
-                          ))
-                      )}
-                   </div>
-                </div>
-
-                {/* 2. Staff & Status Manager */}
-                <div className="space-y-6">
-                   {/* Staff */}
-                   <div className="bg-zinc-900/50 border border-white/5 rounded-3xl p-6">
-                      <h3 className="font-bold text-lg text-white mb-4 flex items-center gap-2"><UserCheck className="text-blue-400" size={20}/> Staff Members</h3>
-                      <div className="flex gap-2 mb-4">
-                         <input type="text" placeholder="Staff Name" className="flex-1 bg-zinc-900 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-blue-500 outline-none" value={newStaffName} onChange={(e) => setNewStaffName(e.target.value)} />
-                         <button onClick={handleAddStaff} className="px-4 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-400 shadow-lg shadow-blue-500/20">Add</button>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                         {staff.map((s, i) => (
-                           <div key={i} className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-white border border-white/5 flex items-center gap-2">
-                              <div className="w-2 h-2 bg-green-500 rounded-full"></div> {s.name}
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
+                        {activeQueue.length === 0 ? (
+                           <div className="h-full flex flex-col items-center justify-center text-zinc-600 gap-2">
+                               <div className="w-16 h-16 rounded-full bg-zinc-900 flex items-center justify-center"><Users size={24} className="opacity-30"/></div>
+                               <p className="text-sm">Queue is empty</p>
+                               <button onClick={() => setIsWalkInOpen(true)} className="text-xs font-bold text-emerald-500 hover:underline">Add First Customer</button>
                            </div>
-                         ))}
-                      </div>
-                   </div>
+                        ) : activeQueue.map((cust) => (
+                           <div key={cust._id} className="relative group bg-zinc-900 border border-white/10 p-4 rounded-2xl active:scale-98 transition-all">
+                              {cust.isGuest && <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-zinc-800 text-[9px] text-zinc-400 rounded uppercase font-bold tracking-wider">WALK-IN</div>}
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                   <span className="text-xl font-black text-zinc-700 w-8">#{cust.queueNumber}</span>
+                                   <div>
+                                     <h4 className="font-bold text-sm text-white">{cust.userId?.name || cust.guestName}</h4>
+                                     <p className="text-xs text-zinc-400">{cust.services[0]?.name}</p>
+                                   </div>
+                                </div>
+                                <button onClick={() => openAssignmentModal(cust)} className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 border border-white/5 transition-all">
+                                   <Play size={16} fill="currentColor" />
+                                </button>
+                              </div>
+                           </div>
+                        ))}
+                    </div>
+                 </div>
 
-                   {/* Salon Status */}
-                   <div className="bg-zinc-900/50 border border-white/5 rounded-3xl p-6">
-                      <h3 className="font-bold text-lg text-white mb-4 flex items-center gap-2"><Power className="text-red-400" size={20}/> Salon Visibility</h3>
-                      <div className="flex items-center justify-between bg-zinc-900 p-4 rounded-xl border border-white/5">
-                         <div>
-                            <h4 className="font-bold text-white">Online Status</h4>
-                            <p className="text-xs text-zinc-500">Visible to customers on map</p>
-                         </div>
-                         <button onClick={toggleOnlineStatus} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-lg ${isOnline ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-red-500 text-white shadow-red-500/20'}`}>
-                            {isOnline ? "LIVE NOW" : "OFFLINE"}
-                         </button>
-                      </div>
-                   </div>
-                </div>
+                 {/* RIGHT: CHAIRS GRID */}
+                 <div className="lg:col-span-8 bg-zinc-900/30 border border-white/5 rounded-3xl overflow-hidden flex flex-col h-auto lg:h-full">
+                    <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between sticky top-0 backdrop-blur-sm z-10">
+                        <h3 className="font-bold text-sm text-zinc-100 flex items-center gap-2"><Scissors size={14} className="text-emerald-400"/> Service Floor</h3>
+                        <span className="text-[10px] text-zinc-500 font-bold uppercase">{chairs.length} Chairs</span>
+                    </div>
+                    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto custom-scrollbar flex-1">
+                        {chairs.map((chair) => (
+                          <div key={chair.id} className={`relative rounded-2xl p-4 border transition-all flex flex-col justify-between min-h-[160px] ${chair.status === 'occupied' ? 'bg-zinc-900 border-emerald-500/30 shadow-lg shadow-emerald-900/10' : 'bg-zinc-900/50 border-white/5 border-dashed'}`}>
+                             {/* Chair Header */}
+                             <div className="flex justify-between items-start mb-2">
+                                <div className="flex items-center gap-2">
+                                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${chair.status === 'occupied' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-600'}`}><Armchair size={16} /></div>
+                                   <div>
+                                      <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">{chair.name}</h4>
+                                      <p className={`text-[10px] font-bold ${chair.status === 'occupied' ? 'text-emerald-400' : 'text-zinc-600'}`}>{chair.status === 'occupied' ? 'ACTIVE' : 'EMPTY'}</p>
+                                   </div>
+                                </div>
+                                {chair.assignedStaff && <div className="flex items-center gap-1 bg-zinc-950 px-2 py-1 rounded border border-white/5"><UserCheck size={10} className="text-zinc-400"/><span className="text-[10px] font-medium text-zinc-300">{chair.assignedStaff}</span></div>}
+                             </div>
+
+                             {/* Chair Body */}
+                             {chair.status === 'occupied' && chair.currentCustomer ? (
+                               <div className="mt-2">
+                                 <div className="flex items-center gap-3 mb-4 p-2 bg-zinc-950/50 rounded-xl">
+                                   <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${getAvatarGradient(chair.currentCustomer.userId?.name || chair.currentCustomer.guestName)} flex items-center justify-center text-sm font-bold`}>
+                                     {(chair.currentCustomer.userId?.name || chair.currentCustomer.guestName || "G").charAt(0)}
+                                   </div>
+                                   <div>
+                                     <h5 className="font-bold text-white text-sm">{chair.currentCustomer.userId?.name || chair.currentCustomer.guestName}</h5>
+                                     <p className="text-xs text-emerald-400">{chair.currentCustomer.services[0]?.name}</p>
+                                   </div>
+                                 </div>
+                                 <button onClick={() => handleCompleteService(chair.id)} className="w-full py-2.5 bg-white text-black text-xs font-bold rounded-lg hover:bg-emerald-400 transition-colors flex items-center justify-center gap-2 active:scale-95"><CheckSquare size={14}/> Complete</button>
+                               </div>
+                             ) : (
+                               <div className="flex-1 flex flex-col items-center justify-center text-zinc-700 gap-2">
+                                  <p className="text-xs font-medium">Ready for customer</p>
+                                  {activeQueue.length > 0 && <button onClick={() => openAssignmentModal(activeQueue[0])} className="text-[10px] font-bold text-blue-400 bg-blue-500/10 px-2 py-1 rounded hover:bg-blue-500/20">Assign Next</button>}
+                               </div>
+                             )}
+                          </div>
+                        ))}
+                    </div>
+                 </div>
+
+               </div>
              </div>
            )}
 
+           {/* === VIEW: SETTINGS === */}
+           {activeTab === 'settings' && (
+             <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 pb-20">
+               
+               {/* 1. Services Manager */}
+               <div className="bg-zinc-900/50 border border-white/5 rounded-3xl p-5 lg:p-6">
+                  <h3 className="font-bold text-lg text-white mb-4 flex items-center gap-2"><Scissors className="text-emerald-400" size={20}/> Manage Services</h3>
+                  
+                  {/* QUICK ADD */}
+                  <div className="mb-6">
+                     <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2 flex items-center gap-1"><Zap size={10} className="text-yellow-400"/> Quick Add</p>
+                     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                         {SUGGESTED_SERVICES.map((s, i) => (
+                             <button key={i} onClick={() => fillServiceSuggestion(s)} className="shrink-0 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-white/5 rounded-lg text-xs text-zinc-300 transition-colors flex items-center gap-1 whitespace-nowrap">
+                               {s.name} <span className="opacity-50">• ₹{s.price}</span>
+                             </button>
+                         ))}
+                     </div>
+                  </div>
+
+                  {/* INPUTS */}
+                  <div className="space-y-3 mb-6 bg-zinc-900/80 p-4 rounded-2xl border border-white/5">
+                     <div className="grid grid-cols-3 gap-2">
+                        <input type="text" placeholder="Service Name" className="col-span-3 bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.name} onChange={(e) => setNewService({...newService, name: e.target.value})} />
+                        <input type="number" placeholder="₹ Price" className="bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.price} onChange={(e) => setNewService({...newService, price: e.target.value})} />
+                        <input type="number" placeholder="Mins" className="bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.time} onChange={(e) => setNewService({...newService, time: e.target.value})} />
+                        <button onClick={handleAddService} className="col-span-3 bg-emerald-500 text-white rounded-xl py-3 font-bold hover:bg-emerald-400 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"><Plus size={16}/> Add Service</button>
+                     </div>
+                  </div>
+
+                  {/* LIST */}
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar">
+                     {services.length === 0 ? <p className="text-zinc-500 text-sm text-center py-4">No services added.</p> : services.map((s, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 bg-zinc-900 rounded-xl border border-white/5">
+                           <div><h4 className="font-bold text-sm text-white">{s.name}</h4><p className="text-xs text-zinc-400">₹{s.price} • {s.time} mins</p></div>
+                           <button onClick={() => handleDeleteService(i)} className="p-2 text-zinc-600 hover:text-red-400 transition-colors"><Trash2 size={16}/></button>
+                        </div>
+                     ))}
+                  </div>
+               </div>
+
+               {/* 2. Staff & Status */}
+               <div className="space-y-6">
+                  <div className="bg-zinc-900/50 border border-white/5 rounded-3xl p-5 lg:p-6">
+                     <h3 className="font-bold text-lg text-white mb-4 flex items-center gap-2"><UserCheck className="text-blue-400" size={20}/> Staff</h3>
+                     <div className="flex gap-2 mb-4">
+                        <input type="text" placeholder="Staff Name" className="flex-1 bg-zinc-900 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-blue-500 outline-none" value={newStaffName} onChange={(e) => setNewStaffName(e.target.value)} />
+                        <button onClick={handleAddStaff} className="px-4 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-400 active:scale-95 transition-all">Add</button>
+                     </div>
+                     <div className="flex flex-wrap gap-2">
+                        {staff.map((s, i) => (
+                          <div key={i} className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-white border border-white/5 flex items-center gap-2">
+                             <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div> {s.name}
+                          </div>
+                        ))}
+                     </div>
+                  </div>
+                  
+                  {/* Logout Area for Mobile */}
+                  <button onClick={onLogout} className="lg:hidden w-full py-4 bg-red-500/10 text-red-400 font-bold rounded-2xl border border-red-500/20 flex items-center justify-center gap-2">
+                      <LogOut size={18}/> Sign Out
+                  </button>
+               </div>
+             </div>
+           )}
         </div>
+
+        {/* --- MOBILE: BOTTOM NAVIGATION BAR (App-Like) --- */}
+        <div className="lg:hidden fixed bottom-0 left-0 w-full bg-zinc-900/80 backdrop-blur-xl border-t border-white/10 z-50 pb-safe">
+            <div className="flex items-center justify-around h-16 px-2">
+                <button 
+                  onClick={() => setActiveTab('dashboard')} 
+                  className={`flex flex-col items-center justify-center w-16 h-full space-y-1 ${activeTab === 'dashboard' ? 'text-white' : 'text-zinc-500'}`}
+                >
+                    <Home size={22} strokeWidth={activeTab === 'dashboard' ? 3 : 2} />
+                    <span className="text-[10px] font-medium">Home</span>
+                </button>
+
+                {/* CENTRAL ACTION BUTTON: ADD WALK-IN */}
+                <button 
+                   onClick={() => setIsWalkInOpen(true)}
+                   className="flex items-center justify-center w-14 h-14 bg-white text-black rounded-full shadow-lg shadow-white/10 -mt-6 border-4 border-zinc-900 active:scale-90 transition-transform"
+                >
+                   <UserPlus size={24} />
+                </button>
+
+                <button 
+                  onClick={() => setActiveTab('settings')} 
+                  className={`flex flex-col items-center justify-center w-16 h-full space-y-1 ${activeTab === 'settings' ? 'text-white' : 'text-zinc-500'}`}
+                >
+                    <Settings size={22} strokeWidth={activeTab === 'settings' ? 3 : 2} />
+                    <span className="text-[10px] font-medium">Setup</span>
+                </button>
+            </div>
+        </div>
+
       </main>
     </div>
   );
