@@ -173,15 +173,11 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
   // 🔥 Active Ticket State
   const [activeTicket, setActiveTicket] = useState(null);
   const [canceling, setCanceling] = useState(false);
-  const [calculatingRoute, setCalculatingRoute] = useState(false); // Loader for Directions button
 
   const [userLocation, setUserLocation] = useState(null); 
   const [heading, setHeading] = useState(0); 
   const [routeDestination, setRouteDestination] = useState(null); 
   const watchId = useRef(null); 
-  
-  // 🔥 Specific Ref for the Map Section to ensure smooth scrolling
-  const mapRef = useRef(null);
 
   // --- LENIS SMOOTH SCROLL ---
   useEffect(() => {
@@ -264,7 +260,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
     );
   };
  
-  // Generic Route Handler (From Card)
   const handleRoute = (salon) => {
     if (!userLocation) {
         alert("Please enable location first to get directions.");
@@ -282,49 +277,8 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         lng: Number(salon.longitude)
     });
 
-    if (mapRef.current) {
-        mapRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    } else {
-        window.scrollTo({ top: 100, behavior: 'smooth' });
-    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
-  // 🔥 SPECIAL FUNCTION: HANDLE DIRECTION FROM ACTIVE TICKET CARD
-  const handleTicketDirection = (salon) => {
-    setCalculatingRoute(true);
-
-    if (!userLocation) {
-        alert("Please allow location access to get directions.");
-        startLocationTracking();
-        setCalculatingRoute(false);
-        return;
-    }
-
-    if (!salon || !salon.latitude || !salon.longitude) {
-        alert("Location data for this salon is missing.");
-        setCalculatingRoute(false);
-        return;
-    }
-
-    // Set Destination State - This triggers the map to draw the line
-    setRouteDestination({
-        lat: parseFloat(salon.latitude),
-        lng: parseFloat(salon.longitude)
-    });
-
-    // Scroll to Map Section
-    setTimeout(() => {
-        if (mapRef.current) {
-            mapRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-        } else {
-            // Fallback
-            const mapEl = document.getElementById("map-section");
-            if (mapEl) mapEl.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-        setCalculatingRoute(false);
-    }, 500); // Small delay to let UI settle
-  };
-
 
   // --- SOCKETS & INITIAL DATA ---
   useEffect(() => {
@@ -358,6 +312,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
     // 🔥 Socket Listeners for Ticket Status
     socket.on("request_accepted", (ticket) => {
         setActiveTicket(ticket);
+        // Maybe show a toast notification here
     });
 
     socket.on("request_rejected", () => {
@@ -643,17 +598,14 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
             </div>
           </div>
 
-          {/* 🔥 MAP CONTAINER WITH REF AND ID FOR SCROLLING */}
-          <div ref={mapRef} id="map-section" className="scroll-mt-28 transition-all duration-500">
-            <MapSalon 
-                salons={sortedSalons} 
-                userLocation={userLocation}
-                heading={heading} 
-                onSelect={(s) => handleOpenBooking(s)} 
-                routeDestination={routeDestination} 
-                onRouteClick={handleRoute}
-            />
-          </div>
+          <MapSalon 
+            salons={sortedSalons} 
+            userLocation={userLocation}
+            heading={heading} 
+            onSelect={(s) => handleOpenBooking(s)} 
+            routeDestination={routeDestination} 
+            onRouteClick={handleRoute}
+          />
 
           <div className="flex flex-col md:flex-row gap-4 mt-6">
             <div className="relative flex-1">
@@ -801,27 +753,15 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                 </div>
                 
                 <div className="flex gap-3">
-                    {/* 🔥 UPDATED: Uses special function handleTicketDirection */}
                     <button 
-                        onClick={() => handleTicketDirection(activeTicket.salonId)}
-                        disabled={calculatingRoute}
-                        className="flex-1 bg-white/10 hover:bg-white/20 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={() => handleRoute(activeTicket.salonId)}
+                        className="flex-1 bg-white/10 hover:bg-white/20 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
                     >
-                         {calculatingRoute ? (
-                             <>
-                                <Loader2 size={16} className="animate-spin" />
-                                <span>Loading...</span>
-                             </>
-                        ) : (
-                             <>
-                                <Navigation size={16} fill="currentColor" /> 
-                                <span>Directions</span>
-                             </>
-                        )}
+                        <Navigation size={16} /> Directions
                     </button>
                     <button 
                         onClick={handleCancelTicket}
-                        disabled={canceling || calculatingRoute}
+                        disabled={canceling}
                         className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
                     >
                         {canceling ? <Loader2 size={16} className="animate-spin"/> : <X size={16} />}
