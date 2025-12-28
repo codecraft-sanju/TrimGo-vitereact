@@ -342,3 +342,39 @@ export const getUserHistory = async (req, res) => {
     });
   }
 };
+
+/* -------------------------------------------------------------------------- */
+/* NEW: SALON ACTION - REJECT REQUEST (PENDING -> CANCELLED)                  */
+/* -------------------------------------------------------------------------- */
+export const rejectRequest = async (req, res) => {
+  try {
+    const { ticketId } = req.body;
+    const salonId = req.salon._id;
+
+    // 1. Ticket dhundo aur Status update karo 'cancelled'
+    const ticket = await Ticket.findByIdAndUpdate(
+      ticketId,
+      { status: "cancelled" }, // Hum isse database me delete nahi karte, bas status change karte hain record ke liye
+      { new: true }
+    );
+
+    if (!ticket) {
+      return res.status(404).json({ success: false, message: "Ticket not found" });
+    }
+
+    if (ticket.userId) {
+        req.io.to(`user_${ticket.userId}`).emit("request_rejected", {
+            ticketId: ticket._id,
+            message: "Your request was declined by the salon."
+        });
+    }
+
+    req.io.to(`salon_${salonId}`).emit("queue_updated");
+
+    res.status(200).json({ success: true, message: "Request rejected successfully" });
+
+  } catch (err) {
+    console.error("Reject Error:", err);
+    res.status(500).json({ success: false, message: "Server Error while rejecting" });
+  }
+};

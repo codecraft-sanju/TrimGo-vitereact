@@ -7,7 +7,8 @@ import {
     getMyTicket,
     getSalonData,
     getUserHistory,
-    addWalkInClient 
+    addWalkInClient,
+    rejectRequest 
 } from "../Controllers/queueController.js";
 
 // Middleware Imports (Security ke liye)
@@ -31,6 +32,11 @@ router.get("/salon-dashboard", protectSalon, getSalonData);
 
 // 5. Accept Request (Pending -> Waiting)
 router.post("/accept", protectSalon, acceptRequest);
+
+// --- NEW ROUTE ADDED HERE ---
+// 5.5. Reject Request (Pending -> Cancelled)
+router.post("/reject", protectSalon, rejectRequest); 
+// ----------------------------
 
 // 6. Start Service (Waiting -> Serving + Chair Assignment)
 router.post("/start", protectSalon, startService);
