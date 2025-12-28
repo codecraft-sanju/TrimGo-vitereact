@@ -14,7 +14,9 @@ import {
   Crosshair, 
   Menu,
   Gift,
-  BadgeCheck // <--- Imported for Verified Badge
+  BadgeCheck,
+  Loader2,
+  AlertCircle
 } from "lucide-react";
 import { io } from "socket.io-client"; 
 import Lenis from 'lenis'; 
@@ -27,7 +29,6 @@ import AIConcierge from "./AIConcierge";
 
 /* ---------------------------------
    HELPER: HAVERSINE DISTANCE FORMULA
-   (Fixed: Now fully included)
 ---------------------------------- */
 const deg2rad = (deg) => {
   return deg * (Math.PI / 180);
@@ -158,7 +159,7 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm }) => {
    MAIN COMPONENT 
 ---------------------------------- */
 
-const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick, onReferralClick }) => {
+const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
   const [selectedCity, setSelectedCity] = useState("Locating...");
   const [sortBy, setSortBy] = useState("distance"); 
   const [searchTerm, setSearchTerm] = useState("");
@@ -169,12 +170,16 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick, onReferral
   const [activeBookingSalon, setActiveBookingSalon] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); 
   
+  // 🔥 Active Ticket State
+  const [activeTicket, setActiveTicket] = useState(null);
+  const [canceling, setCanceling] = useState(false);
+
   const [userLocation, setUserLocation] = useState(null); 
   const [heading, setHeading] = useState(0); 
   const [routeDestination, setRouteDestination] = useState(null); 
   const watchId = useRef(null); 
 
-  // --- LENIS SMOOTH SCROLL IMPLEMENTATION ---
+  // --- LENIS SMOOTH SCROLL ---
   useEffect(() => {
     const lenis = new Lenis({
       duration: 1.2,
@@ -275,8 +280,10 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick, onReferral
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // --- SOCKETS & INITIAL DATA ---
   useEffect(() => {
     startLocationTracking();
+    fetchActiveTicket(); // Check if user already has a ticket
 
     const socket = io(import.meta.env.VITE_BACKEND_URL);
     if(user?._id) socket.emit("join_room", `user_${user._id}`); 
@@ -295,15 +302,31 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick, onReferral
         setSalons((prevSalons) => 
             prevSalons.map((salon) => {
                 if (salon._id === salonId) {
-                    return { 
-                        ...salon, 
-                        waiting: waitingCount, 
-                        estTime: estTime 
-                    }; 
+                    return { ...salon, waiting: waitingCount, estTime: estTime }; 
                 }
                 return salon;
             })
         );
+    });
+
+    // 🔥 Socket Listeners for Ticket Status
+    socket.on("request_accepted", (ticket) => {
+        setActiveTicket(ticket);
+        // Maybe show a toast notification here
+    });
+
+    socket.on("request_rejected", () => {
+        setActiveTicket(null);
+        alert("Your request was rejected by the salon.");
+    });
+
+    socket.on("status_change", (data) => {
+        setActiveTicket(prev => prev ? {...prev, status: data.status, chairId: data.chairId} : null);
+    });
+
+    socket.on("service_completed", () => {
+        setActiveTicket(null);
+        alert("Service completed! Please rate your experience.");
     });
 
     fetchSalons();
@@ -333,6 +356,19 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick, onReferral
     }
   };
 
+  const fetchActiveTicket = async () => {
+      try {
+          const { data } = await api.get("/queue/my-ticket");
+          if(data.success && data.ticket) {
+              setActiveTicket(data.ticket);
+          } else {
+              setActiveTicket(null);
+          }
+      } catch (error) {
+          console.error("Error fetching ticket", error);
+      }
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => fetchSalons(), 500); 
     return () => clearTimeout(timer);
@@ -341,7 +377,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick, onReferral
   const salonsWithDistance = useMemo(() => {
       return salons.map(salon => {
           let distStr = null;
-          // SAFEGUARD: Ensure calculateDistance exists and location data is valid
           if (typeof calculateDistance === 'function' && userLocation && salon.latitude && salon.longitude) {
               distStr = calculateDistance(userLocation.lat, userLocation.lng, salon.latitude, salon.longitude);
           }
@@ -373,6 +408,10 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick, onReferral
   }, [salonsWithDistance, sortBy]);
 
   const handleOpenBooking = (salon) => {
+    if(activeTicket) {
+        alert("You already have an active request. Cancel it to join another queue.");
+        return;
+    }
     if(!salon.isOnline) {
         alert("This salon is currently offline.");
         return;
@@ -399,18 +438,32 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick, onReferral
         const { data } = await api.post("/queue/join", payload);
 
         if(data.success) {
-            onJoinQueue({
-                ...salon,
-                ticketId: data.ticket._id,
-                status: data.ticket.status,
-                number: data.ticket.queueNumber, 
-                eta: totals.time
-            });
+            // Update Local State directly
+            setActiveTicket(data.ticket);
             setActiveBookingSalon(null);
         }
     } catch (error) {
         alert(error.response?.data?.message || "Failed to join queue");
     }
+  };
+
+  // 🔥 NEW: CANCEL TICKET FUNCTION
+  const handleCancelTicket = async () => {
+      if(!activeTicket) return;
+      if(!window.confirm("Are you sure you want to cancel your spot?")) return;
+
+      setCanceling(true);
+      try {
+          const { data } = await api.post("/queue/cancel", { ticketId: activeTicket._id });
+          if(data.success) {
+              setActiveTicket(null); // Clear UI
+          }
+      } catch (error) {
+          console.error(error);
+          alert("Failed to cancel ticket");
+      } finally {
+          setCanceling(false);
+      }
   };
 
   return (
@@ -580,7 +633,6 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick, onReferral
                         <div className="flex items-center flex-wrap gap-2 mb-1">
                           <h2 className="text-base sm:text-lg font-bold text-zinc-900 line-clamp-1">{salon.salonName}</h2>
                           
-                          {/* 🔥 VERIFIED BADGE IMPLEMENTATION 🔥 */}
                           {salon.verified && (
                              <div className="flex items-center justify-center" title="Verified Partner">
                                 <BadgeCheck size={18} className="text-blue-500 fill-white ml-0.5 shrink-0" />
@@ -653,10 +705,10 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick, onReferral
                       </div>
                       <button 
                         onClick={() => handleOpenBooking(salon)} 
-                        disabled={!salon.isOnline} 
-                        className={`px-5 py-2.5 rounded-xl text-white text-[11px] font-bold transition-all flex items-center gap-2 shadow-sm ${salon.isOnline ? 'bg-zinc-900 active:scale-95' : 'bg-zinc-300'}`}
+                        disabled={!salon.isOnline || (activeTicket && activeTicket.salonId?._id !== salon._id)} 
+                        className={`px-5 py-2.5 rounded-xl text-white text-[11px] font-bold transition-all flex items-center gap-2 shadow-sm ${!salon.isOnline ? 'bg-zinc-300 cursor-not-allowed' : activeTicket ? 'bg-zinc-400 cursor-not-allowed' : 'bg-zinc-900 active:scale-95'}`}
                       >
-                        {salon.isOnline ? "Join Queue" : "Offline"} 
+                        {salon.isOnline ? (activeTicket ? "Busy" : "Join Queue") : "Offline"} 
                         <Ticket size={14} />
                       </button>
                     </div>
@@ -680,6 +732,46 @@ const UserDashboard = ({ user, onLogout, onJoinQueue, onProfileClick, onReferral
             onSalonSelect={handleOpenBooking} 
         />
       </main>
+
+      {/* 🔥 ACTIVE TICKET FLOATING CARD (BOTTOM) 🔥 */}
+      {activeTicket && (
+        <div className="fixed bottom-4 left-4 right-4 z-50 animate-in slide-in-from-bottom-20 duration-500">
+            <div className="bg-zinc-900/95 backdrop-blur-lg rounded-2xl shadow-2xl p-4 border border-white/10 text-white flex flex-col gap-3 max-w-lg mx-auto">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Current Status</span>
+                        </div>
+                        <h3 className="font-bold text-lg">{activeTicket.salonId?.salonName || "Salon"}</h3>
+                        <p className="text-xs text-zinc-400">Queue #{activeTicket.queueNumber} • {activeTicket.status.toUpperCase()}</p>
+                    </div>
+                    <div className="text-right">
+                        <div className="text-2xl font-black">₹{activeTicket.totalPrice}</div>
+                        <div className="text-xs text-zinc-400">to pay</div>
+                    </div>
+                </div>
+                
+                <div className="flex gap-3">
+                    <button 
+                        onClick={() => handleRoute(activeTicket.salonId)}
+                        className="flex-1 bg-white/10 hover:bg-white/20 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                    >
+                        <Navigation size={16} /> Directions
+                    </button>
+                    <button 
+                        onClick={handleCancelTicket}
+                        disabled={canceling}
+                        className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                    >
+                        {canceling ? <Loader2 size={16} className="animate-spin"/> : <X size={16} />}
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
     </div>
   );
 };

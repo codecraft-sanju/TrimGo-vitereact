@@ -3,6 +3,36 @@ import Salon from "../Models/Salon.js";
 import User from "../Models/User.js";
 
 /* -------------------------------------------------------------------------- */
+/* USER ACTION: CANCEL TICKET (AGAR USER KHUD CANCEL KARE)                    */
+/* -------------------------------------------------------------------------- */
+export const cancelTicket = async (req, res) => {
+  try {
+    const { ticketId } = req.body;
+    const userId = req.user._id;
+
+    // 1. Ticket verify karein ki woh user ki hi hai
+    const ticket = await Ticket.findOne({ _id: ticketId, userId });
+
+    if (!ticket) {
+      return res.status(404).json({ success: false, message: "Ticket not found or unauthorized" });
+    }
+
+    // 2. Status update to 'cancelled'
+    ticket.status = 'cancelled';
+    await ticket.save();
+
+    // 3. SOCKET EMIT: Salon Dashboard ko update bhejo ki user hat gaya
+    req.io.to(`salon_${ticket.salonId}`).emit("queue_updated");
+
+    res.status(200).json({ success: true, message: "Ticket cancelled successfully" });
+
+  } catch (err) {
+    console.error("Cancel Error:", err);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+/* -------------------------------------------------------------------------- */
 /* NEW: SALON ACTION - ADD WALK-IN CLIENT (OFFLINE USER)                      */
 /* -------------------------------------------------------------------------- */
 export const addWalkInClient = async (req, res) => {
