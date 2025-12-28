@@ -6,7 +6,8 @@ import {
     completeService,
     getMyTicket,
     getSalonData,
-    getUserHistory // 🔥 1. New Import added
+    getUserHistory,
+    addWalkInClient 
 } from "../Controllers/queueController.js";
 
 // Middleware Imports (Security ke liye)
@@ -15,25 +16,15 @@ import { protectSalon } from "../Middleware/salonMiddleware.js"; // Sirf logged-
 
 const router = express.Router();
 
-/* =========================================
-   USER ROUTES (Client Side)
-   Base URL: /api/queue
-   ========================================= */
-
 // 1. Join Queue (User request bhejega)
 router.post("/join", protect, joinQueue);
 
 // 2. Check Active Ticket (User dashboard load hone par check karega)
 router.get("/my-ticket", protect, getMyTicket);
 
-// 3. Get Booking History (Profile Page ke liye) 🔥 2. New Route added
+// 3. Get Booking History (Profile Page ke liye)
 router.get("/history", protect, getUserHistory);
 
-
-/* =========================================
-   SALON ROUTES (Business Side)
-   Base URL: /api/queue
-   ========================================= */
 
 // 4. Get Dashboard Data (Salon login hone par initial data load karega)
 router.get("/salon-dashboard", protectSalon, getSalonData);
@@ -46,5 +37,8 @@ router.post("/start", protectSalon, startService);
 
 // 7. Complete Service (Serving -> Completed + Payment/Rating trigger)
 router.post("/complete", protectSalon, completeService);
+
+//  8. Add Walk-in Client (Offline User - New Feature)
+router.post("/add-walkin", protectSalon, addWalkInClient);
 
 export default router;

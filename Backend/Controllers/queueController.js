@@ -3,6 +3,77 @@ import Salon from "../Models/Salon.js";
 import User from "../Models/User.js";
 
 /* -------------------------------------------------------------------------- */
+/* NEW: SALON ACTION - ADD WALK-IN CLIENT (OFFLINE USER)                      */
+/* -------------------------------------------------------------------------- */
+export const addWalkInClient = async (req, res) => {
+  try {
+    const { name, mobile, services, totalPrice, totalTime } = req.body;
+    const salonId = req.salon._id; // Middleware se salon ID
+
+    // 1. Validation
+    if (!name || !services || services.length === 0) {
+      return res.status(400).json({ success: false, message: "Customer Name and Services are required" });
+    }
+
+    // 2. Queue Number Calculation (Aaj ka last number + 1)
+    // Hum sirf aaj ke tickets check karenge
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const lastTicket = await Ticket.findOne({
+      salonId,
+      createdAt: { $gte: startOfDay }
+    }).sort({ createdAt: -1 }); // Sabse latest ticket
+
+    const queueNumber = lastTicket && lastTicket.queueNumber ? lastTicket.queueNumber + 1 : 1;
+
+    // 3. Create Ticket (Without User ID)
+    const newTicket = await Ticket.create({
+      salonId,
+      userId: null,        // Important: No online account
+      isGuest: true,       // Important: Flag for frontend
+      guestName: name,     // Walk-in Name
+      guestMobile: mobile, // Walk-in Mobile
+      services,
+      totalPrice,
+      totalTime,
+      queueNumber,
+      status: "waiting"    // Direct waiting queue mein daal rahe hain
+    });
+
+    // 4. Socket Emit (Salon Dashboard Update)
+    // Salon owner ko turant dikhna chahiye
+    req.io.to(`salon_${salonId}`).emit("queue_updated");
+
+    // 5. Broadcast Dynamic Time Update (Users ke liye)
+    // Kyunki queue lambi ho gayi, toh online users ko naya time dikhna chahiye
+    const activeTickets = await Ticket.find({
+        salonId,
+        status: { $in: ["waiting", "serving"] }
+    }).select("totalTime");
+
+    const currentWaitingCount = activeTickets.length;
+    const currentEstTime = activeTickets.reduce((sum, t) => sum + (t.totalTime || 0), 0);
+
+    req.io.emit("queue_update_broadcast", { 
+        salonId, 
+        waitingCount: currentWaitingCount,
+        estTime: currentEstTime
+    });
+
+    res.status(201).json({ 
+        success: true, 
+        message: "Walk-in client added successfully", 
+        ticket: newTicket 
+    });
+
+  } catch (err) {
+    console.error("Walk-in Error:", err);
+    res.status(500).json({ success: false, message: "Server Error adding walk-in" });
+  }
+};
+
+/* -------------------------------------------------------------------------- */
 /* USER ACTION: JOIN QUEUE                                                    */
 /* -------------------------------------------------------------------------- */
 export const joinQueue = async (req, res) => {
@@ -122,12 +193,14 @@ export const startService = async (req, res) => {
       { new: true }
     );
 
-    // 🔥 SOCKET EMIT: User ko status change dikhao
-    req.io.to(`user_${ticket.userId}`).emit("status_change", { 
-        status: "serving", 
-        chairId, 
-        staffName 
-    });
+    // 🔥 SOCKET EMIT: User ko status change dikhao (Check if userId exists for guests)
+    if(ticket.userId) {
+        req.io.to(`user_${ticket.userId}`).emit("status_change", { 
+            status: "serving", 
+            chairId, 
+            staffName 
+        });
+    }
 
     // 🔥 SOCKET EMIT: Salon Dashboard refresh
     req.io.to(`salon_${salonId}`).emit("queue_updated");
@@ -158,8 +231,10 @@ export const completeService = async (req, res) => {
         $inc: { revenue: ticket.totalPrice, reviewsCount: 1 } 
     });
 
-    // 🔥 SOCKET EMIT: User ko Rate karne ke liye bolo
-    req.io.to(`user_${ticket.userId}`).emit("service_completed", ticket);
+    // 🔥 SOCKET EMIT: User ko Rate karne ke liye bolo (If online user)
+    if(ticket.userId) {
+        req.io.to(`user_${ticket.userId}`).emit("service_completed", ticket);
+    }
 
     // 🔥 SOCKET EMIT: Salon Dashboard refresh
     req.io.to(`salon_${salonId}`).emit("queue_updated");
@@ -212,6 +287,7 @@ export const getSalonData = async (req, res) => {
         const salonId = req.salon._id;
         
         // Fetch lists for columns
+        // Note: populate will return null for userId if it's a guest ticket (userId: null)
         const requests = await Ticket.find({ salonId, status: "pending" }).populate("userId", "name");
         const waiting = await Ticket.find({ salonId, status: "waiting" }).populate("userId", "name");
         const serving = await Ticket.find({ salonId, status: "serving" }).populate("userId", "name");

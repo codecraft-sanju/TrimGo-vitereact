@@ -7,16 +7,34 @@ const ticketSchema = new mongoose.Schema(
       ref: "Salon",
       required: true,
     },
+    
+    // --- CHANGE 1: User ID ko Optional banaya ---
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false, // <--- IMPORTANT: Ise FALSE karein
+      default: null,
     },
+
+    // --- CHANGE 2: Guest Details (Offline Client ke liye fields) ---
+    isGuest: {
+      type: Boolean,
+      default: false, // Online users ke liye false, Walk-in ke liye true hoga
+    },
+    guestName: {
+      type: String, // Yahan "Rahul", "Amit" aayega
+      default: "",
+    },
+    guestMobile: {
+      type: String, // Optional mobile number
+      default: "",
+    },
+
     services: [
       {
         name: String,
         price: Number,
-        time: Number, // Estimated time in minutes
+        time: Number, 
         category: String
       },
     ],
@@ -26,26 +44,24 @@ const ticketSchema = new mongoose.Schema(
     },
     totalTime: {
       type: Number,
-      required: true, // Total estimated duration
+      required: true, 
     },
     queueNumber: {
       type: Number,
-      default: null, // Position in line (e.g., 5th person)
+      default: null, 
     },
-    // Status Flow: 
-    // pending (User requested) -> waiting (Salon accepted) -> serving (In chair) -> completed (Done)
     status: {
       type: String,
       enum: ["pending", "waiting", "serving", "completed", "cancelled", "rejected"],
-      default: "pending",
+      default: "pending", // Walk-in ke liye direct 'waiting' bhi set kar sakte ho controller se
     },
     assignedStaff: {
       type: String,
-      default: null, // Name of the barber serving this ticket
+      default: null, 
     },
     chairId: {
       type: Number,
-      default: null, // ID of the chair being used
+      default: null, 
     },
   },
   { timestamps: true }

@@ -4,7 +4,7 @@ import {
   Bell, DollarSign, TrendingUp, Clock, CheckCircle, Scissors,
   Play, CheckSquare, X, Camera, Mail, Phone, MapPin, User,
   Armchair, UserCheck, Plus, Trash2, Menu, Save, Edit3, Power,
-  AlertTriangle, Sparkles, Zap, ArrowRight // <--- Fixed: Imported ArrowRight
+  AlertTriangle, Sparkles, Zap, ArrowRight, UserPlus // <--- Added UserPlus for Walk-in
 } from "lucide-react";
 import api from "../utils/api";
 import { io } from "socket.io-client";
@@ -26,6 +26,102 @@ const SUGGESTED_SERVICES = [
 ];
 
 // --- SUB-COMPONENTS ---
+
+// 1. WALK-IN MODAL (NEW)
+const WalkInModal = ({ isOpen, onClose, services, onConfirm }) => {
+  const [name, setName] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [selectedServices, setSelectedServices] = useState([]);
+
+  if (!isOpen) return null;
+
+  const toggleService = (service) => {
+    // Check by name because IDs might differ in structure
+    const exists = selectedServices.find(s => s.name === service.name);
+    if (exists) {
+      setSelectedServices(prev => prev.filter(s => s.name !== service.name));
+    } else {
+      setSelectedServices(prev => [...prev, service]);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (!name.trim()) return alert("Customer Name is required");
+    if (selectedServices.length === 0) return alert("Select at least one service");
+    
+    onConfirm({ name, mobile, services: selectedServices });
+    
+    // Reset
+    setName("");
+    setMobile("");
+    setSelectedServices([]);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="relative w-full max-w-md bg-zinc-900 border border-white/10 rounded-2xl p-6 shadow-2xl animate-in fade-in zoom-in-95">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-bold text-white flex items-center gap-2">
+            <UserPlus className="text-emerald-400" /> Add Walk-in Client
+          </h3>
+          <button onClick={onClose} className="text-zinc-500 hover:text-white"><X size={20}/></button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-bold text-zinc-500 uppercase block mb-1">Customer Name</label>
+            <input 
+              type="text" 
+              placeholder="e.g. Rahul Sharma"
+              className="w-full bg-zinc-950 border border-white/10 rounded-xl p-3 text-white focus:border-emerald-500 outline-none"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          
+          <div>
+            <label className="text-xs font-bold text-zinc-500 uppercase block mb-1">Mobile (Optional)</label>
+            <input 
+              type="number" 
+              placeholder="e.g. 9876543210"
+              className="w-full bg-zinc-950 border border-white/10 rounded-xl p-3 text-white focus:border-emerald-500 outline-none"
+              value={mobile}
+              onChange={(e) => setMobile(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Select Services</label>
+            <div className="max-h-40 overflow-y-auto custom-scrollbar border border-white/5 rounded-xl bg-zinc-950 p-2 space-y-2">
+              {services.map((s, i) => {
+                const isSelected = selectedServices.some(sel => sel.name === s.name);
+                return (
+                  <div 
+                    key={i} 
+                    onClick={() => toggleService(s)}
+                    className={`p-3 rounded-lg border cursor-pointer flex justify-between items-center transition-all ${isSelected ? 'bg-emerald-500/20 border-emerald-500 text-white' : 'border-white/5 text-zinc-400 hover:bg-white/5'}`}
+                  >
+                    <span className="text-sm font-medium">{s.name}</span>
+                    <span className="text-xs opacity-70">₹{s.price}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <button 
+            onClick={handleSubmit}
+            className="w-full py-3.5 bg-white text-black font-bold rounded-xl hover:bg-emerald-400 transition-colors mt-2"
+          >
+            Add to Queue
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ProfileModal = ({ isOpen, onClose, salon, profileImage, onImageUpload }) => {
   const fileInputRef = useRef(null);
@@ -86,12 +182,15 @@ const AssignmentModal = ({ isOpen, onClose, customer, availableChairs, staffList
     }
   };
 
+  // Safe Name Access
+  const customerName = customer.userId?.name || customer.guestName || "Walk-in Customer";
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
       <div className="relative w-full max-w-sm bg-zinc-900 border border-white/10 rounded-2xl p-6 shadow-2xl">
         <h3 className="text-lg font-bold text-white mb-1">Start Service</h3>
-        <p className="text-zinc-400 text-sm mb-6">For <span className="text-white font-medium">{customer.userId?.name || "Customer"}</span></p>
+        <p className="text-zinc-400 text-sm mb-6">For <span className="text-white font-medium">{customerName}</span></p>
 
         <div className="space-y-4">
           <div>
@@ -164,6 +263,9 @@ const SalonDashboard = ({ salon, onLogout }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   const [assignmentModal, setAssignmentModal] = useState({ isOpen: false, customer: null });
+  
+  // 🔥 NEW STATE: Walk-in Modal
+  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
 
   // --- 1. INITIAL FETCH & SOCKET ---
   useEffect(() => {
@@ -191,7 +293,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
   }, [salon]);
 
   // --- API CALLS ---
- // --- API CALLS ---
   const fetchDashboardData = async () => {
     try {
         const { data } = await api.get("/queue/salon-dashboard");
@@ -200,17 +301,13 @@ const SalonDashboard = ({ salon, onLogout }) => {
             setActiveQueue(data.waiting);
             setStats(data.stats);
 
-            // 🔥 FIX: Serving data ko wapas Chairs par map karna
+            // Sync Chairs with Serving Tickets
             const servingTickets = data.serving || [];
-
-            // 1. Naya Chairs array banao (Default state se shuru karo)
             const mappedChairs = Array.from({ length: 4 }, (_, i) => {
                 const chairId = i + 1;
-                // Check karo ki database me is Chair ID par koi ticket hai kya?
                 const activeTicket = servingTickets.find(t => t.chairId === chairId);
 
                 if (activeTicket) {
-                    // Agar ticket mila, toh chair ko 'occupied' set karo
                     return {
                         id: chairId,
                         name: `Chair ${chairId}`,
@@ -219,7 +316,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
                         assignedStaff: activeTicket.assignedStaff
                     };
                 } else {
-                    // Agar nahi mila, toh 'empty' rehne do
                     return {
                         id: chairId,
                         name: `Chair ${chairId}`,
@@ -229,8 +325,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
                     };
                 }
             });
-
-            // 2. State update karo
             setChairs(mappedChairs);
         }
     } catch (error) { 
@@ -288,9 +382,32 @@ const SalonDashboard = ({ salon, onLogout }) => {
     } catch (error) { alert("Error completing service"); }
   };
 
+  // 🔥 NEW: Handle Walk-in Submission
+  const handleAddWalkIn = async (customerData) => {
+    try {
+        const totalPrice = customerData.services.reduce((sum, s) => sum + Number(s.price), 0);
+        const totalTime = customerData.services.reduce((sum, s) => sum + Number(s.time), 0);
+
+        const payload = {
+            name: customerData.name,
+            mobile: customerData.mobile,
+            services: customerData.services,
+            totalPrice,
+            totalTime
+        };
+
+        const { data } = await api.post("/queue/add-walkin", payload);
+        if(data.success) {
+            // Queue will update via socket, but we can also update locally for instant feedback
+            setActiveQueue(prev => [...prev, data.ticket]);
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Failed to add walk-in client");
+    }
+  };
+
   // --- SETTINGS HANDLERS (Advanced) ---
-  
-  // Helper to fill form from suggestion
   const fillServiceSuggestion = (s) => {
       setNewService({ name: s.name, price: s.price, time: s.time, category: s.category });
   };
@@ -338,12 +455,19 @@ const SalonDashboard = ({ salon, onLogout }) => {
     return gradients[n.length % gradients.length];
   };
 
-  // Check if services are empty (for onboarding banner)
   const isServicesEmpty = services.length === 0;
 
   return (
     <div className="min-h-screen w-full bg-zinc-950 font-sans text-white overflow-hidden flex selection:bg-emerald-500 selection:text-white">
       
+      {/* 1. Walk-in Modal */}
+      <WalkInModal 
+        isOpen={isWalkInOpen}
+        onClose={() => setIsWalkInOpen(false)}
+        services={services}
+        onConfirm={handleAddWalkIn}
+      />
+
       <ProfileModal 
         isOpen={isProfileOpen} 
         onClose={() => setIsProfileOpen(false)}
@@ -505,16 +629,29 @@ const SalonDashboard = ({ salon, onLogout }) => {
                         <h3 className="font-bold text-sm text-zinc-100 flex items-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-blue-500"></div> Waiting Queue
                         </h3>
-                        <span className="text-xs font-bold bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-md">{activeQueue.length}</span>
+                        {/* 🔥 NEW: Add Walk-in Button */}
+                        <div className="flex items-center gap-2">
+                            <button 
+                                onClick={() => setIsWalkInOpen(true)}
+                                className="flex items-center gap-1 bg-zinc-800 hover:bg-white hover:text-black text-xs font-bold text-zinc-300 px-2 py-1.5 rounded-lg transition-colors border border-white/10"
+                            >
+                                <UserPlus size={14} /> 
+                                <span className="hidden sm:inline">Add Walk-in</span>
+                            </button>
+                            <span className="text-xs font-bold bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-md">{activeQueue.length}</span>
+                        </div>
                       </div>
                       <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
                         {activeQueue.length === 0 ? <div className="h-40 lg:h-full flex flex-col items-center justify-center text-zinc-600 gap-2"><Users size={32} className="opacity-20"/><p className="text-sm">Queue is empty</p></div> : activeQueue.map((cust, idx) => (
                             <div key={cust._id} className="relative group bg-zinc-900 border border-white/10 hover:border-blue-500/50 p-4 rounded-2xl transition-all">
+                               {cust.isGuest && <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-zinc-800 text-[9px] text-zinc-400 rounded uppercase font-bold tracking-wider">WALK-IN</div>}
+                               
                                <div className="flex items-center justify-between">
                                  <div className="flex items-center gap-3">
                                     <span className="text-lg font-black text-zinc-700 w-6">#{cust.queueNumber}</span>
                                     <div>
-                                      <h4 className="font-bold text-sm text-white">{cust.userId?.name}</h4>
+                                      {/* 🔥 SAFE NAME DISPLAY (User vs Guest) */}
+                                      <h4 className="font-bold text-sm text-white">{cust.userId?.name || cust.guestName || "Guest"}</h4>
                                       <p className="text-xs text-zinc-400">{cust.services[0]?.name}</p>
                                     </div>
                                  </div>
@@ -549,8 +686,14 @@ const SalonDashboard = ({ salon, onLogout }) => {
                                 {chair.status === 'occupied' && chair.currentCustomer ? (
                                   <>
                                     <div className="flex items-center gap-3 mb-4">
-                                      <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${getAvatarGradient(chair.currentCustomer.userId?.name)} flex items-center justify-center text-sm font-bold`}>{chair.currentCustomer.userId?.name?.charAt(0)}</div>
-                                      <div><h5 className="font-bold text-white text-sm">{chair.currentCustomer.userId?.name}</h5><p className="text-xs text-emerald-400">{chair.currentCustomer.services[0]?.name}</p></div>
+                                      <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${getAvatarGradient(chair.currentCustomer.userId?.name || chair.currentCustomer.guestName)} flex items-center justify-center text-sm font-bold`}>
+                                        {(chair.currentCustomer.userId?.name || chair.currentCustomer.guestName || "G").charAt(0)}
+                                      </div>
+                                      <div>
+                                        {/* 🔥 SAFE NAME DISPLAY (User vs Guest) */}
+                                        <h5 className="font-bold text-white text-sm">{chair.currentCustomer.userId?.name || chair.currentCustomer.guestName || "Guest"}</h5>
+                                        <p className="text-xs text-emerald-400">{chair.currentCustomer.services[0]?.name}</p>
+                                      </div>
                                     </div>
                                     <button onClick={() => handleCompleteService(chair.id)} className="w-full py-2 bg-white text-black text-xs font-bold rounded-lg hover:bg-emerald-400 transition-colors flex items-center justify-center gap-2"><CheckSquare size={14}/> Complete</button>
                                   </>
@@ -628,9 +771,9 @@ const SalonDashboard = ({ salon, onLogout }) => {
                       </div>
                       <div className="flex flex-wrap gap-2">
                          {staff.map((s, i) => (
-                            <div key={i} className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-white border border-white/5 flex items-center gap-2">
-                               <div className="w-2 h-2 bg-green-500 rounded-full"></div> {s.name}
-                            </div>
+                           <div key={i} className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-white border border-white/5 flex items-center gap-2">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div> {s.name}
+                           </div>
                          ))}
                       </div>
                    </div>
