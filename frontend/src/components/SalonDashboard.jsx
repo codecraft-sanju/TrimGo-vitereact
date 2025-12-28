@@ -4,7 +4,7 @@ import {
   Bell, DollarSign, TrendingUp, Clock, CheckCircle, Scissors,
   Play, CheckSquare, X, Camera, Mail, Phone, MapPin, User,
   Armchair, UserCheck, Plus, Trash2, Menu, Save, Edit3, Power,
-  AlertTriangle, Sparkles, Zap, ArrowRight, UserPlus, Home, LayoutDashboard
+  AlertTriangle, Sparkles, Zap, ArrowRight, UserPlus, Home, LayoutDashboard, XCircle
 } from "lucide-react";
 import api from "../utils/api";
 import { io } from "socket.io-client";
@@ -355,6 +355,18 @@ const SalonDashboard = ({ salon, onLogout }) => {
     } catch (error) { alert("Failed to accept"); }
   };
 
+  // 🔥 NEW: REJECT HANDLER
+  const handleRejectRequest = async (req) => {
+    if(!window.confirm("Reject this customer request?")) return;
+    try {
+        await api.post("/queue/reject", { ticketId: req._id });
+        setRequests(requests.filter(r => r._id !== req._id));
+    } catch (error) { 
+        console.error(error);
+        alert("Failed to reject request"); 
+    }
+  };
+
   const openAssignmentModal = (customer) => {
     const availableChairs = chairs.filter(c => c.status === 'empty');
     if (availableChairs.length === 0) {
@@ -601,7 +613,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
                  </div>
                </div>
 
-               {/* 3. NEW REQUESTS (Prominent if active) */}
+               {/* 3. NEW REQUESTS (With Cancel Option) */}
                {requests.length > 0 && (
                  <div className="animate-in fade-in slide-in-from-top-4">
                     <div className="flex items-center justify-between mb-3">
@@ -618,9 +630,25 @@ const SalonDashboard = ({ salon, onLogout }) => {
                                      <p className="text-xs text-zinc-400">{req.services[0]?.name} {req.services.length > 1 && `+${req.services.length - 1}`}</p>
                                    </div>
                                 </div>
-                                <div className="flex items-center justify-between mt-2">
-                                    <span className="text-sm font-bold text-white">₹{req.totalPrice}</span>
-                                    <button onClick={() => handleAcceptRequest(req)} className="px-4 py-2 bg-white text-black text-xs font-bold rounded-lg hover:bg-emerald-400 transition-colors">Accept</button>
+                                <div className="flex items-center justify-between mt-2 mb-3">
+                                    <span className="text-sm font-bold text-zinc-300">Total</span>
+                                    <span className="text-lg font-black text-white">₹{req.totalPrice}</span>
+                                </div>
+                                
+                                {/* 🔥 NEW: ACCEPT / CANCEL BUTTONS */}
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button 
+                                        onClick={() => handleRejectRequest(req)} 
+                                        className="py-2.5 bg-zinc-800 text-red-400 border border-white/5 hover:bg-red-500/10 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1"
+                                    >
+                                        <X size={14} /> Cancel
+                                    </button>
+                                    <button 
+                                        onClick={() => handleAcceptRequest(req)} 
+                                        className="py-2.5 bg-white text-black text-xs font-bold rounded-xl hover:bg-emerald-400 transition-colors flex items-center justify-center gap-1 shadow-lg shadow-white/5"
+                                    >
+                                        <CheckCircle size={14} /> Accept
+                                    </button>
                                 </div>
                             </div>
                         ))}
