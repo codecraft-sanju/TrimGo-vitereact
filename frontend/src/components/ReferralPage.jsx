@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   ArrowLeft, Copy, Check, Share2, Users, 
   Gift, ShieldCheck, Truck, Sparkles, 
   Trophy, Lock, MessageCircle
 } from "lucide-react";
 import Lenis from '@studio-freight/lenis';
-import { motion } from "framer-motion"; 
+import { motion, useScroll, useTransform } from "framer-motion"; 
 
 /* --- 🎨 ADVANCED UI COMPONENTS --- */
 
@@ -41,12 +41,13 @@ const ProgressBar = ({ current, max }) => {
 /* --- 🚀 MAIN COMPONENT --- */
 const ReferralPage = ({ user, onBack }) => {
   const [copied, setCopied] = useState(false);
+  const scrollRef = useRef(null);
   
   // Dynamic stats
   const referralCode = user?.referralCode || "TRIM-VIP-24";
   const referralCount = user?.referredSalons?.length || 0; 
 
-  // --- LENIS SMOOTH SCROLL SETUP ---
+  // --- LENIS SMOOTH SCROLL SETUP (OPTIMIZED FOR MOBILE) ---
   useEffect(() => {
     const lenis = new Lenis({
       duration: 1.2,
@@ -55,7 +56,7 @@ const ReferralPage = ({ user, onBack }) => {
       gestureDirection: 'vertical',
       smooth: true,
       mouseMultiplier: 1,
-      smoothTouch: false, // Mobile native feel preserved
+      smoothTouch: false, // Keep false for mobile to use native momentum (prevents lag)
       touchMultiplier: 2,
     });
 
@@ -99,20 +100,22 @@ const ReferralPage = ({ user, onBack }) => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#F2F4F8] font-sans text-zinc-900 selection:bg-indigo-500/30 overflow-x-hidden relative">
+    <div 
+      ref={scrollRef}
+      className="min-h-screen w-full bg-[#F2F4F8] font-sans text-zinc-900 selection:bg-indigo-500/30 overflow-x-hidden relative"
+    >
       
-      {/* Background Decor */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-purple-200/40 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-indigo-200/40 rounded-full blur-[120px]" />
+      {/* Background Decor - Optimized with transform-gpu for mobile performance */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-purple-200/40 rounded-full blur-[100px] transform-gpu will-change-transform" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-indigo-200/40 rounded-full blur-[100px] transform-gpu will-change-transform" />
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay" />
       </div>
 
-      {/* --- HEADER (FIXED & ALWAYS VISIBLE) --- */}
-      {/* Changes: 'fixed' instead of 'sticky', added 'left-0 right-0' */}
+      {/* --- HEADER --- */}
       <header className="fixed top-0 left-0 right-0 z-50 px-6 py-4 pointer-events-none">
         <div className="max-w-5xl mx-auto pointer-events-auto">
-          <div className="flex items-center justify-between bg-white/70 backdrop-blur-md rounded-full px-2 py-2 pr-6 border border-white/50 shadow-sm transition-all duration-300">
+          <div className="flex items-center justify-between bg-white/70 backdrop-blur-xl rounded-full px-2 py-2 pr-6 border border-white/50 shadow-sm transition-all duration-300">
             <button 
               onClick={onBack} 
               className="p-3 rounded-full bg-white shadow-sm border border-zinc-100 hover:bg-zinc-50 transition-all active:scale-90 group"
@@ -128,8 +131,7 @@ const ReferralPage = ({ user, onBack }) => {
       </header>
 
       {/* --- MAIN CONTENT --- */}
-      {/* Changes: Added 'pt-24' or 'pt-28' to push content down below the fixed header */}
-      <main className="relative z-10 max-w-5xl mx-auto px-4 pb-20 pt-28">
+      <main className="relative z-10 max-w-5xl mx-auto px-4 pb-24 pt-32">
         
         {/* === BENTO GRID LAYOUT === */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -139,9 +141,10 @@ const ReferralPage = ({ user, onBack }) => {
             initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp}
             className="md:col-span-8 group perspective-1000"
           >
-            <div className="relative overflow-hidden rounded-[2.5rem] bg-zinc-900 p-8 md:p-10 text-white shadow-2xl shadow-zinc-900/20 border border-zinc-800 transition-transform duration-500 hover:scale-[1.01]">
-              <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-indigo-600/30 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
-              <div className="absolute bottom-0 left-0 w-[200px] h-[200px] bg-emerald-500/20 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2" />
+            <div className="relative overflow-hidden rounded-[2.5rem] bg-zinc-900 p-8 md:p-10 text-white shadow-2xl shadow-zinc-900/20 border border-zinc-800 transition-transform duration-500 hover:scale-[1.01] transform-gpu">
+              {/* Internal Glows - Optimized */}
+              <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-indigo-600/30 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 transform-gpu" />
+              <div className="absolute bottom-0 left-0 w-[200px] h-[200px] bg-emerald-500/20 rounded-full blur-[60px] translate-y-1/2 -translate-x-1/2 transform-gpu" />
 
               <div className="relative z-10">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 backdrop-blur-md text-xs font-bold text-indigo-300 mb-6">
@@ -185,7 +188,7 @@ const ReferralPage = ({ user, onBack }) => {
             initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp} transition={{ delay: 0.1 }}
             className="md:col-span-4 flex flex-col gap-6"
           >
-             <GlassCard className="h-full p-6 flex flex-col justify-between group">
+             <GlassCard className="h-full p-6 flex flex-col justify-between group transform-gpu">
                 <div>
                    <div className="flex items-center justify-between mb-4">
                       <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-200">
@@ -222,7 +225,7 @@ const ReferralPage = ({ user, onBack }) => {
             initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp} transition={{ delay: 0.2 }}
             className="md:col-span-7"
           >
-             <GlassCard className="h-full p-6 sm:p-8">
+             <GlassCard className="h-full p-6 sm:p-8 transform-gpu">
                 <div className="flex items-center gap-3 mb-8">
                   <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600">
                     <Trophy size={20} />
@@ -275,7 +278,7 @@ const ReferralPage = ({ user, onBack }) => {
             initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp} transition={{ delay: 0.3 }}
             className="md:col-span-5"
           >
-             <div className="h-full relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#FFEEEE] via-[#FFF5F5] to-white border border-pink-100 p-8 flex flex-col justify-between group">
+             <div className="h-full relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#FFEEEE] via-[#FFF5F5] to-white border border-pink-100 p-8 flex flex-col justify-between group transform-gpu">
                 <div className="relative z-10">
                   <div className="inline-block px-3 py-1 rounded-full bg-pink-100 text-pink-600 text-[10px] font-bold uppercase tracking-widest mb-3">
                     Milestone Reward
@@ -293,7 +296,7 @@ const ReferralPage = ({ user, onBack }) => {
                   <img 
                     src="/tshirtgoodies.png" 
                     alt="Kit" 
-                    className="relative z-10 w-48 drop-shadow-2xl transition-transform duration-700 ease-in-out group-hover:-translate-y-4 group-hover:scale-105 group-hover:rotate-3"
+                    className="relative z-10 w-48 drop-shadow-2xl transition-transform duration-700 ease-in-out group-hover:-translate-y-4 group-hover:scale-105 group-hover:rotate-3 will-change-transform"
                     onError={(e) => {
                       e.target.style.display = 'none'; 
                       e.target.parentElement.innerHTML += '<div class="text-pink-300 font-bold text-xl">KIT IMAGE</div>'; 
@@ -313,7 +316,7 @@ const ReferralPage = ({ user, onBack }) => {
             initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp} transition={{ delay: 0.4 }}
             className="md:col-span-12"
           >
-            <GlassCard className="p-8">
+            <GlassCard className="p-8 transform-gpu">
                 <h3 className="text-lg font-bold text-zinc-900 mb-6 flex items-center gap-2">
                   <ShieldCheck className="text-indigo-500" size={20} />
                   Verification Lifecycle
