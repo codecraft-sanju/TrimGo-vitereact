@@ -753,12 +753,22 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                 </div>
                 
                 <div className="flex gap-3">
-                    <button 
-                        onClick={() => handleRoute(activeTicket.salonId)}
-                        className="flex-1 bg-white/10 hover:bg-white/20 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
-                    >
-                        <Navigation size={16} /> Directions
-                    </button>
+                  {/* Change only this button inside the Active Ticket Card */}
+<button 
+    onClick={() => {
+        // 1. Salon ID nikalo (Safe check agar object hai ya string)
+        const sId = activeTicket.salonId?._id || activeTicket.salonId;
+        
+        // 2. Main 'salons' list se match karo jisme Lat/Lng confirm hai
+        const targetSalon = salons.find(s => s._id === sId) || activeTicket.salonId;
+        
+        // 3. Ab route function call karo
+        handleRoute(targetSalon);
+    }}
+    className="flex-1 bg-white/10 hover:bg-white/20 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+>
+    <Navigation size={16} /> Directions
+</button>
                     <button 
                         onClick={handleCancelTicket}
                         disabled={canceling}

@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import { 
   ArrowLeft, Copy, Check, Share2, Users, 
   Gift, ShieldCheck, Truck, Sparkles, 
-  Trophy, Lock, MessageCircle, RefreshCw
+  Trophy, Lock, MessageCircle
 } from "lucide-react";
+import Lenis from '@studio-freight/lenis';
+import { motion } from "framer-motion"; 
 
 /* --- 🎨 ADVANCED UI COMPONENTS --- */
 
@@ -39,12 +41,37 @@ const ProgressBar = ({ current, max }) => {
 /* --- 🚀 MAIN COMPONENT --- */
 const ReferralPage = ({ user, onBack }) => {
   const [copied, setCopied] = useState(false);
-  const [loading, setLoading] = useState(false);
   
-  // Dynamic stats based on user prop
+  // Dynamic stats
   const referralCode = user?.referralCode || "TRIM-VIP-24";
   const referralCount = user?.referredSalons?.length || 0; 
 
+  // --- LENIS SMOOTH SCROLL SETUP ---
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), 
+      direction: 'vertical',
+      gestureDirection: 'vertical',
+      smooth: true,
+      mouseMultiplier: 1,
+      smoothTouch: false, // Mobile native feel preserved
+      touchMultiplier: 2,
+    });
+
+    function raf(time) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+
+    requestAnimationFrame(raf);
+
+    return () => {
+      lenis.destroy();
+    };
+  }, []);
+
+  // --- HANDLERS ---
   const handleCopy = () => {
     navigator.clipboard.writeText(referralCode);
     setCopied(true);
@@ -57,33 +84,35 @@ const ReferralPage = ({ user, onBack }) => {
       text: `Register your salon on TrimGo using code ${referralCode} to get a Welcome Kit!`,
       url: window.location.href
     };
-
     if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch (err) {
-        console.log('Error sharing:', err);
-      }
+      try { await navigator.share(shareData); } catch (err) { console.log('Error sharing:', err); }
     } else {
       handleCopy();
       alert("Link copied to clipboard!");
     }
   };
 
+  // --- ANIMATION VARIANTS ---
+  const fadeInUp = {
+    hidden: { opacity: 0, y: 40 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
+  };
+
   return (
     <div className="min-h-screen w-full bg-[#F2F4F8] font-sans text-zinc-900 selection:bg-indigo-500/30 overflow-x-hidden relative">
       
       {/* Background Decor */}
-      <div className="fixed inset-0 z-0">
+      <div className="fixed inset-0 z-0 pointer-events-none">
         <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-purple-200/40 rounded-full blur-[120px]" />
         <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-indigo-200/40 rounded-full blur-[120px]" />
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay" />
       </div>
 
-      {/* --- HEADER --- */}
-      <header className="sticky top-0 z-50 px-6 py-4">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex items-center justify-between bg-white/70 backdrop-blur-md rounded-full px-2 py-2 pr-6 border border-white/50 shadow-sm">
+      {/* --- HEADER (FIXED & ALWAYS VISIBLE) --- */}
+      {/* Changes: 'fixed' instead of 'sticky', added 'left-0 right-0' */}
+      <header className="fixed top-0 left-0 right-0 z-50 px-6 py-4 pointer-events-none">
+        <div className="max-w-5xl mx-auto pointer-events-auto">
+          <div className="flex items-center justify-between bg-white/70 backdrop-blur-md rounded-full px-2 py-2 pr-6 border border-white/50 shadow-sm transition-all duration-300">
             <button 
               onClick={onBack} 
               className="p-3 rounded-full bg-white shadow-sm border border-zinc-100 hover:bg-zinc-50 transition-all active:scale-90 group"
@@ -98,13 +127,18 @@ const ReferralPage = ({ user, onBack }) => {
         </div>
       </header>
 
-      <main className="relative z-10 max-w-5xl mx-auto px-4 pb-20 pt-6">
+      {/* --- MAIN CONTENT --- */}
+      {/* Changes: Added 'pt-24' or 'pt-28' to push content down below the fixed header */}
+      <main className="relative z-10 max-w-5xl mx-auto px-4 pb-20 pt-28">
         
         {/* === BENTO GRID LAYOUT === */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
 
           {/* 1. HERO CARD */}
-          <div className="md:col-span-8 group perspective-1000">
+          <motion.div 
+            initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp}
+            className="md:col-span-8 group perspective-1000"
+          >
             <div className="relative overflow-hidden rounded-[2.5rem] bg-zinc-900 p-8 md:p-10 text-white shadow-2xl shadow-zinc-900/20 border border-zinc-800 transition-transform duration-500 hover:scale-[1.01]">
               <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-indigo-600/30 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
               <div className="absolute bottom-0 left-0 w-[200px] h-[200px] bg-emerald-500/20 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2" />
@@ -144,10 +178,13 @@ const ReferralPage = ({ user, onBack }) => {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* 2. STATS & PROGRESS */}
-          <div className="md:col-span-4 flex flex-col gap-6">
+          <motion.div 
+            initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp} transition={{ delay: 0.1 }}
+            className="md:col-span-4 flex flex-col gap-6"
+          >
              <GlassCard className="h-full p-6 flex flex-col justify-between group">
                 <div>
                    <div className="flex items-center justify-between mb-4">
@@ -171,17 +208,20 @@ const ReferralPage = ({ user, onBack }) => {
                   </div>
                   <ProgressBar current={referralCount} max={10} />
                   {referralCount >= 10 && (
-                     <div className="mt-4 p-3 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center gap-3 animate-in slide-in-from-bottom-2 fade-in">
-                        <div className="p-1.5 bg-emerald-500 rounded-full text-white"><Check size={12} strokeWidth={3} /></div>
-                        <span className="text-xs font-bold text-emerald-800">Milestone Unlocked!</span>
-                     </div>
+                      <div className="mt-4 p-3 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center gap-3 animate-in slide-in-from-bottom-2 fade-in">
+                         <div className="p-1.5 bg-emerald-500 rounded-full text-white"><Check size={12} strokeWidth={3} /></div>
+                         <span className="text-xs font-bold text-emerald-800">Milestone Unlocked!</span>
+                      </div>
                   )}
                 </div>
              </GlassCard>
-          </div>
+          </motion.div>
 
           {/* 3. REWARDS TRACKER */}
-          <div className="md:col-span-7">
+          <motion.div 
+            initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp} transition={{ delay: 0.2 }}
+            className="md:col-span-7"
+          >
              <GlassCard className="h-full p-6 sm:p-8">
                 <div className="flex items-center gap-3 mb-8">
                   <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600">
@@ -193,45 +233,48 @@ const ReferralPage = ({ user, onBack }) => {
                 <div className="space-y-4">
                    <div className={`relative group p-4 rounded-2xl border transition-all duration-300 ${referralCount >= 5 ? 'bg-gradient-to-r from-emerald-50 to-white border-emerald-100' : 'bg-zinc-50 border-zinc-100 opacity-80'}`}>
                       <div className="flex items-center gap-4 relative z-10">
-                         <div className={`h-12 w-12 rounded-full flex items-center justify-center border-4 text-lg font-bold transition-all ${referralCount >= 5 ? 'bg-emerald-500 border-emerald-200 text-white shadow-lg shadow-emerald-200' : 'bg-white border-zinc-200 text-zinc-300'}`}>
-                            {referralCount >= 5 ? <Check size={20} strokeWidth={3} /> : "1"}
-                         </div>
-                         <div className="flex-1">
-                            <h4 className="font-bold text-zinc-900">5 Verified Salons</h4>
-                            <p className="text-xs text-zinc-500 font-medium mt-0.5">₹300 Cash Bonus</p>
-                         </div>
-                         {referralCount >= 5 ? (
-                            <span className="px-3 py-1 rounded-full bg-white border border-emerald-100 text-emerald-600 text-xs font-bold shadow-sm">Paid</span>
-                         ) : (
-                            <Lock size={16} className="text-zinc-300" />
-                         )}
+                          <div className={`h-12 w-12 rounded-full flex items-center justify-center border-4 text-lg font-bold transition-all ${referralCount >= 5 ? 'bg-emerald-500 border-emerald-200 text-white shadow-lg shadow-emerald-200' : 'bg-white border-zinc-200 text-zinc-300'}`}>
+                             {referralCount >= 5 ? <Check size={20} strokeWidth={3} /> : "1"}
+                          </div>
+                          <div className="flex-1">
+                             <h4 className="font-bold text-zinc-900">5 Verified Salons</h4>
+                             <p className="text-xs text-zinc-500 font-medium mt-0.5">₹300 Cash Bonus</p>
+                          </div>
+                          {referralCount >= 5 ? (
+                             <span className="px-3 py-1 rounded-full bg-white border border-emerald-100 text-emerald-600 text-xs font-bold shadow-sm">Paid</span>
+                          ) : (
+                             <Lock size={16} className="text-zinc-300" />
+                          )}
                       </div>
                    </div>
 
                    <div className={`relative group p-4 rounded-2xl border transition-all duration-300 ${referralCount >= 10 ? 'bg-gradient-to-r from-indigo-50 to-white border-indigo-100' : 'bg-white border-zinc-100'}`}>
                       <div className="flex items-center gap-4 relative z-10">
-                         <div className={`h-12 w-12 rounded-full flex items-center justify-center border-4 text-lg font-bold transition-all ${referralCount >= 10 ? 'bg-indigo-600 border-indigo-200 text-white shadow-lg shadow-indigo-200' : 'bg-white border-zinc-200 text-zinc-300'}`}>
-                            {referralCount >= 10 ? <Gift size={20} /> : "2"}
-                         </div>
-                         <div className="flex-1">
-                            <h4 className="font-bold text-zinc-900">10 Verified Salons</h4>
-                            <p className="text-xs text-zinc-500 font-medium mt-0.5">₹800 Cash + Premium Welcome Kit</p>
-                         </div>
-                         {referralCount >= 10 ? (
-                            <span className="px-3 py-1 rounded-full bg-indigo-600 text-white text-xs font-bold shadow-md shadow-indigo-200">Claim</span>
-                         ) : (
-                            <div className="h-8 w-8 rounded-full bg-zinc-50 flex items-center justify-center border border-zinc-100">
-                               <Lock size={14} className="text-zinc-300" />
-                            </div>
-                         )}
+                          <div className={`h-12 w-12 rounded-full flex items-center justify-center border-4 text-lg font-bold transition-all ${referralCount >= 10 ? 'bg-indigo-600 border-indigo-200 text-white shadow-lg shadow-indigo-200' : 'bg-white border-zinc-200 text-zinc-300'}`}>
+                             {referralCount >= 10 ? <Gift size={20} /> : "2"}
+                          </div>
+                          <div className="flex-1">
+                             <h4 className="font-bold text-zinc-900">10 Verified Salons</h4>
+                             <p className="text-xs text-zinc-500 font-medium mt-0.5">₹800 Cash + Premium Welcome Kit</p>
+                          </div>
+                          {referralCount >= 10 ? (
+                             <span className="px-3 py-1 rounded-full bg-indigo-600 text-white text-xs font-bold shadow-md shadow-indigo-200">Claim</span>
+                          ) : (
+                             <div className="h-8 w-8 rounded-full bg-zinc-50 flex items-center justify-center border border-zinc-100">
+                                <Lock size={14} className="text-zinc-300" />
+                             </div>
+                          )}
                       </div>
                    </div>
                 </div>
              </GlassCard>
-          </div>
+          </motion.div>
 
-          {/* 4. MERCH SHOWCASE - RE-ADDED ORIGINAL IMAGE LOGIC */}
-          <div className="md:col-span-5">
+          {/* 4. MERCH SHOWCASE */}
+          <motion.div 
+            initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp} transition={{ delay: 0.3 }}
+            className="md:col-span-5"
+          >
              <div className="h-full relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#FFEEEE] via-[#FFF5F5] to-white border border-pink-100 p-8 flex flex-col justify-between group">
                 <div className="relative z-10">
                   <div className="inline-block px-3 py-1 rounded-full bg-pink-100 text-pink-600 text-[10px] font-bold uppercase tracking-widest mb-3">
@@ -263,10 +306,13 @@ const ReferralPage = ({ user, onBack }) => {
                    <span>Free Shipping • India Wide</span>
                 </div>
              </div>
-          </div>
+          </motion.div>
 
           {/* 5. VERIFICATION STEPS */}
-          <div className="md:col-span-12">
+          <motion.div 
+            initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp} transition={{ delay: 0.4 }}
+            className="md:col-span-12"
+          >
             <GlassCard className="p-8">
                 <h3 className="text-lg font-bold text-zinc-900 mb-6 flex items-center gap-2">
                   <ShieldCheck className="text-indigo-500" size={20} />
@@ -294,23 +340,23 @@ const ReferralPage = ({ user, onBack }) => {
 
                 <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 p-5 md:p-6 flex flex-col md:flex-row items-start md:items-center gap-5">
                   <div className="h-12 w-12 rounded-full bg-white flex items-center justify-center text-emerald-600 shadow-sm shrink-0">
-                     <MessageCircle size={24} />
+                      <MessageCircle size={24} />
                   </div>
                   <div className="flex-1">
-                     <h4 className="font-bold text-zinc-900 text-lg flex items-center gap-2">
+                      <h4 className="font-bold text-zinc-900 text-lg flex items-center gap-2">
                         Shipping & Delivery
                         <span className="hidden sm:inline-block px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] rounded-full uppercase tracking-wider">Automated</span>
-                     </h4>
-                     <p className="text-zinc-600 text-sm mt-1 leading-relaxed">
+                      </h4>
+                      <p className="text-zinc-600 text-sm mt-1 leading-relaxed">
                         Once you hit <span className="font-bold text-zinc-900">10 referrals</span>, our team will automatically contact you via <span className="font-bold text-emerald-600">WhatsApp</span> to confirm your shipping address for the Welcome Kit.
-                     </p>
+                      </p>
                   </div>
                   <button className="hidden md:flex items-center gap-2 px-4 py-2 bg-white rounded-lg text-xs font-bold text-emerald-700 shadow-sm border border-emerald-100 hover:bg-emerald-50 transition-colors">
-                     <Truck size={14} /> Track Status
+                      <Truck size={14} /> Track Status
                   </button>
                 </div>
             </GlassCard>
-          </div>
+          </motion.div>
 
         </div>
       </main>
