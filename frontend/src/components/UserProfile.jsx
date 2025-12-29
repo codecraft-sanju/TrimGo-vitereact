@@ -13,18 +13,22 @@ const SAVED_CARDS = [
   { id: 2, type: "Mastercard", last4: "8899", expiry: "09/26", holder: "Sanjay Choudhary", color: "from-indigo-600 to-purple-600" },
 ];
 
-// --- VISUAL ASSETS ---
+/* --- ⚡ PERFORMANCE OPTIMIZED BACKGROUND --- */
 const BackgroundAurora = () => (
-  <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-zinc-50">
-    <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
-    <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-purple-300/30 rounded-full blur-[120px] animate-blob" />
-    <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-emerald-300/30 rounded-full blur-[120px] animate-blob animation-delay-2000" />
+  // Fixed position + translate-z-0 forces GPU acceleration
+  <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-zinc-50 translate-z-0">
+    <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 md:opacity-20 mix-blend-overlay"></div>
+    {/* Simplified blobs for mobile (larger size, lower opacity, no animation) */}
+    <div className="absolute top-[-10%] left-[-10%] w-[80vw] h-[80vw] md:w-[60%] md:h-[60%] bg-purple-300/20 md:bg-purple-300/30 rounded-full blur-[60px] md:blur-[120px]" />
+    <div className="absolute bottom-[-10%] right-[-10%] w-[80vw] h-[80vw] md:w-[60%] md:h-[60%] bg-emerald-300/20 md:bg-emerald-300/30 rounded-full blur-[60px] md:blur-[120px]" />
   </div>
 );
 
-// --- SUB-COMPONENTS ---
+// --- SUB-COMPONENTS (Optimized) ---
+
+// Mobile: Solid White. Desktop: Glass.
 const StatCard = ({ icon: Icon, label, value, color, bg }) => (
-  <div className="bg-white/60 border border-white/40 shadow-sm p-4 rounded-2xl flex items-center gap-4 hover:shadow-md transition group backdrop-blur-sm">
+  <div className="bg-white md:bg-white/60 border border-zinc-100 md:border-white/40 shadow-sm p-4 rounded-2xl flex items-center gap-4 hover:shadow-md transition group md:backdrop-blur-sm">
     <div className={`w-12 h-12 rounded-xl ${bg} ${color} flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>
       <Icon size={20} />
     </div>
@@ -73,8 +77,6 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
   // 3. CALCULATE STATS DYNAMICALLY
   const stats = useMemo(() => {
     const totalSpent = bookings.reduce((acc, curr) => {
-        // Only count completed bookings for spent amount if you want strict logic
-        // For now summing up all non-cancelled
         return curr.status !== 'cancelled' ? acc + (curr.totalPrice || 0) : acc;
     }, 0);
     
@@ -98,13 +100,15 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-zinc-50 font-sans pb-12 relative overflow-x-hidden selection:bg-zinc-900 selection:text-white">
+    // OPTIMIZED WRAPPER: min-h-[100dvh] + touch-pan-y
+    <div className="min-h-[100dvh] bg-zinc-50 font-sans pb-12 relative overflow-x-hidden selection:bg-zinc-900 selection:text-white touch-pan-y">
       <BackgroundAurora />
 
       {/* --- HEADER NAVIGATION --- */}
-      <div className="relative z-10 px-6 py-6 flex items-center justify-between max-w-5xl mx-auto">
-        <button onClick={onBack} className="flex items-center gap-2 text-zinc-500 hover:text-zinc-900 transition px-4 py-2 rounded-full bg-white/50 border border-zinc-200 hover:bg-white shadow-sm backdrop-blur-md">
-          <ChevronRight size={18} className="rotate-180"/> Back
+      {/* Mobile: Solid background. Desktop: Glass */}
+      <div className="sticky top-0 z-50 px-4 md:px-6 py-4 flex items-center justify-between max-w-5xl mx-auto bg-white/90 md:bg-transparent backdrop-blur-none md:backdrop-filter-none transition-all">
+        <button onClick={onBack} className="flex items-center gap-2 text-zinc-500 hover:text-zinc-900 transition px-4 py-2 rounded-full bg-white border border-zinc-200 hover:bg-white shadow-sm md:bg-white/50 md:backdrop-blur-md">
+          <ChevronRight size={18} className="rotate-180"/> <span className="hidden sm:inline">Back</span>
         </button>
         <div className="text-sm font-bold text-zinc-400 tracking-widest uppercase">Profile</div>
         <button onClick={onLogout} className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 border border-red-200 transition">
@@ -112,11 +116,12 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
         </button>
       </div>
 
-      <div className="relative z-10 max-w-5xl mx-auto px-6 mt-2">
+      <div className="relative z-10 max-w-5xl mx-auto px-4 md:px-6 mt-2">
         
         {/* --- HERO PROFILE CARD --- */}
-        <div className="relative rounded-[2.5rem] bg-white/80 border border-white/60 shadow-xl shadow-zinc-200/50 overflow-hidden backdrop-blur-xl">
-          <div className="h-48 w-full relative group overflow-hidden">
+        {/* Mobile: Clean White. Desktop: Glass */}
+        <div className="relative rounded-[2rem] md:rounded-[2.5rem] bg-white md:bg-white/80 border border-zinc-200 md:border-white/60 shadow-xl shadow-zinc-200/50 overflow-hidden md:backdrop-blur-xl transition-all">
+          <div className="h-40 md:h-48 w-full relative group overflow-hidden">
              <img 
                 src="https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2070&auto=format&fit=crop" 
                 alt="Profile Cover" 
@@ -128,11 +133,11 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
              </button>
           </div>
 
-          <div className="px-8 pb-8">
-            <div className="flex flex-col md:flex-row items-start md:items-end -mt-16 gap-6">
+          <div className="px-5 md:px-8 pb-8">
+            <div className="flex flex-col md:flex-row items-start md:items-end -mt-12 md:-mt-16 gap-4 md:gap-6">
               {/* Avatar */}
               <div className="relative group">
-                <div className="w-32 h-32 rounded-[2rem] p-1.5 bg-white shadow-2xl">
+                <div className="w-24 h-24 md:w-32 md:h-32 rounded-[2rem] p-1.5 bg-white shadow-2xl">
                    <div className="w-full h-full rounded-[1.7rem] bg-zinc-100 flex items-center justify-center text-4xl font-bold text-zinc-900 relative overflow-hidden border border-zinc-200">
                       <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || "Guest"}`} alt="User" className="w-full h-full object-cover" />
                    </div>
@@ -144,9 +149,9 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
 
               {/* User Info */}
               <div className="flex-1 mb-2">
-                <div className="flex items-center gap-3">
-                  <h1 className="text-3xl font-black text-zinc-900 tracking-tight">{user?.name || "Guest"}</h1>
-                  <span className="px-3 py-1 rounded-full bg-gradient-to-r from-yellow-100 to-amber-100 border border-yellow-200 text-yellow-700 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-3">
+                  <h1 className="text-2xl md:text-3xl font-black text-zinc-900 tracking-tight">{user?.name || "Guest"}</h1>
+                  <span className="w-fit px-3 py-1 rounded-full bg-gradient-to-r from-yellow-100 to-amber-100 border border-yellow-200 text-yellow-700 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm">
                     <Crown size={12} className="fill-yellow-700"/> Pro Member
                   </span>
                 </div>
@@ -155,64 +160,64 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
                   <span className="flex items-center gap-1.5">
                     <Mail size={14} className="text-zinc-400"/> {user?.email || "No Email"}
                   </span>
-                  <span className="w-1 h-1 rounded-full bg-zinc-300"></span>
+                  <span className="hidden md:block w-1 h-1 rounded-full bg-zinc-300"></span>
                   <span className="flex items-center gap-1 text-emerald-600">
                     <CheckCircle size={14}/> Verified
                   </span>
                 </div>
               </div>
 
-              <div className="flex gap-3 w-full md:w-auto mt-4 md:mt-0">
-                <button className="flex-1 md:flex-none px-6 py-3 rounded-xl bg-zinc-900 text-white font-bold text-sm hover:scale-105 transition shadow-lg shadow-zinc-900/20">
+              <div className="flex gap-3 w-full md:w-auto mt-2 md:mt-0">
+                <button className="flex-1 md:flex-none px-6 py-3 rounded-xl bg-zinc-900 text-white font-bold text-sm hover:scale-105 transition shadow-lg shadow-zinc-900/20 active:scale-95">
                   Edit Profile
                 </button>
-                <button className="px-4 py-3 rounded-xl bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition border border-zinc-200 shadow-sm">
+                <button className="px-4 py-3 rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900 transition border border-zinc-200 shadow-sm active:scale-95">
                   <Settings size={20} />
                 </button>
               </div>
             </div>
 
             {/* --- REAL DYNAMIC STATS --- */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-8 border-t border-zinc-100 opacity-75">
-               <div className="text-center md:text-left">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-8 border-t border-zinc-100 opacity-90">
+               <div className="text-left">
                  <p className="text-2xl font-black text-zinc-900">{stats.count}</p>
-                 <p className="text-xs text-zinc-400 uppercase font-bold tracking-wider">Bookings</p>
+                 <p className="text-[10px] md:text-xs text-zinc-400 uppercase font-bold tracking-wider">Bookings</p>
                </div>
-               <div className="text-center md:text-left">
+               <div className="text-left">
                  <p className="text-2xl font-black text-zinc-900">4.8</p>
-                 <p className="text-xs text-zinc-400 uppercase font-bold tracking-wider flex items-center justify-center md:justify-start gap-1"><Star size={12} className="text-yellow-400 fill-yellow-400"/> Avg Rating</p>
+                 <p className="text-[10px] md:text-xs text-zinc-400 uppercase font-bold tracking-wider flex items-center gap-1"><Star size={12} className="text-yellow-400 fill-yellow-400"/> Avg Rating</p>
                </div>
-               <div className="text-center md:text-left">
+               <div className="text-left">
                  <p className="text-2xl font-black text-emerald-500">{stats.timeSaved}m</p>
-                 <p className="text-xs text-zinc-400 uppercase font-bold tracking-wider">Time Saved</p>
+                 <p className="text-[10px] md:text-xs text-zinc-400 uppercase font-bold tracking-wider">Time Saved</p>
                </div>
-               <div className="text-center md:text-left">
+               <div className="text-left">
                  <p className="text-2xl font-black text-zinc-900">₹{stats.spent}</p>
-                 <p className="text-xs text-zinc-400 uppercase font-bold tracking-wider">Total Spent</p>
+                 <p className="text-[10px] md:text-xs text-zinc-400 uppercase font-bold tracking-wider">Total Spent</p>
                </div>
             </div>
           </div>
         </div>
 
         {/* --- MAIN CONTENT GRID --- */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mt-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8 mt-6 md:mt-8">
           
-          {/* LEFT: TABS NAVIGATION */}
+          {/* LEFT: TABS NAVIGATION (Sticky) */}
           <div className="lg:col-span-1">
-            <div className="sticky top-24 space-y-2">
+            <div className="lg:sticky lg:top-24 space-y-2 flex lg:block overflow-x-auto pb-4 lg:pb-0 gap-2 scrollbar-hide">
               {[
                 { id: "overview", icon: Grid, label: "Overview" },
-                { id: "bookings", icon: History, label: "Booking History" },
-                { id: "wallet", icon: Wallet, label: "Wallet & Cards" },
+                { id: "bookings", icon: History, label: "History" },
+                { id: "wallet", icon: Wallet, label: "Wallet" },
                 { id: "settings", icon: Settings, label: "Settings" },
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-4 rounded-2xl text-sm font-bold transition-all duration-300 ${
+                  className={`flex-none lg:w-full flex items-center justify-center lg:justify-start gap-2 lg:gap-3 px-4 py-3 md:py-4 rounded-xl md:rounded-2xl text-sm font-bold transition-all duration-300 ${
                     activeTab === tab.id
-                      ? "bg-zinc-900 text-white shadow-xl shadow-zinc-900/20 scale-105"
-                      : "bg-white/50 text-zinc-500 hover:bg-white hover:text-zinc-900 hover:shadow-md"
+                      ? "bg-zinc-900 text-white shadow-xl shadow-zinc-900/20 scale-[1.02]"
+                      : "bg-white text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 border border-zinc-100"
                   }`}
                 >
                   <tab.icon size={18} className={activeTab === tab.id ? "text-zinc-300" : "text-zinc-400"} />
@@ -220,7 +225,7 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
                 </button>
               ))}
               
-              <div className="mt-8 p-6 rounded-3xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white relative overflow-hidden group cursor-pointer shadow-xl shadow-indigo-500/20">
+              <div className="hidden lg:block mt-8 p-6 rounded-3xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white relative overflow-hidden group cursor-pointer shadow-xl shadow-indigo-500/20">
                   <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:scale-110 transition-transform"><Zap size={60}/></div>
                   <h4 className="font-bold text-lg mb-1">Upgrade to Pro</h4>
                   <p className="text-xs text-indigo-100 mb-4 opacity-90">Get priority queueing & 0% convenience fees.</p>
@@ -234,7 +239,7 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
             
             {/* TAB: OVERVIEW */}
             {activeTab === "overview" && (
-              <div className="space-y-6">
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <StatCard 
                     icon={Zap} 
@@ -252,7 +257,7 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
                   />
                 </div>
 
-                <div className="bg-white border border-zinc-200 shadow-xl shadow-zinc-200/40 rounded-3xl p-6">
+                <div className="bg-white border border-zinc-200 shadow-xl shadow-zinc-200/40 rounded-[2rem] p-6">
                   <div className="flex justify-between items-center mb-6">
                     <h3 className="font-bold text-zinc-900">Recent Activity</h3>
                     <button onClick={() => setActiveTab('bookings')} className="text-xs text-zinc-500 font-bold hover:text-zinc-900 hover:underline">View All</button>
@@ -265,17 +270,17 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
                     ) : (
                         bookings.slice(0, 2).map((booking) => (
                         <div key={booking._id} className="flex items-center gap-4 p-4 rounded-2xl bg-zinc-50 hover:bg-zinc-100 transition border border-zinc-100 cursor-pointer">
-                            <div className="w-12 h-12 rounded-xl bg-white border border-zinc-200 flex items-center justify-center font-bold text-zinc-600 shadow-sm">
+                            <div className="w-12 h-12 shrink-0 rounded-xl bg-white border border-zinc-200 flex items-center justify-center font-bold text-zinc-600 shadow-sm">
                             {/* Handling optional salon name */}
                             {booking.salonId?.salonName ? booking.salonId.salonName.charAt(0) : "S"}
                             </div>
-                            <div className="flex-1">
-                            <h4 className="font-bold text-zinc-900">{booking.salonId?.salonName || "Unknown Salon"}</h4>
-                            <p className="text-xs text-zinc-500 font-medium">
+                            <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-zinc-900 truncate">{booking.salonId?.salonName || "Unknown Salon"}</h4>
+                            <p className="text-xs text-zinc-500 font-medium truncate">
                                 {booking.services?.[0]?.name || "Service"} • {new Date(booking.createdAt).toLocaleDateString()}
                             </p>
                             </div>
-                            <div className="text-right">
+                            <div className="text-right shrink-0">
                             <p className="font-bold text-zinc-900">₹{booking.totalPrice}</p>
                             <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
                                 booking.status === 'cancelled' 
@@ -295,7 +300,7 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
 
             {/* TAB: BOOKINGS (REAL DATA CONNECTED) */}
             {activeTab === "bookings" && (
-              <div className="space-y-6">
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <SectionTitle title="Booking History" sub="Manage your past and upcoming appointments." />
                 
                 {loading ? (
@@ -313,7 +318,7 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
                     {bookings.map((booking) => (
                         <div key={booking._id} className="flex flex-col md:flex-row md:items-center gap-4 p-5 rounded-3xl bg-white border border-zinc-200 shadow-lg shadow-zinc-200/30 hover:shadow-xl transition group">
                             <div className="flex items-center gap-4 flex-1">
-                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm ${booking.status === 'cancelled' ? 'bg-red-50 text-red-500 border border-red-100' : 'bg-zinc-100 text-zinc-900 border border-zinc-200'}`}>
+                                <div className={`w-14 h-14 shrink-0 rounded-2xl flex items-center justify-center shadow-sm ${booking.status === 'cancelled' ? 'bg-red-50 text-red-500 border border-red-100' : 'bg-zinc-100 text-zinc-900 border border-zinc-200'}`}>
                                 {booking.status === 'cancelled' ? <X size={24}/> : <CheckCircle size={24}/>}
                                 </div>
                                 <div>
@@ -324,7 +329,7 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
                                     {booking.services?.map(s => s.name).join(", ")}
                                 </p>
                                 <p className="text-xs text-zinc-400 mt-1 flex items-center gap-1 font-medium">
-                                    <Clock size={12}/> {new Date(booking.createdAt).toDateString()} • {new Date(booking.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                    <Clock size={12}/> {new Date(booking.createdAt).toDateString()}
                                 </p>
                                 </div>
                             </div>
@@ -353,7 +358,7 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
 
             {/* TAB: WALLET (STILL MOCK - NEXT PHASE) */}
             {activeTab === "wallet" && (
-              <div className="space-y-8">
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                  <SectionTitle title="Wallet & Payment Methods" sub="Manage your saved cards and TrimGo wallet (Demo)." />
                  
                  <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex gap-3 text-amber-800 text-sm mb-4">
@@ -361,18 +366,18 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
                     <p>Payments Integration coming soon. These are currently mock cards.</p>
                  </div>
 
-                 <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide">
+                 <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide snap-x">
                     {/* Add Card Button */}
-                    <button className="min-w-[280px] h-[180px] rounded-3xl border-2 border-dashed border-zinc-300 flex flex-col items-center justify-center text-zinc-400 hover:text-zinc-900 hover:border-zinc-900 hover:bg-zinc-50 transition group bg-white">
-                       <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                         <CreditCard size={20} />
-                       </div>
-                       <span className="text-sm font-bold">Add New Card</span>
+                    <button className="min-w-[280px] h-[180px] snap-center rounded-3xl border-2 border-dashed border-zinc-300 flex flex-col items-center justify-center text-zinc-400 hover:text-zinc-900 hover:border-zinc-900 hover:bg-zinc-50 transition group bg-white">
+                        <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                          <CreditCard size={20} />
+                        </div>
+                        <span className="text-sm font-bold">Add New Card</span>
                     </button>
 
                     {/* Saved Cards */}
                     {SAVED_CARDS.map((card) => (
-                      <div key={card.id} className={`min-w-[320px] h-[180px] rounded-3xl bg-gradient-to-br ${card.color} p-6 relative overflow-hidden shadow-xl shadow-zinc-300 flex flex-col justify-between transform transition hover:-translate-y-2 text-white`}>
+                      <div key={card.id} className={`min-w-[320px] h-[180px] snap-center rounded-3xl bg-gradient-to-br ${card.color} p-6 relative overflow-hidden shadow-xl shadow-zinc-300 flex flex-col justify-between transform transition hover:-translate-y-2 text-white`}>
                           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
                           
                           <div className="flex justify-between items-start">
@@ -409,12 +414,12 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
 
             {/* TAB: SETTINGS (REAL USER DATA DISPLAY) */}
             {activeTab === "settings" && (
-              <div className="space-y-6">
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                  <SectionTitle title="Account Settings" sub="Control your profile configuration and preferences." />
 
                  <div className="bg-white border border-zinc-200 rounded-3xl overflow-hidden divide-y divide-zinc-100 shadow-sm">
                     {settingsList.map((item, i) => (
-                      <div key={i} className="p-5 flex items-center gap-4 hover:bg-zinc-50 cursor-pointer transition group">
+                      <div key={i} className="p-5 flex items-center gap-4 hover:bg-zinc-50 cursor-pointer transition group active:bg-zinc-100">
                           <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 group-hover:bg-zinc-200 group-hover:text-zinc-900 transition">
                             <item.icon size={18} />
                           </div>
