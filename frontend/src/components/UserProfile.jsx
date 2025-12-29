@@ -3,17 +3,17 @@ import {
   User, MapPin, Calendar, CreditCard, Settings, LogOut, Camera,
   Edit3, Star, Clock, ChevronRight, Shield, Bell, Smartphone,
   History, Wallet, Zap, Crown, Grid, CheckCircle, X, Mail, Phone,
-  AlertTriangle, Info
+  AlertTriangle, Info, ArrowLeft
 } from "lucide-react";
 import api from "../utils/api";
 
-// --- KEEPING WALLET MOCK FOR NOW ---
+// --- ⚡ MOCK DATA FOR WALLET ---
 const SAVED_CARDS = [
   { id: 1, type: "Visa", last4: "4242", expiry: "12/28", holder: "Sanjay Choudhary", color: "from-zinc-900 to-zinc-800" },
   { id: 2, type: "Mastercard", last4: "8899", expiry: "09/26", holder: "Sanjay Choudhary", color: "from-indigo-600 to-purple-600" },
 ];
 
-// --- VISUAL ASSETS ---
+// --- 🎨 VISUAL ASSETS ---
 const BackgroundAurora = () => (
   <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-zinc-50">
     <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
@@ -22,7 +22,49 @@ const BackgroundAurora = () => (
   </div>
 );
 
-// --- SUB-COMPONENTS ---
+// --- 🧩 SUB-COMPONENTS ---
+
+// 1. Premium Floating Header (Consistent with ReferralPage)
+const Header = ({ onBack, onLogout }) => (
+  <header className="fixed top-0 left-0 right-0 z-50 px-4 md:px-6 py-3 md:py-4 pointer-events-none">
+    <div className="max-w-5xl mx-auto pointer-events-auto">
+      {/* Glass Pill: Solid on Mobile for FPS, Blur on Desktop for Aesthetics */}
+      <div className="flex items-center justify-between bg-white/90 md:bg-white/70 md:backdrop-blur-xl rounded-full p-2 border border-white/50 shadow-sm transition-all duration-300">
+        
+        {/* Left: Back Button */}
+        <button 
+          onClick={onBack} 
+          className="p-2.5 md:p-3 rounded-full bg-white shadow-sm border border-zinc-100 active:bg-zinc-100 transition-colors group"
+        >
+          <ArrowLeft size={18} className="text-zinc-600 group-hover:-translate-x-0.5 transition-transform" />
+        </button>
+
+        {/* Center/Right: Actions & Title */}
+        <div className="flex items-center gap-4 pr-1">
+           {/* Title Hidden on very small screens, visible on others */}
+           <div className="hidden sm:flex flex-col items-end leading-tight mr-2">
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">TrimGo ID</span>
+            <span className="text-sm font-bold text-zinc-800">My Profile</span>
+          </div>
+
+          {/* Divider */}
+          <div className="hidden sm:block h-8 w-[1px] bg-zinc-200"></div>
+
+          {/* Logout Button */}
+          <button 
+            onClick={onLogout} 
+            className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-red-50 text-red-500 hover:bg-red-100 border border-red-100 transition-all active:scale-95"
+          >
+            <span className="text-xs font-bold">Logout</span>
+            <LogOut size={14} strokeWidth={2.5} />
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </header>
+);
+
 const StatCard = ({ icon: Icon, label, value, color, bg }) => (
   <div className="bg-white/60 border border-white/40 shadow-sm p-4 rounded-2xl flex items-center gap-4 hover:shadow-md transition group backdrop-blur-sm">
     <div className={`w-12 h-12 rounded-xl ${bg} ${color} flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>
@@ -42,7 +84,7 @@ const SectionTitle = ({ title, sub }) => (
   </div>
 );
 
-// --- MAIN COMPONENT ---
+// --- 🚀 MAIN COMPONENT ---
 export const UserProfile = ({ user, onBack, onLogout }) => {
   const [activeTab, setActiveTab] = useState("overview");
   
@@ -73,8 +115,6 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
   // 3. CALCULATE STATS DYNAMICALLY
   const stats = useMemo(() => {
     const totalSpent = bookings.reduce((acc, curr) => {
-        // Only count completed bookings for spent amount if you want strict logic
-        // For now summing up all non-cancelled
         return curr.status !== 'cancelled' ? acc + (curr.totalPrice || 0) : acc;
     }, 0);
     
@@ -98,29 +138,24 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-zinc-50 font-sans pb-12 relative overflow-x-hidden selection:bg-zinc-900 selection:text-white">
+    <div className="min-h-screen bg-zinc-50 font-sans pb-20 relative overflow-x-hidden selection:bg-indigo-100 selection:text-indigo-900">
+      
+      {/* 1. Background */}
       <BackgroundAurora />
 
-      {/* --- HEADER NAVIGATION --- */}
-      <div className="relative z-10 px-6 py-6 flex items-center justify-between max-w-5xl mx-auto">
-        <button onClick={onBack} className="flex items-center gap-2 text-zinc-500 hover:text-zinc-900 transition px-4 py-2 rounded-full bg-white/50 border border-zinc-200 hover:bg-white shadow-sm backdrop-blur-md">
-          <ChevronRight size={18} className="rotate-180"/> Back
-        </button>
-        <div className="text-sm font-bold text-zinc-400 tracking-widest uppercase">Profile</div>
-        <button onClick={onLogout} className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 border border-red-200 transition">
-          <LogOut size={18} />
-        </button>
-      </div>
+      {/* 2. New Floating Header */}
+      <Header onBack={onBack} onLogout={onLogout} />
 
-      <div className="relative z-10 max-w-5xl mx-auto px-6 mt-2">
+      {/* 3. Main Content Wrapper - Added PT-28/PT-32 to clear fixed header */}
+      <div className="relative z-10 max-w-5xl mx-auto px-4 md:px-6 pt-24 md:pt-32">
         
         {/* --- HERO PROFILE CARD --- */}
         <div className="relative rounded-[2.5rem] bg-white/80 border border-white/60 shadow-xl shadow-zinc-200/50 overflow-hidden backdrop-blur-xl">
-          <div className="h-48 w-full relative group overflow-hidden">
+          <div className="h-40 md:h-48 w-full relative group overflow-hidden">
              <img 
-                src="https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2070&auto=format&fit=crop" 
-                alt="Profile Cover" 
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+               src="https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2070&auto=format&fit=crop" 
+               alt="Profile Cover" 
+               className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
              />
              <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/60 via-zinc-900/20 to-transparent"></div>
              <button className="absolute top-4 right-4 bg-white/20 text-white p-2 rounded-full hover:bg-white/30 transition backdrop-blur-md border border-white/20">
@@ -128,11 +163,11 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
              </button>
           </div>
 
-          <div className="px-8 pb-8">
+          <div className="px-6 md:px-8 pb-8">
             <div className="flex flex-col md:flex-row items-start md:items-end -mt-16 gap-6">
               {/* Avatar */}
-              <div className="relative group">
-                <div className="w-32 h-32 rounded-[2rem] p-1.5 bg-white shadow-2xl">
+              <div className="relative group mx-auto md:mx-0">
+                <div className="w-28 h-28 md:w-32 md:h-32 rounded-[2rem] p-1.5 bg-white shadow-2xl">
                    <div className="w-full h-full rounded-[1.7rem] bg-zinc-100 flex items-center justify-center text-4xl font-bold text-zinc-900 relative overflow-hidden border border-zinc-200">
                       <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || "Guest"}`} alt="User" className="w-full h-full object-cover" />
                    </div>
@@ -143,19 +178,19 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
               </div>
 
               {/* User Info */}
-              <div className="flex-1 mb-2">
-                <div className="flex items-center gap-3">
-                  <h1 className="text-3xl font-black text-zinc-900 tracking-tight">{user?.name || "Guest"}</h1>
-                  <span className="px-3 py-1 rounded-full bg-gradient-to-r from-yellow-100 to-amber-100 border border-yellow-200 text-yellow-700 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm">
+              <div className="flex-1 mb-2 text-center md:text-left w-full">
+                <div className="flex flex-col md:flex-row items-center md:items-start gap-2 md:gap-3 justify-center md:justify-start">
+                  <h1 className="text-2xl md:text-3xl font-black text-zinc-900 tracking-tight">{user?.name || "Guest"}</h1>
+                  <span className="px-3 py-1 rounded-full bg-gradient-to-r from-yellow-100 to-amber-100 border border-yellow-200 text-yellow-700 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm mt-1 md:mt-0">
                     <Crown size={12} className="fill-yellow-700"/> Pro Member
                   </span>
                 </div>
                 
-                <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-zinc-500 font-medium">
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mt-2 text-sm text-zinc-500 font-medium">
                   <span className="flex items-center gap-1.5">
                     <Mail size={14} className="text-zinc-400"/> {user?.email || "No Email"}
                   </span>
-                  <span className="w-1 h-1 rounded-full bg-zinc-300"></span>
+                  <span className="hidden md:inline-block w-1 h-1 rounded-full bg-zinc-300"></span>
                   <span className="flex items-center gap-1 text-emerald-600">
                     <CheckCircle size={14}/> Verified
                   </span>
@@ -163,10 +198,10 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
               </div>
 
               <div className="flex gap-3 w-full md:w-auto mt-4 md:mt-0">
-                <button className="flex-1 md:flex-none px-6 py-3 rounded-xl bg-zinc-900 text-white font-bold text-sm hover:scale-105 transition shadow-lg shadow-zinc-900/20">
+                <button className="flex-1 md:flex-none px-6 py-3 rounded-xl bg-zinc-900 text-white font-bold text-sm hover:scale-105 transition shadow-lg shadow-zinc-900/20 active:scale-95">
                   Edit Profile
                 </button>
-                <button className="px-4 py-3 rounded-xl bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition border border-zinc-200 shadow-sm">
+                <button className="px-4 py-3 rounded-xl bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition border border-zinc-200 shadow-sm active:scale-95">
                   <Settings size={20} />
                 </button>
               </div>
@@ -199,11 +234,11 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
           
           {/* LEFT: TABS NAVIGATION */}
           <div className="lg:col-span-1">
-            <div className="sticky top-24 space-y-2">
+            <div className="sticky top-28 space-y-2">
               {[
                 { id: "overview", icon: Grid, label: "Overview" },
-                { id: "bookings", icon: History, label: "Booking History" },
-                { id: "wallet", icon: Wallet, label: "Wallet & Cards" },
+                { id: "bookings", icon: History, label: "History" },
+                { id: "wallet", icon: Wallet, label: "Wallet" },
                 { id: "settings", icon: Settings, label: "Settings" },
               ].map((tab) => (
                 <button
@@ -234,7 +269,7 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
             
             {/* TAB: OVERVIEW */}
             {activeTab === "overview" && (
-              <div className="space-y-6">
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <StatCard 
                     icon={Zap} 
@@ -265,17 +300,16 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
                     ) : (
                         bookings.slice(0, 2).map((booking) => (
                         <div key={booking._id} className="flex items-center gap-4 p-4 rounded-2xl bg-zinc-50 hover:bg-zinc-100 transition border border-zinc-100 cursor-pointer">
-                            <div className="w-12 h-12 rounded-xl bg-white border border-zinc-200 flex items-center justify-center font-bold text-zinc-600 shadow-sm">
-                            {/* Handling optional salon name */}
+                            <div className="w-12 h-12 rounded-xl bg-white border border-zinc-200 flex items-center justify-center font-bold text-zinc-600 shadow-sm shrink-0">
                             {booking.salonId?.salonName ? booking.salonId.salonName.charAt(0) : "S"}
                             </div>
-                            <div className="flex-1">
-                            <h4 className="font-bold text-zinc-900">{booking.salonId?.salonName || "Unknown Salon"}</h4>
-                            <p className="text-xs text-zinc-500 font-medium">
+                            <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-zinc-900 truncate">{booking.salonId?.salonName || "Unknown Salon"}</h4>
+                            <p className="text-xs text-zinc-500 font-medium truncate">
                                 {booking.services?.[0]?.name || "Service"} • {new Date(booking.createdAt).toLocaleDateString()}
                             </p>
                             </div>
-                            <div className="text-right">
+                            <div className="text-right shrink-0">
                             <p className="font-bold text-zinc-900">₹{booking.totalPrice}</p>
                             <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
                                 booking.status === 'cancelled' 
@@ -295,7 +329,7 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
 
             {/* TAB: BOOKINGS (REAL DATA CONNECTED) */}
             {activeTab === "bookings" && (
-              <div className="space-y-6">
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <SectionTitle title="Booking History" sub="Manage your past and upcoming appointments." />
                 
                 {loading ? (
@@ -313,7 +347,7 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
                     {bookings.map((booking) => (
                         <div key={booking._id} className="flex flex-col md:flex-row md:items-center gap-4 p-5 rounded-3xl bg-white border border-zinc-200 shadow-lg shadow-zinc-200/30 hover:shadow-xl transition group">
                             <div className="flex items-center gap-4 flex-1">
-                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm ${booking.status === 'cancelled' ? 'bg-red-50 text-red-500 border border-red-100' : 'bg-zinc-100 text-zinc-900 border border-zinc-200'}`}>
+                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm shrink-0 ${booking.status === 'cancelled' ? 'bg-red-50 text-red-500 border border-red-100' : 'bg-zinc-100 text-zinc-900 border border-zinc-200'}`}>
                                 {booking.status === 'cancelled' ? <X size={24}/> : <CheckCircle size={24}/>}
                                 </div>
                                 <div>
@@ -351,9 +385,9 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
               </div>
             )}
 
-            {/* TAB: WALLET (STILL MOCK - NEXT PHASE) */}
+            {/* TAB: WALLET */}
             {activeTab === "wallet" && (
-              <div className="space-y-8">
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                  <SectionTitle title="Wallet & Payment Methods" sub="Manage your saved cards and TrimGo wallet (Demo)." />
                  
                  <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex gap-3 text-amber-800 text-sm mb-4">
@@ -364,10 +398,10 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
                  <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide">
                     {/* Add Card Button */}
                     <button className="min-w-[280px] h-[180px] rounded-3xl border-2 border-dashed border-zinc-300 flex flex-col items-center justify-center text-zinc-400 hover:text-zinc-900 hover:border-zinc-900 hover:bg-zinc-50 transition group bg-white">
-                       <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                         <CreditCard size={20} />
-                       </div>
-                       <span className="text-sm font-bold">Add New Card</span>
+                        <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                          <CreditCard size={20} />
+                        </div>
+                        <span className="text-sm font-bold">Add New Card</span>
                     </button>
 
                     {/* Saved Cards */}
@@ -407,9 +441,9 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
               </div>
             )}
 
-            {/* TAB: SETTINGS (REAL USER DATA DISPLAY) */}
+            {/* TAB: SETTINGS */}
             {activeTab === "settings" && (
-              <div className="space-y-6">
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                  <SectionTitle title="Account Settings" sub="Control your profile configuration and preferences." />
 
                  <div className="bg-white border border-zinc-200 rounded-3xl overflow-hidden divide-y divide-zinc-100 shadow-sm">
