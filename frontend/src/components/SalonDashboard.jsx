@@ -4,8 +4,7 @@ import {
   Bell, DollarSign, TrendingUp, Clock, CheckCircle, Scissors,
   Play, CheckSquare, X, Camera, Mail, Phone, MapPin, User,
   Armchair, UserCheck, Plus, Trash2, Menu, Save, Edit3, Power,
-  AlertTriangle, Sparkles, Zap, ArrowRight, UserPlus, Home, 
-  LayoutDashboard, XCircle, Loader2
+  AlertTriangle, Sparkles, Zap, ArrowRight, UserPlus, Home, LayoutDashboard, XCircle
 } from "lucide-react";
 import api from "../utils/api";
 import { io } from "socket.io-client";
@@ -29,7 +28,7 @@ const SUGGESTED_SERVICES = [
 // --- SUB-COMPONENTS ---
 
 // 1. WALK-IN MODAL (Responsive)
-const WalkInModal = ({ isOpen, onClose, services, onConfirm, isLoading }) => {
+const WalkInModal = ({ isOpen, onClose, services, onConfirm }) => {
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [selectedServices, setSelectedServices] = useState([]);
@@ -50,18 +49,23 @@ const WalkInModal = ({ isOpen, onClose, services, onConfirm, isLoading }) => {
     if (selectedServices.length === 0) return alert("Select at least one service");
     
     onConfirm({ name, mobile, services: selectedServices });
-    // Note: We don't reset immediately here, we wait for parent to close or finish loading
+    
+    // Reset
+    setName("");
+    setMobile("");
+    setSelectedServices([]);
+    onClose();
   };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={!isLoading ? onClose : undefined}></div>
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
       <div className="relative w-full max-w-md bg-zinc-900 border-t sm:border border-white/10 rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl animate-in slide-in-from-bottom-10 fade-in duration-300">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-xl font-bold text-white flex items-center gap-2">
             <UserPlus className="text-emerald-400" /> Add Walk-in Client
           </h3>
-          <button onClick={onClose} disabled={isLoading} className="text-zinc-500 hover:text-white disabled:opacity-50"><X size={20}/></button>
+          <button onClick={onClose} className="text-zinc-500 hover:text-white"><X size={20}/></button>
         </div>
 
         <div className="space-y-4">
@@ -73,7 +77,6 @@ const WalkInModal = ({ isOpen, onClose, services, onConfirm, isLoading }) => {
               className="w-full bg-zinc-950 border border-white/10 rounded-xl p-3 text-white focus:border-emerald-500 outline-none placeholder:text-zinc-700"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              disabled={isLoading}
             />
           </div>
           
@@ -85,7 +88,6 @@ const WalkInModal = ({ isOpen, onClose, services, onConfirm, isLoading }) => {
               className="w-full bg-zinc-950 border border-white/10 rounded-xl p-3 text-white focus:border-emerald-500 outline-none placeholder:text-zinc-700"
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
-              disabled={isLoading}
             />
           </div>
 
@@ -97,8 +99,8 @@ const WalkInModal = ({ isOpen, onClose, services, onConfirm, isLoading }) => {
                 return (
                   <div 
                     key={i} 
-                    onClick={() => !isLoading && toggleService(s)}
-                    className={`p-3 rounded-lg border cursor-pointer flex justify-between items-center transition-all ${isSelected ? 'bg-emerald-500/20 border-emerald-500 text-white' : 'border-white/5 text-zinc-400 hover:bg-white/5'} ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onClick={() => toggleService(s)}
+                    className={`p-3 rounded-lg border cursor-pointer flex justify-between items-center transition-all ${isSelected ? 'bg-emerald-500/20 border-emerald-500 text-white' : 'border-white/5 text-zinc-400 hover:bg-white/5'}`}
                   >
                     <span className="text-sm font-medium">{s.name}</span>
                     <span className="text-xs opacity-70">₹{s.price}</span>
@@ -110,10 +112,9 @@ const WalkInModal = ({ isOpen, onClose, services, onConfirm, isLoading }) => {
 
           <button 
             onClick={handleSubmit}
-            disabled={isLoading}
-            className="w-full py-3.5 bg-white text-black font-bold rounded-xl hover:bg-emerald-400 transition-colors mt-2 active:scale-95 transform disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-white text-black font-bold rounded-xl hover:bg-emerald-400 transition-colors mt-2 active:scale-95 transform"
           >
-            {isLoading ? <Loader2 className="animate-spin" size={20} /> : "Add to Queue"}
+            Add to Queue
           </button>
         </div>
       </div>
@@ -167,7 +168,7 @@ const ProfileModal = ({ isOpen, onClose, salon, profileImage, onImageUpload }) =
 };
 
 // 3. ASSIGNMENT MODAL
-const AssignmentModal = ({ isOpen, onClose, customer, availableChairs, staffList, onConfirm, isLoading }) => {
+const AssignmentModal = ({ isOpen, onClose, customer, availableChairs, staffList, onConfirm }) => {
   const [selectedChair, setSelectedChair] = useState("");
   const [selectedStaff, setSelectedStaff] = useState("");
 
@@ -176,6 +177,7 @@ const AssignmentModal = ({ isOpen, onClose, customer, availableChairs, staffList
   const handleSubmit = () => {
     if (selectedChair && selectedStaff) {
       onConfirm(customer, Number(selectedChair), selectedStaff);
+      onClose();
     } else {
       alert("Please select both a Chair and a Staff member.");
     }
@@ -186,14 +188,14 @@ const AssignmentModal = ({ isOpen, onClose, customer, availableChairs, staffList
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={!isLoading ? onClose : undefined}></div>
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
       <div className="relative w-full max-w-sm bg-zinc-900 border-t sm:border border-white/10 rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl animate-in slide-in-from-bottom-10 fade-in">
         <div className="flex justify-between items-start mb-6">
             <div>
                 <h3 className="text-lg font-bold text-white mb-1">Start Service</h3>
                 <p className="text-zinc-400 text-sm">For <span className="text-white font-medium">{customerName}</span></p>
             </div>
-            <button onClick={onClose} disabled={isLoading} className="disabled:opacity-50"><X size={20} className="text-zinc-500"/></button>
+            <button onClick={onClose}><X size={20} className="text-zinc-500"/></button>
         </div>
 
         <div className="space-y-4">
@@ -203,8 +205,8 @@ const AssignmentModal = ({ isOpen, onClose, customer, availableChairs, staffList
               {availableChairs.length > 0 ? availableChairs.map(chair => (
                 <div 
                   key={chair.id}
-                  onClick={() => !isLoading && setSelectedChair(chair.id)}
-                  className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center gap-2 ${selectedChair === chair.id ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-zinc-950 border-white/10 text-zinc-400 hover:border-white/20'} ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  onClick={() => setSelectedChair(chair.id)}
+                  className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center gap-2 ${selectedChair === chair.id ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-zinc-950 border-white/10 text-zinc-400 hover:border-white/20'}`}
                 >
                   <Armchair size={16} />
                   <span className="text-sm font-bold">{chair.name}</span>
@@ -216,10 +218,9 @@ const AssignmentModal = ({ isOpen, onClose, customer, availableChairs, staffList
           <div>
             <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Assign Staff</label>
             <select 
-              className="w-full bg-zinc-950 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-emerald-500 appearance-none disabled:opacity-50"
+              className="w-full bg-zinc-950 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-emerald-500 appearance-none"
               onChange={(e) => setSelectedStaff(e.target.value)}
               value={selectedStaff}
-              disabled={isLoading}
             >
               <option value="">Select Staff Member</option>
               {staffList.map((s, i) => (
@@ -230,10 +231,10 @@ const AssignmentModal = ({ isOpen, onClose, customer, availableChairs, staffList
           
           <button 
             onClick={handleSubmit}
-            disabled={!selectedChair || !selectedStaff || isLoading}
-            className="w-full py-3.5 mt-4 bg-white text-black font-bold rounded-xl hover:bg-emerald-400 disabled:opacity-50 disabled:hover:bg-white transition-colors active:scale-95 flex items-center justify-center gap-2"
+            disabled={!selectedChair || !selectedStaff}
+            className="w-full py-3.5 mt-4 bg-white text-black font-bold rounded-xl hover:bg-emerald-400 disabled:opacity-50 disabled:hover:bg-white transition-colors active:scale-95"
           >
-            {isLoading ? <Loader2 className="animate-spin" size={20}/> : "Start Service"}
+            Start Service
           </button>
         </div>
       </div>
@@ -268,11 +269,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
   const [profileImage, setProfileImage] = useState(null);
   const [assignmentModal, setAssignmentModal] = useState({ isOpen: false, customer: null });
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
-
-  // --- LOADER STATES ---
-  // actionLoading stores the ID of the item being processed (e.g., 'accept-123', 'chair-1', 'online-toggle')
-  const [actionLoading, setActionLoading] = useState(null); 
-  const [isSubmitting, setIsSubmitting] = useState(false); // For modals/forms
 
   // --- 1. INITIAL FETCH & SOCKET ---
   useEffect(() => {
@@ -352,19 +348,16 @@ const SalonDashboard = ({ salon, onLogout }) => {
 
   // --- HANDLERS ---
   const handleAcceptRequest = async (req) => {
-    setActionLoading(`accept-${req._id}`);
     try {
         await api.post("/queue/accept", { ticketId: req._id });
         setRequests(requests.filter(r => r._id !== req._id));
         setActiveQueue([...activeQueue, req]); 
     } catch (error) { alert("Failed to accept"); }
-    finally { setActionLoading(null); }
   };
 
   // 🔥 NEW: REJECT HANDLER
   const handleRejectRequest = async (req) => {
     if(!window.confirm("Reject this customer request?")) return;
-    setActionLoading(`reject-${req._id}`);
     try {
         await api.post("/queue/reject", { ticketId: req._id });
         setRequests(requests.filter(r => r._id !== req._id));
@@ -372,7 +365,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
         console.error(error);
         alert("Failed to reject request"); 
     }
-    finally { setActionLoading(null); }
   };
 
   const openAssignmentModal = (customer) => {
@@ -385,35 +377,28 @@ const SalonDashboard = ({ salon, onLogout }) => {
   };
 
   const handleStartService = async (customer, chairId, staffName) => {
-    setIsSubmitting(true);
     try {
         await api.post("/queue/start", { ticketId: customer._id, chairId, staffName });
         setChairs(prev => prev.map(c => 
             c.id === chairId ? { ...c, status: 'occupied', currentCustomer: customer, assignedStaff: staffName } : c
         ));
         setActiveQueue(activeQueue.filter(q => q._id !== customer._id));
-        setAssignmentModal({ isOpen: false, customer: null }); // Close modal only on success
     } catch (error) { alert("Failed to start service"); }
-    finally { setIsSubmitting(false); }
   };
 
   const handleCompleteService = async (chairId) => {
     const chair = chairs.find(c => c.id === chairId);
     if (!chair?.currentCustomer) return;
-    
-    setActionLoading(`complete-${chairId}`);
     try {
         await api.post("/queue/complete", { ticketId: chair.currentCustomer._id });
         setChairs(prev => prev.map(c => 
             c.id === chairId ? { ...c, status: 'empty', currentCustomer: null, assignedStaff: null } : c
         ));
     } catch (error) { alert("Error completing service"); }
-    finally { setActionLoading(null); }
   };
 
   // Handle Walk-in Submission
   const handleAddWalkIn = async (customerData) => {
-    setIsSubmitting(true);
     try {
         const totalPrice = customerData.services.reduce((sum, s) => sum + Number(s.price), 0);
         const totalTime = customerData.services.reduce((sum, s) => sum + Number(s.time), 0);
@@ -429,13 +414,11 @@ const SalonDashboard = ({ salon, onLogout }) => {
         const { data } = await api.post("/queue/add-walkin", payload);
         if(data.success) {
             setActiveQueue(prev => [...prev, data.ticket]);
-            setIsWalkInOpen(false); // Close on success
         }
     } catch (error) {
         console.error(error);
         alert("Failed to add walk-in client");
     }
-    finally { setIsSubmitting(false); }
   };
 
   // --- SETTINGS HANDLERS ---
@@ -445,18 +428,15 @@ const SalonDashboard = ({ salon, onLogout }) => {
 
   const handleAddService = async () => {
       if(!newService.name || !newService.price || !newService.time) return;
-      setIsSubmitting(true);
       const updatedServices = [...services, { ...newService, price: Number(newService.price), time: Number(newService.time) }];
       try {
           await api.put("/salon/update", { services: updatedServices });
           setServices(updatedServices);
           setNewService({ name: "", price: "", time: "", category: "Hair" }); 
       } catch (error) { alert("Failed to save service"); }
-      finally { setIsSubmitting(false); }
   };
 
   const handleDeleteService = async (index) => {
-      // Small optimization: we can use index as loading ID too if needed, but for now simple alert is ok or we can add specific loader
       const updatedServices = services.filter((_, i) => i !== index);
       try {
           await api.put("/salon/update", { services: updatedServices });
@@ -466,24 +446,20 @@ const SalonDashboard = ({ salon, onLogout }) => {
 
   const handleAddStaff = async () => {
       if(!newStaffName.trim()) return;
-      setIsSubmitting(true);
       const updatedStaff = [...staff, { name: newStaffName, status: 'available' }];
       try {
           await api.put("/salon/update", { staff: updatedStaff });
           setStaff(updatedStaff);
           setNewStaffName("");
       } catch (error) { alert("Failed to add staff"); }
-      finally { setIsSubmitting(false); }
   };
 
   const toggleOnlineStatus = async () => {
-      setActionLoading('online-toggle');
       try {
           const newStatus = !isOnline;
           await api.put("/salon/update", { isOnline: newStatus });
           setIsOnline(newStatus);
       } catch (error) { alert("Update failed"); }
-      finally { setActionLoading(null); }
   }
 
   // --- HELPERS ---
@@ -505,7 +481,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
         onClose={() => setIsWalkInOpen(false)}
         services={services}
         onConfirm={handleAddWalkIn}
-        isLoading={isSubmitting}
       />
 
       <ProfileModal 
@@ -523,7 +498,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
         availableChairs={assignmentModal.availableChairs}
         staffList={staff}
         onConfirm={handleStartService}
-        isLoading={isSubmitting}
       />
 
       {/* --- BACKGROUND EFFECTS --- */}
@@ -575,12 +549,8 @@ const SalonDashboard = ({ salon, onLogout }) => {
            </div>
 
            <div className="flex items-center gap-3">
-             <button 
-                onClick={!actionLoading ? toggleOnlineStatus : undefined} 
-                disabled={actionLoading === 'online-toggle'}
-                className={`px-3 py-1.5 rounded-full border flex items-center gap-2 transition-all active:scale-95 ${isOnline ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-zinc-800 border-zinc-700 text-zinc-400'} ${actionLoading === 'online-toggle' ? 'opacity-70' : ''}`}
-             >
-                 {actionLoading === 'online-toggle' ? <Loader2 size={14} className="animate-spin" /> : <Power size={14} />}
+             <button onClick={toggleOnlineStatus} className={`px-3 py-1.5 rounded-full border flex items-center gap-2 transition-all active:scale-95 ${isOnline ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}>
+                 <Power size={14} />
                  <span className="text-[10px] font-bold uppercase hidden sm:block">{isOnline ? 'Online' : 'Offline'}</span>
              </button>
              <div onClick={() => setIsProfileOpen(true)} className="w-9 h-9 rounded-full bg-gradient-to-tr from-zinc-700 to-zinc-600 p-0.5 cursor-pointer hover:scale-105 transition overflow-hidden">
@@ -665,21 +635,19 @@ const SalonDashboard = ({ salon, onLogout }) => {
                                     <span className="text-lg font-black text-white">₹{req.totalPrice}</span>
                                 </div>
                                 
-                                {/* 🔥 NEW: ACCEPT / CANCEL BUTTONS WITH LOADERS */}
+                                {/* 🔥 NEW: ACCEPT / CANCEL BUTTONS */}
                                 <div className="grid grid-cols-2 gap-2">
                                     <button 
                                         onClick={() => handleRejectRequest(req)} 
-                                        disabled={actionLoading === `reject-${req._id}` || actionLoading === `accept-${req._id}`}
-                                        className="py-2.5 bg-zinc-800 text-red-400 border border-white/5 hover:bg-red-500/10 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1 disabled:opacity-50"
+                                        className="py-2.5 bg-zinc-800 text-red-400 border border-white/5 hover:bg-red-500/10 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1"
                                     >
-                                        {actionLoading === `reject-${req._id}` ? <Loader2 size={14} className="animate-spin"/> : <><X size={14} /> Cancel</>}
+                                        <X size={14} /> Cancel
                                     </button>
                                     <button 
                                         onClick={() => handleAcceptRequest(req)} 
-                                        disabled={actionLoading === `accept-${req._id}` || actionLoading === `reject-${req._id}`}
-                                        className="py-2.5 bg-white text-black text-xs font-bold rounded-xl hover:bg-emerald-400 transition-colors flex items-center justify-center gap-1 shadow-lg shadow-white/5 disabled:opacity-50"
+                                        className="py-2.5 bg-white text-black text-xs font-bold rounded-xl hover:bg-emerald-400 transition-colors flex items-center justify-center gap-1 shadow-lg shadow-white/5"
                                     >
-                                        {actionLoading === `accept-${req._id}` ? <Loader2 size={14} className="animate-spin"/> : <><CheckCircle size={14} /> Accept</>}
+                                        <CheckCircle size={14} /> Accept
                                     </button>
                                 </div>
                             </div>
@@ -759,13 +727,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
                                      <p className="text-xs text-emerald-400">{chair.currentCustomer.services[0]?.name}</p>
                                    </div>
                                  </div>
-                                 <button 
-                                    onClick={() => handleCompleteService(chair.id)} 
-                                    disabled={actionLoading === `complete-${chair.id}`}
-                                    className="w-full py-2.5 bg-white text-black text-xs font-bold rounded-lg hover:bg-emerald-400 transition-colors flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
-                                >
-                                    {actionLoading === `complete-${chair.id}` ? <Loader2 size={14} className="animate-spin" /> : <><CheckSquare size={14}/> Complete</>}
-                                </button>
+                                 <button onClick={() => handleCompleteService(chair.id)} className="w-full py-2.5 bg-white text-black text-xs font-bold rounded-lg hover:bg-emerald-400 transition-colors flex items-center justify-center gap-2 active:scale-95"><CheckSquare size={14}/> Complete</button>
                                </div>
                              ) : (
                                <div className="flex-1 flex flex-col items-center justify-center text-zinc-700 gap-2">
@@ -792,56 +754,52 @@ const SalonDashboard = ({ salon, onLogout }) => {
                   
                   {/* QUICK ADD */}
                   <div className="mb-6">
-                      <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2 flex items-center gap-1"><Zap size={10} className="text-yellow-400"/> Quick Add</p>
-                      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                          {SUGGESTED_SERVICES.map((s, i) => (
-                              <button key={i} onClick={() => fillServiceSuggestion(s)} className="shrink-0 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-white/5 rounded-lg text-xs text-zinc-300 transition-colors flex items-center gap-1 whitespace-nowrap">
-                                {s.name} <span className="opacity-50">• ₹{s.price}</span>
-                              </button>
-                          ))}
-                      </div>
+                     <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2 flex items-center gap-1"><Zap size={10} className="text-yellow-400"/> Quick Add</p>
+                     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                         {SUGGESTED_SERVICES.map((s, i) => (
+                             <button key={i} onClick={() => fillServiceSuggestion(s)} className="shrink-0 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-white/5 rounded-lg text-xs text-zinc-300 transition-colors flex items-center gap-1 whitespace-nowrap">
+                               {s.name} <span className="opacity-50">• ₹{s.price}</span>
+                             </button>
+                         ))}
+                     </div>
                   </div>
 
                   {/* INPUTS */}
                   <div className="space-y-3 mb-6 bg-zinc-900/80 p-4 rounded-2xl border border-white/5">
-                      <div className="grid grid-cols-3 gap-2">
-                         <input type="text" placeholder="Service Name" className="col-span-3 bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.name} onChange={(e) => setNewService({...newService, name: e.target.value})} />
-                         <input type="number" placeholder="₹ Price" className="bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.price} onChange={(e) => setNewService({...newService, price: e.target.value})} />
-                         <input type="number" placeholder="Mins" className="bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.time} onChange={(e) => setNewService({...newService, time: e.target.value})} />
-                         <button onClick={handleAddService} disabled={isSubmitting} className="col-span-3 bg-emerald-500 text-white rounded-xl py-3 font-bold hover:bg-emerald-400 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
-                            {isSubmitting ? <Loader2 size={16} className="animate-spin"/> : <><Plus size={16}/> Add Service</>}
-                         </button>
-                      </div>
+                     <div className="grid grid-cols-3 gap-2">
+                        <input type="text" placeholder="Service Name" className="col-span-3 bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.name} onChange={(e) => setNewService({...newService, name: e.target.value})} />
+                        <input type="number" placeholder="₹ Price" className="bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.price} onChange={(e) => setNewService({...newService, price: e.target.value})} />
+                        <input type="number" placeholder="Mins" className="bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.time} onChange={(e) => setNewService({...newService, time: e.target.value})} />
+                        <button onClick={handleAddService} className="col-span-3 bg-emerald-500 text-white rounded-xl py-3 font-bold hover:bg-emerald-400 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"><Plus size={16}/> Add Service</button>
+                     </div>
                   </div>
 
                   {/* LIST */}
                   <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar">
-                      {services.length === 0 ? <p className="text-zinc-500 text-sm text-center py-4">No services added.</p> : services.map((s, i) => (
-                         <div key={i} className="flex items-center justify-between p-3 bg-zinc-900 rounded-xl border border-white/5">
-                            <div><h4 className="font-bold text-sm text-white">{s.name}</h4><p className="text-xs text-zinc-400">₹{s.price} • {s.time} mins</p></div>
-                            <button onClick={() => handleDeleteService(i)} className="p-2 text-zinc-600 hover:text-red-400 transition-colors"><Trash2 size={16}/></button>
-                         </div>
-                      ))}
+                     {services.length === 0 ? <p className="text-zinc-500 text-sm text-center py-4">No services added.</p> : services.map((s, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 bg-zinc-900 rounded-xl border border-white/5">
+                           <div><h4 className="font-bold text-sm text-white">{s.name}</h4><p className="text-xs text-zinc-400">₹{s.price} • {s.time} mins</p></div>
+                           <button onClick={() => handleDeleteService(i)} className="p-2 text-zinc-600 hover:text-red-400 transition-colors"><Trash2 size={16}/></button>
+                        </div>
+                     ))}
                   </div>
                </div>
 
                {/* 2. Staff & Status */}
                <div className="space-y-6">
                   <div className="bg-zinc-900/50 border border-white/5 rounded-3xl p-5 lg:p-6">
-                      <h3 className="font-bold text-lg text-white mb-4 flex items-center gap-2"><UserCheck className="text-blue-400" size={20}/> Staff</h3>
-                      <div className="flex gap-2 mb-4">
-                         <input type="text" placeholder="Staff Name" className="flex-1 bg-zinc-900 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-blue-500 outline-none" value={newStaffName} onChange={(e) => setNewStaffName(e.target.value)} />
-                         <button onClick={handleAddStaff} disabled={isSubmitting} className="px-4 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-400 active:scale-95 transition-all disabled:opacity-50 min-w-[80px] flex items-center justify-center">
-                            {isSubmitting ? <Loader2 size={16} className="animate-spin"/> : "Add"}
-                         </button>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                         {staff.map((s, i) => (
-                           <div key={i} className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-white border border-white/5 flex items-center gap-2">
-                              <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div> {s.name}
-                           </div>
-                         ))}
-                      </div>
+                     <h3 className="font-bold text-lg text-white mb-4 flex items-center gap-2"><UserCheck className="text-blue-400" size={20}/> Staff</h3>
+                     <div className="flex gap-2 mb-4">
+                        <input type="text" placeholder="Staff Name" className="flex-1 bg-zinc-900 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-blue-500 outline-none" value={newStaffName} onChange={(e) => setNewStaffName(e.target.value)} />
+                        <button onClick={handleAddStaff} className="px-4 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-400 active:scale-95 transition-all">Add</button>
+                     </div>
+                     <div className="flex flex-wrap gap-2">
+                        {staff.map((s, i) => (
+                          <div key={i} className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-white border border-white/5 flex items-center gap-2">
+                             <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div> {s.name}
+                          </div>
+                        ))}
+                     </div>
                   </div>
                   
                   {/* Logout Area for Mobile */}
