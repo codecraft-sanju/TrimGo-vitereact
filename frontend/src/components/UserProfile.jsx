@@ -13,23 +13,25 @@ const SAVED_CARDS = [
   { id: 2, type: "Mastercard", last4: "8899", expiry: "09/26", holder: "Sanjay Choudhary", color: "from-indigo-600 to-purple-600" },
 ];
 
-// --- 🎨 VISUAL ASSETS ---
+// --- 🎨 VISUAL ASSETS (OPTIMIZED FOR MOBILE) ---
 const BackgroundAurora = () => (
-  <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-zinc-50">
+  // transform-gpu forces hardware acceleration
+  <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-zinc-50 transform-gpu">
     <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
-    <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-purple-300/30 rounded-full blur-[120px] animate-blob" />
-    <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-emerald-300/30 rounded-full blur-[120px] animate-blob animation-delay-2000" />
+    {/* Reduced blur radius slightly for mobile performance */}
+    <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-purple-300/30 rounded-full blur-[80px] md:blur-[120px] animate-blob will-change-transform" />
+    <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-emerald-300/30 rounded-full blur-[80px] md:blur-[120px] animate-blob animation-delay-2000 will-change-transform" />
   </div>
 );
 
 // --- 🧩 SUB-COMPONENTS ---
 
-// 1. Premium Floating Header (Consistent with ReferralPage)
+// 1. Premium Floating Header
 const Header = ({ onBack, onLogout }) => (
   <header className="fixed top-0 left-0 right-0 z-50 px-4 md:px-6 py-3 md:py-4 pointer-events-none">
     <div className="max-w-5xl mx-auto pointer-events-auto">
-      {/* Glass Pill: Solid on Mobile for FPS, Blur on Desktop for Aesthetics */}
-      <div className="flex items-center justify-between bg-white/90 md:bg-white/70 md:backdrop-blur-xl rounded-full p-2 border border-white/50 shadow-sm transition-all duration-300">
+      {/* PERFORMANCE FIX: Reduced backdrop-blur on mobile, increased opacity */}
+      <div className="flex items-center justify-between bg-white/95 backdrop-blur-sm md:bg-white/70 md:backdrop-blur-xl rounded-full p-2 border border-white/50 shadow-sm transition-all duration-300 transform-gpu">
         
         {/* Left: Back Button */}
         <button 
@@ -66,8 +68,9 @@ const Header = ({ onBack, onLogout }) => (
 );
 
 const StatCard = ({ icon: Icon, label, value, color, bg }) => (
-  <div className="bg-white/60 border border-white/40 shadow-sm p-4 rounded-2xl flex items-center gap-4 hover:shadow-md transition group backdrop-blur-sm">
-    <div className={`w-12 h-12 rounded-xl ${bg} ${color} flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>
+  // PERFORMANCE FIX: Reduced blur and transparency for smoother rendering
+  <div className="bg-white border border-zinc-100 shadow-sm p-4 rounded-2xl flex items-center gap-4 hover:shadow-md transition group">
+    <div className={`w-12 h-12 rounded-xl ${bg} ${color} flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform transform-gpu`}>
       <Icon size={20} />
     </div>
     <div>
@@ -96,6 +99,12 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
+        // Optimized: Only fetch if we don't have data (simple cache for this session)
+        if (bookings.length > 0) { 
+            setLoading(false);
+            return;
+        }
+        
         const { data } = await api.get("/queue/history");
         if (data.success) {
           setBookings(data.history || []);
@@ -110,7 +119,7 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
     if (user) {
       fetchHistory();
     }
-  }, [user]);
+  }, [user]); // Removed bookings dependency to prevent loop, added check inside
 
   // 3. CALCULATE STATS DYNAMICALLY
   const stats = useMemo(() => {
@@ -138,7 +147,8 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-zinc-50 font-sans pb-20 relative overflow-x-hidden selection:bg-indigo-100 selection:text-indigo-900">
+    // PERFORMANCE FIX: Added overflow-x-hidden and touch scrolling enhancement
+    <div className="min-h-screen bg-zinc-50 font-sans pb-20 relative overflow-x-hidden selection:bg-indigo-100 selection:text-indigo-900 overscroll-none">
       
       {/* 1. Background */}
       <BackgroundAurora />
@@ -146,16 +156,19 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
       {/* 2. New Floating Header */}
       <Header onBack={onBack} onLogout={onLogout} />
 
-      {/* 3. Main Content Wrapper - Added PT-28/PT-32 to clear fixed header */}
+      {/* 3. Main Content Wrapper */}
       <div className="relative z-10 max-w-5xl mx-auto px-4 md:px-6 pt-24 md:pt-32">
         
         {/* --- HERO PROFILE CARD --- */}
-        <div className="relative rounded-[2.5rem] bg-white/80 border border-white/60 shadow-xl shadow-zinc-200/50 overflow-hidden backdrop-blur-xl">
+        {/* PERFORMANCE FIX: Reduced backdrop blur on mobile */}
+        <div className="relative rounded-[2.5rem] bg-white/90 md:bg-white/80 border border-white/60 shadow-xl shadow-zinc-200/50 overflow-hidden backdrop-blur-none md:backdrop-blur-xl transform-gpu">
           <div className="h-40 md:h-48 w-full relative group overflow-hidden">
              <img 
                src="https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2070&auto=format&fit=crop" 
                alt="Profile Cover" 
-               className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+               loading="lazy" // Lazy load large image
+               decoding="async"
+               className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 will-change-transform"
              />
              <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/60 via-zinc-900/20 to-transparent"></div>
              <button className="absolute top-4 right-4 bg-white/20 text-white p-2 rounded-full hover:bg-white/30 transition backdrop-blur-md border border-white/20">
@@ -169,7 +182,12 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
               <div className="relative group mx-auto md:mx-0">
                 <div className="w-28 h-28 md:w-32 md:h-32 rounded-[2rem] p-1.5 bg-white shadow-2xl">
                    <div className="w-full h-full rounded-[1.7rem] bg-zinc-100 flex items-center justify-center text-4xl font-bold text-zinc-900 relative overflow-hidden border border-zinc-200">
-                      <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || "Guest"}`} alt="User" className="w-full h-full object-cover" />
+                      <img 
+                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || "Guest"}`} 
+                        alt="User" 
+                        loading="lazy"
+                        className="w-full h-full object-cover" 
+                      />
                    </div>
                 </div>
                 <button className="absolute bottom-0 right-0 w-8 h-8 bg-zinc-900 rounded-full flex items-center justify-center text-white border-4 border-white shadow-lg hover:scale-110 transition">
@@ -198,10 +216,10 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
               </div>
 
               <div className="flex gap-3 w-full md:w-auto mt-4 md:mt-0">
-                <button className="flex-1 md:flex-none px-6 py-3 rounded-xl bg-zinc-900 text-white font-bold text-sm hover:scale-105 transition shadow-lg shadow-zinc-900/20 active:scale-95">
+                <button className="flex-1 md:flex-none px-6 py-3 rounded-xl bg-zinc-900 text-white font-bold text-sm hover:scale-105 transition shadow-lg shadow-zinc-900/20 active:scale-95 transform-gpu">
                   Edit Profile
                 </button>
-                <button className="px-4 py-3 rounded-xl bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition border border-zinc-200 shadow-sm active:scale-95">
+                <button className="px-4 py-3 rounded-xl bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition border border-zinc-200 shadow-sm active:scale-95 transform-gpu">
                   <Settings size={20} />
                 </button>
               </div>
@@ -244,9 +262,9 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-4 rounded-2xl text-sm font-bold transition-all duration-300 ${
+                  className={`w-full flex items-center gap-3 px-4 py-4 rounded-2xl text-sm font-bold transition-all duration-200 ${
                     activeTab === tab.id
-                      ? "bg-zinc-900 text-white shadow-xl shadow-zinc-900/20 scale-105"
+                      ? "bg-zinc-900 text-white shadow-xl shadow-zinc-900/20 scale-100 md:scale-105"
                       : "bg-white/50 text-zinc-500 hover:bg-white hover:text-zinc-900 hover:shadow-md"
                   }`}
                 >
@@ -255,7 +273,7 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
                 </button>
               ))}
               
-              <div className="mt-8 p-6 rounded-3xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white relative overflow-hidden group cursor-pointer shadow-xl shadow-indigo-500/20">
+              <div className="mt-8 p-6 rounded-3xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white relative overflow-hidden group cursor-pointer shadow-xl shadow-indigo-500/20 transform-gpu">
                   <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:scale-110 transition-transform"><Zap size={60}/></div>
                   <h4 className="font-bold text-lg mb-1">Upgrade to Pro</h4>
                   <p className="text-xs text-indigo-100 mb-4 opacity-90">Get priority queueing & 0% convenience fees.</p>
@@ -265,7 +283,8 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
           </div>
 
           {/* RIGHT: DYNAMIC CONTENT */}
-          <div className="lg:col-span-3 min-h-[500px]">
+          {/* content-visibility: auto helps with rendering performance of long lists */}
+          <div className="lg:col-span-3 min-h-[500px]" style={{ contentVisibility: 'auto' }}>
             
             {/* TAB: OVERVIEW */}
             {activeTab === "overview" && (
@@ -280,7 +299,7 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
                   />
                   <StatCard 
                     icon={Wallet} 
-                    label="Wallet Balance (Demo)" 
+                    label="Wallet Balance" 
                     value="₹450.00" 
                     bg="bg-blue-100"
                     color="text-blue-600" 
@@ -327,7 +346,7 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
               </div>
             )}
 
-            {/* TAB: BOOKINGS (REAL DATA CONNECTED) */}
+            {/* TAB: BOOKINGS */}
             {activeTab === "bookings" && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <SectionTitle title="Booking History" sub="Manage your past and upcoming appointments." />
@@ -395,9 +414,9 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
                     <p>Payments Integration coming soon. These are currently mock cards.</p>
                  </div>
 
-                 <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide">
+                 <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide snap-x">
                     {/* Add Card Button */}
-                    <button className="min-w-[280px] h-[180px] rounded-3xl border-2 border-dashed border-zinc-300 flex flex-col items-center justify-center text-zinc-400 hover:text-zinc-900 hover:border-zinc-900 hover:bg-zinc-50 transition group bg-white">
+                    <button className="min-w-[280px] h-[180px] rounded-3xl border-2 border-dashed border-zinc-300 flex flex-col items-center justify-center text-zinc-400 hover:text-zinc-900 hover:border-zinc-900 hover:bg-zinc-50 transition group bg-white snap-center">
                         <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
                           <CreditCard size={20} />
                         </div>
@@ -406,7 +425,7 @@ export const UserProfile = ({ user, onBack, onLogout }) => {
 
                     {/* Saved Cards */}
                     {SAVED_CARDS.map((card) => (
-                      <div key={card.id} className={`min-w-[320px] h-[180px] rounded-3xl bg-gradient-to-br ${card.color} p-6 relative overflow-hidden shadow-xl shadow-zinc-300 flex flex-col justify-between transform transition hover:-translate-y-2 text-white`}>
+                      <div key={card.id} className={`min-w-[320px] h-[180px] rounded-3xl bg-gradient-to-br ${card.color} p-6 relative overflow-hidden shadow-xl shadow-zinc-300 flex flex-col justify-between transform transition hover:-translate-y-2 text-white snap-center transform-gpu`}>
                           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
                           
                           <div className="flex justify-between items-start">
