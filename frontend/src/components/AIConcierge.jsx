@@ -1,6 +1,5 @@
-// AIConcierge.jsx
 import React, { useState, useRef, useEffect } from "react";
-import { X, Sparkles, Zap, DollarSign, Star, Clock, ChevronRight, User, Send } from "lucide-react";
+import { X, Sparkles, Zap, DollarSign, Star, Clock, ChevronRight, User, Send, Instagram, ArrowUpRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const SUGGESTIONS = [
@@ -23,24 +22,56 @@ const AIConcierge = ({ salons = [], onSalonSelect }) => {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
 
-  // Auto-scroll logic
+  // Auto-scroll logic (Optimized: Scrolls only on new message)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages, isTyping, isOpen]);
 
   // --- REAL AI LOGIC ---
   const processQuery = (query) => {
-    const lowerQ = query.toLowerCase();
+    const lowerQ = query.trim().toLowerCase();
 
-    // 0. ADMIN / CREATOR LOGIC
-    if (lowerQ.includes("admin") || lowerQ.includes("owner") || lowerQ.includes("creator") || lowerQ.includes("founder") || lowerQ.includes("sanjay")) {
+    // 0. GREETINGS LOGIC
+    const greetings = ["hi", "hello", "hey", "hola", "namaste", "yo"];
+    if (greetings.some(g => lowerQ === g || lowerQ.startsWith(g + " "))) {
+        return { 
+            text: "Hello! 👋 Great to see you. I'm ready to help you find the best salon deals or shortest queues. What are you looking for today?" 
+        };
+    }
+
+    // 1. ADMIN / CREATOR / FOUNDER LOGIC
+    if (
+        lowerQ.includes("admin") || 
+        lowerQ.includes("owner") || 
+        lowerQ.includes("creat") || 
+        lowerQ.includes("founder") || 
+        lowerQ.includes("sanjay") ||
+        lowerQ.includes("made") ||
+        lowerQ.includes("built") ||
+        lowerQ.includes("dev")
+    ) {
         return {
-            text: "TrimGo is built by **Sanjay Choudhary**, a Full Stack Developer passionate about solving real-world problems.",
-            adminData: {
+            text: "TrimGo is the brainchild of **Sanjay Choudhary**, a visionary Full Stack Developer. This startup is just the beginning of his journey—expect many more innovative products to launch soon!",
+            creatorData: {
                 name: "Sanjay Choudhary",
-                role: "Founder & Developer",
-                instaHandle: "@sanjuuu_x18",
-                instaLink: "https://www.instagram.com/sanjuuu_x18"
+                role: "Founder & Lead Developer",
+                tagline: "Building the future, one app at a time.",
+                links: [
+                    { 
+                        label: "Founder", 
+                        handle: "@sanjuuu_x18", 
+                        url: "https://www.instagram.com/sanjuuu_x18",
+                        primary: true 
+                    },
+                    { 
+                        label: "Official Page", 
+                        handle: "@trimgo_official", 
+                        url: "https://www.instagram.com/trimgo_official",
+                        primary: false 
+                    }
+                ]
             }
         };
     }
@@ -48,7 +79,7 @@ const AIConcierge = ({ salons = [], onSalonSelect }) => {
     const onlineSalons = salons.filter(s => s.isOnline);
     if (onlineSalons.length === 0) return { text: "All salons seem to be offline at the moment." };
 
-    // 1. CHEAPEST logic
+    // 2. CHEAPEST logic
     if (lowerQ.includes("cheap") || lowerQ.includes("price") || lowerQ.includes("cost")) {
       const cheapest = [...onlineSalons].sort((a, b) => {
         const minA = Math.min(...(a.services?.map(s => s.price) || [9999]));
@@ -57,23 +88,23 @@ const AIConcierge = ({ salons = [], onSalonSelect }) => {
       })[0];
       if (cheapest) {
         const minPrice = Math.min(...(cheapest.services?.map(s => s.price) || [0]));
-        return { text: `Best price at **${cheapest.salonName}**. Starts at ₹${minPrice}.`, salon: cheapest };
+        return { text: `Best price at **${cheapest.salonName}**. Starts at ₹${minPrice}.`, salonData: cheapest };
       }
     }
 
-    // 2. FASTEST / URGENT logic
+    // 3. FASTEST / URGENT logic
     if (lowerQ.includes("fast") || lowerQ.includes("urgent") || lowerQ.includes("time")) {
       const fastest = [...onlineSalons].sort((a, b) => (a.estTime || 0) - (b.estTime || 0))[0];
-      if (fastest) return { text: `**${fastest.salonName}** is quickest. Est: ${fastest.estTime || 0} mins.`, salon: fastest };
+      if (fastest) return { text: `**${fastest.salonName}** is quickest. Est: ${fastest.estTime || 0} mins.`, salonData: fastest };
     }
 
-    // 3. RATING logic
+    // 4. RATING logic
     if (lowerQ.includes("best") || lowerQ.includes("rate") || lowerQ.includes("star")) {
       const best = [...onlineSalons].sort((a, b) => (b.rating || 0) - (a.rating || 0))[0];
-      if (best) return { text: `**${best.salonName}** is top rated (${best.rating || "New"} stars).`, salon: best };
+      if (best) return { text: `**${best.salonName}** is top rated (${best.rating || "New"} stars).`, salonData: best };
     }
 
-    // 4. OPEN NOW logic
+    // 5. OPEN NOW logic
     if (lowerQ.includes("open")) return { text: `There are ${onlineSalons.length} salons open right now.` };
 
     return { text: "I can help find nearest, cheapest, or top-rated salons. Tap a suggestion below!" };
@@ -92,8 +123,8 @@ const AIConcierge = ({ salons = [], onSalonSelect }) => {
       setMessages((prev) => [...prev, { 
           role: "ai", 
           text: result.text, 
-          salonData: result.salon,
-          adminData: result.adminData 
+          salonData: result.salonData,
+          creatorData: result.creatorData 
       }]);
       setIsTyping(false);
     }, 800);
@@ -101,10 +132,21 @@ const AIConcierge = ({ salons = [], onSalonSelect }) => {
 
   return (
     <>
-      {/* Scrollbar hiding styles */}
+      {/* Custom Scrollbar Styles for Premium Feel */}
       <style>{`
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(0, 0, 0, 0.1);
+          border-radius: 10px;
+        }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+          background: rgba(0, 0, 0, 0.2);
+        }
       `}</style>
 
       {/* Main Container */}
@@ -118,7 +160,7 @@ const AIConcierge = ({ salons = [], onSalonSelect }) => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: "spring", stiffness: 350, damping: 30 }}
-              // Dimensions: Optimized for Desktop & Mobile
+              // FIXED: Added flex flex-col to parent and proper heights
               className="pointer-events-auto w-[90vw] sm:w-[380px] h-[55vh] sm:h-[500px] max-h-[80vh] bg-white/90 backdrop-blur-xl border border-white/60 shadow-2xl rounded-[2rem] flex flex-col overflow-hidden"
             >
               
@@ -140,8 +182,8 @@ const AIConcierge = ({ salons = [], onSalonSelect }) => {
                 </button>
               </div>
 
-              {/* Chat Area */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 hide-scrollbar bg-gradient-to-b from-white/40 to-white/70">
+              {/* Chat Area - FIXED: flex-1 and min-h-0 ensures scrolling works properly */}
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-gradient-to-b from-white/40 to-white/70">
                 {messages.map((m, i) => (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
@@ -186,25 +228,59 @@ const AIConcierge = ({ salons = [], onSalonSelect }) => {
                         </motion.div>
                     )}
 
-                    {/* Admin Card */}
-                    {m.adminData && (
-                        <div className="mt-2 w-[85%] bg-zinc-900 p-3 rounded-xl shadow-xl border border-zinc-700">
-                            <div className="flex items-center gap-3 mb-2">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-pink-500 to-yellow-500 p-[1.5px]">
-                                    <div className="w-full h-full bg-black rounded-full flex items-center justify-center">
-                                        <User size={14} className="text-white"/>
+                    {/* 🔥 CREATOR / FOUNDER CARD 🔥 */}
+                    {m.creatorData && (
+                        <motion.div 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="mt-3 w-[90%] bg-zinc-900 text-white p-4 rounded-2xl shadow-xl shadow-zinc-500/20 relative overflow-hidden group"
+                        >
+                            {/* Abstract Glow Background */}
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/20 rounded-full blur-[40px] -translate-y-1/2 translate-x-1/2" />
+                            <div className="absolute bottom-0 left-0 w-24 h-24 bg-pink-500/20 rounded-full blur-[30px] translate-y-1/2 -translate-x-1/2" />
+
+                            <div className="relative z-10">
+                                <div className="flex items-start gap-3 mb-4">
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-500 via-purple-500 to-indigo-500 p-[2px]">
+                                        <div className="w-full h-full bg-black rounded-full flex items-center justify-center">
+                                            <User size={18} className="text-white"/>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-white font-bold text-sm tracking-wide">{m.creatorData.name}</h4>
+                                        <p className="text-zinc-400 text-[10px] font-medium uppercase tracking-wider">{m.creatorData.role}</p>
+                                        <p className="text-zinc-500 text-[10px] mt-0.5 italic">{m.creatorData.tagline}</p>
                                     </div>
                                 </div>
-                                <div>
-                                    <h4 className="text-white font-bold text-xs">{m.adminData.name}</h4>
-                                    <p className="text-zinc-400 text-[9px]">{m.adminData.role}</p>
+
+                                <div className="space-y-2">
+                                    {m.creatorData.links.map((link, idx) => (
+                                        <a 
+                                            key={idx} 
+                                            href={link.url} 
+                                            target="_blank" 
+                                            rel="noreferrer" 
+                                            className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 ${
+                                                link.primary 
+                                                ? "bg-white text-black hover:bg-zinc-200" 
+                                                : "bg-white/10 text-white hover:bg-white/20 border border-white/10"
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <Instagram size={14} className={link.primary ? "text-pink-600" : "text-white"} />
+                                                <span>{link.label}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1 text-[10px] opacity-70">
+                                                <span>{link.handle}</span>
+                                                <ArrowUpRight size={10} />
+                                            </div>
+                                        </a>
+                                    ))}
                                 </div>
                             </div>
-                            <a href={m.adminData.instaLink} target="_blank" rel="noreferrer" className="block w-full py-1.5 bg-white/10 rounded-lg text-center text-[10px] font-bold text-white hover:bg-white/20 transition-colors">
-                                Visit Instagram
-                            </a>
-                        </div>
+                        </motion.div>
                     )}
+
                   </motion.div>
                 ))}
                 {isTyping && (
@@ -214,11 +290,12 @@ const AIConcierge = ({ salons = [], onSalonSelect }) => {
                     <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
                   </div>
                 )}
+                {/* Scroll Anchor */}
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* 🔥 WRAPPED SUGGESTIONS (Updated Section) */}
-              <div className="px-4 py-3 bg-white/50 backdrop-blur-sm border-t border-white/40">
+              {/* Suggestions */}
+              <div className="px-4 py-3 bg-white/50 backdrop-blur-sm border-t border-white/40 shrink-0">
                 <div className="flex flex-wrap gap-2">
                     {SUGGESTIONS.map((s) => (
                         <button
@@ -234,7 +311,7 @@ const AIConcierge = ({ salons = [], onSalonSelect }) => {
               </div>
 
               {/* Input Area */}
-              <div className="p-3 bg-white/80 border-t border-zinc-100 flex gap-2 backdrop-blur-xl">
+              <div className="p-3 bg-white/80 border-t border-zinc-100 flex gap-2 backdrop-blur-xl shrink-0">
                 <input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
