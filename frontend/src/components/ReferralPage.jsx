@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import { 
   ArrowLeft, Copy, Check, Share2, Users, 
   Gift, ShieldCheck, Truck, Sparkles, 
   Trophy, Lock, MessageCircle
 } from "lucide-react";
-import Lenis from '@studio-freight/lenis';
-import { motion, useScroll, useTransform } from "framer-motion"; 
+import { motion } from "framer-motion"; 
 
-/* --- 🎨 ADVANCED UI COMPONENTS --- */
+/* --- 🎨 UI COMPONENTS --- */
 
 const ShimmerButton = ({ onClick, children, className = "" }) => (
   <button 
@@ -41,36 +40,10 @@ const ProgressBar = ({ current, max }) => {
 /* --- 🚀 MAIN COMPONENT --- */
 const ReferralPage = ({ user, onBack }) => {
   const [copied, setCopied] = useState(false);
-  const scrollRef = useRef(null);
   
   // Dynamic stats
   const referralCode = user?.referralCode || "TRIM-VIP-24";
   const referralCount = user?.referredSalons?.length || 0; 
-
-  // --- LENIS SMOOTH SCROLL SETUP (OPTIMIZED FOR MOBILE) ---
-  useEffect(() => {
-    const lenis = new Lenis({
-      duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), 
-      direction: 'vertical',
-      gestureDirection: 'vertical',
-      smooth: true,
-      mouseMultiplier: 1,
-      smoothTouch: false, // Keep false for mobile to use native momentum (prevents lag)
-      touchMultiplier: 2,
-    });
-
-    function raf(time) {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
-    }
-
-    requestAnimationFrame(raf);
-
-    return () => {
-      lenis.destroy();
-    };
-  }, []);
 
   // --- HANDLERS ---
   const handleCopy = () => {
@@ -93,22 +66,19 @@ const ReferralPage = ({ user, onBack }) => {
     }
   };
 
-  // --- ANIMATION VARIANTS ---
+  // --- ANIMATION VARIANTS (Simple Fade Ins) ---
   const fadeInUp = {
     hidden: { opacity: 0, y: 40 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
   };
 
   return (
-    <div 
-      ref={scrollRef}
-      className="min-h-screen w-full bg-[#F2F4F8] font-sans text-zinc-900 selection:bg-indigo-500/30 overflow-x-hidden relative"
-    >
+    <div className="min-h-screen w-full bg-[#F2F4F8] font-sans text-zinc-900 selection:bg-indigo-500/30 overflow-x-hidden relative">
       
-      {/* Background Decor - Optimized with transform-gpu for mobile performance */}
+      {/* Background Decor - Hardware Accelerated for Mobile */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-purple-200/40 rounded-full blur-[100px] transform-gpu will-change-transform" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-indigo-200/40 rounded-full blur-[100px] transform-gpu will-change-transform" />
+        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-purple-200/40 rounded-full blur-[100px] transform-gpu" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-indigo-200/40 rounded-full blur-[100px] transform-gpu" />
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay" />
       </div>
 
@@ -142,7 +112,7 @@ const ReferralPage = ({ user, onBack }) => {
             className="md:col-span-8 group perspective-1000"
           >
             <div className="relative overflow-hidden rounded-[2.5rem] bg-zinc-900 p-8 md:p-10 text-white shadow-2xl shadow-zinc-900/20 border border-zinc-800 transition-transform duration-500 hover:scale-[1.01] transform-gpu">
-              {/* Internal Glows - Optimized */}
+              {/* Internal Glows */}
               <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-indigo-600/30 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 transform-gpu" />
               <div className="absolute bottom-0 left-0 w-[200px] h-[200px] bg-emerald-500/20 rounded-full blur-[60px] translate-y-1/2 -translate-x-1/2 transform-gpu" />
 
@@ -296,7 +266,7 @@ const ReferralPage = ({ user, onBack }) => {
                   <img 
                     src="/tshirtgoodies.png" 
                     alt="Kit" 
-                    className="relative z-10 w-48 drop-shadow-2xl transition-transform duration-700 ease-in-out group-hover:-translate-y-4 group-hover:scale-105 group-hover:rotate-3 will-change-transform"
+                    className="relative z-10 w-48 drop-shadow-2xl transition-transform duration-700 ease-in-out group-hover:-translate-y-4 group-hover:scale-105 group-hover:rotate-3"
                     onError={(e) => {
                       e.target.style.display = 'none'; 
                       e.target.parentElement.innerHTML += '<div class="text-pink-300 font-bold text-xl">KIT IMAGE</div>'; 
