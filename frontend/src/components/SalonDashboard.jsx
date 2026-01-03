@@ -4,33 +4,10 @@ import {
   Bell, DollarSign, TrendingUp, Clock, CheckCircle, Scissors,
   Play, CheckSquare, X, Camera, Mail, Phone, MapPin, User,
   Armchair, UserCheck, Plus, Trash2, Menu, Save, Edit3, Power,
-  AlertTriangle, Sparkles, Zap, ArrowRight, UserPlus, Home, LayoutDashboard, XCircle,
-  Image as ImageIcon, Star, Loader2, UploadCloud
+  AlertTriangle, Sparkles, Zap, ArrowRight, UserPlus, Home, LayoutDashboard, XCircle
 } from "lucide-react";
 import api from "../utils/api";
 import { io } from "socket.io-client";
-
-// --- CLOUDINARY UPLOAD HELPER ---
-// 1. Log in to Cloudinary
-// 2. Go to Settings > Upload > Add Upload Preset (Mode: Unsigned)
-// 3. Paste your Cloud Name and Preset Name below:
-const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload";
-const UPLOAD_PRESET = "YOUR_UNSIGNED_PRESET"; 
-
-const uploadToCloudinary = async (file) => {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("upload_preset", UPLOAD_PRESET);
-
-  try {
-    const res = await fetch(CLOUDINARY_URL, { method: "POST", body: formData });
-    const data = await res.json();
-    return data.secure_url;
-  } catch (error) {
-    console.error("Upload failed", error);
-    throw error;
-  }
-};
 
 // --- CONSTANTS: SUGGESTED SERVICES (Quick Add Menu) ---
 const SUGGESTED_SERVICES = [
@@ -280,9 +257,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
   // Settings Data
   const [services, setServices] = useState([]);
   const [staff, setStaff] = useState([]);
-  const [gallery, setGallery] = useState([]); // 🔥 NEW: Salon Photos State
-  const [uploading, setUploading] = useState(false); // NEW: Upload Status
-
   const [newService, setNewService] = useState({ name: "", price: "", time: "", category: "Hair" });
   const [newStaffName, setNewStaffName] = useState("");
 
@@ -295,7 +269,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
   const [profileImage, setProfileImage] = useState(null);
   const [assignmentModal, setAssignmentModal] = useState({ isOpen: false, customer: null });
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
-  const galleryInputRef = useRef(null); // Ref for gallery input
 
   // --- 1. INITIAL FETCH & SOCKET ---
   useEffect(() => {
@@ -368,7 +341,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
           if(data.success) {
               setServices(data.salon.services || []);
               setStaff(data.salon.staff || [{name: data.salon.ownerName, status: 'available'}]);
-              setGallery(data.salon.gallery || []); // 🔥 Load Gallery from Backend
               setIsOnline(data.salon.isOnline);
           }
       } catch (error) { console.error("Profile Fetch Error", error); }
@@ -383,6 +355,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
     } catch (error) { alert("Failed to accept"); }
   };
 
+  // 🔥 NEW: REJECT HANDLER
   const handleRejectRequest = async (req) => {
     if(!window.confirm("Reject this customer request?")) return;
     try {
@@ -487,65 +460,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
           await api.put("/salon/update", { isOnline: newStatus });
           setIsOnline(newStatus);
       } catch (error) { alert("Update failed"); }
-  };
-
-  // 🔥 NEW: GALLERY HANDLERS
-  const handleGalleryUpload = async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      if (gallery.length >= 4) {
-          alert("Maximum 4 photos allowed.");
-          return;
-      }
-
-      setUploading(true);
-      try {
-          // 1. Upload to Cloudinary (or fallback to basic file read for demo if keys not set)
-          let imageUrl;
-          if (UPLOAD_PRESET !== "YOUR_UNSIGNED_PRESET") {
-            imageUrl = await uploadToCloudinary(file);
-          } else {
-            // Fallback for demo if you haven't put keys yet: Convert to Base64 to show it works
-            imageUrl = await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result);
-                reader.readAsDataURL(file);
-            });
-          }
-
-          // 2. Update Backend
-          const updatedGallery = [...gallery, imageUrl];
-          await api.put("/salon/update", { gallery: updatedGallery });
-          setGallery(updatedGallery);
-      } catch (error) {
-          console.error(error);
-          alert("Upload failed");
-      } finally {
-          setUploading(false);
-      }
-  };
-
-  const handleDeletePhoto = async (index) => {
-      if (!window.confirm("Remove this photo?")) return;
-      const updatedGallery = gallery.filter((_, i) => i !== index);
-      try {
-          await api.put("/salon/update", { gallery: updatedGallery });
-          setGallery(updatedGallery);
-      } catch (error) { alert("Delete failed"); }
-  };
-
-  const handleSetMainPhoto = async (index) => {
-      if (index === 0) return; // Already main
-      const photo = gallery[index];
-      const others = gallery.filter((_, i) => i !== index);
-      const updatedGallery = [photo, ...others]; // Move to front
-      
-      try {
-        await api.put("/salon/update", { gallery: updatedGallery });
-        setGallery(updatedGallery);
-      } catch (error) { alert("Update failed"); }
-  };
-
+  }
 
   // --- HELPERS ---
   const getAvatarGradient = (name) => {
@@ -723,16 +638,16 @@ const SalonDashboard = ({ salon, onLogout }) => {
                                 {/* 🔥 NEW: ACCEPT / CANCEL BUTTONS */}
                                 <div className="grid grid-cols-2 gap-2">
                                     <button 
-                                            onClick={() => handleRejectRequest(req)} 
-                                            className="py-2.5 bg-zinc-800 text-red-400 border border-white/5 hover:bg-red-500/10 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1"
+                                        onClick={() => handleRejectRequest(req)} 
+                                        className="py-2.5 bg-zinc-800 text-red-400 border border-white/5 hover:bg-red-500/10 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1"
                                     >
-                                            <X size={14} /> Cancel
+                                        <X size={14} /> Cancel
                                     </button>
                                     <button 
-                                            onClick={() => handleAcceptRequest(req)} 
-                                            className="py-2.5 bg-white text-black text-xs font-bold rounded-xl hover:bg-emerald-400 transition-colors flex items-center justify-center gap-1 shadow-lg shadow-white/5"
+                                        onClick={() => handleAcceptRequest(req)} 
+                                        className="py-2.5 bg-white text-black text-xs font-bold rounded-xl hover:bg-emerald-400 transition-colors flex items-center justify-center gap-1 shadow-lg shadow-white/5"
                                     >
-                                            <CheckCircle size={14} /> Accept
+                                        <CheckCircle size={14} /> Accept
                                     </button>
                                 </div>
                             </div>
@@ -761,19 +676,19 @@ const SalonDashboard = ({ salon, onLogout }) => {
                            </div>
                         ) : activeQueue.map((cust) => (
                            <div key={cust._id} className="relative group bg-zinc-900 border border-white/10 p-4 rounded-2xl active:scale-98 transition-all">
-                             {cust.isGuest && <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-zinc-800 text-[9px] text-zinc-400 rounded uppercase font-bold tracking-wider">WALK-IN</div>}
-                             <div className="flex items-center justify-between">
-                               <div className="flex items-center gap-3">
-                                  <span className="text-xl font-black text-zinc-700 w-8">#{cust.queueNumber}</span>
-                                  <div>
-                                    <h4 className="font-bold text-sm text-white">{cust.userId?.name || cust.guestName}</h4>
-                                    <p className="text-xs text-zinc-400">{cust.services[0]?.name}</p>
-                                  </div>
-                               </div>
-                               <button onClick={() => openAssignmentModal(cust)} className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 border border-white/5 transition-all">
-                                  <Play size={16} fill="currentColor" />
-                               </button>
-                             </div>
+                              {cust.isGuest && <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-zinc-800 text-[9px] text-zinc-400 rounded uppercase font-bold tracking-wider">WALK-IN</div>}
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                   <span className="text-xl font-black text-zinc-700 w-8">#{cust.queueNumber}</span>
+                                   <div>
+                                     <h4 className="font-bold text-sm text-white">{cust.userId?.name || cust.guestName}</h4>
+                                     <p className="text-xs text-zinc-400">{cust.services[0]?.name}</p>
+                                   </div>
+                                </div>
+                                <button onClick={() => openAssignmentModal(cust)} className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 border border-white/5 transition-all">
+                                   <Play size={16} fill="currentColor" />
+                                </button>
+                              </div>
                            </div>
                         ))}
                     </div>
@@ -839,89 +754,39 @@ const SalonDashboard = ({ salon, onLogout }) => {
                   
                   {/* QUICK ADD */}
                   <div className="mb-6">
-                      <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2 flex items-center gap-1"><Zap size={10} className="text-yellow-400"/> Quick Add</p>
-                      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                          {SUGGESTED_SERVICES.map((s, i) => (
+                     <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2 flex items-center gap-1"><Zap size={10} className="text-yellow-400"/> Quick Add</p>
+                     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                         {SUGGESTED_SERVICES.map((s, i) => (
                              <button key={i} onClick={() => fillServiceSuggestion(s)} className="shrink-0 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-white/5 rounded-lg text-xs text-zinc-300 transition-colors flex items-center gap-1 whitespace-nowrap">
                                {s.name} <span className="opacity-50">• ₹{s.price}</span>
                              </button>
-                          ))}
-                      </div>
+                         ))}
+                     </div>
                   </div>
 
                   {/* INPUTS */}
                   <div className="space-y-3 mb-6 bg-zinc-900/80 p-4 rounded-2xl border border-white/5">
-                      <div className="grid grid-cols-3 gap-2">
-                         <input type="text" placeholder="Service Name" className="col-span-3 bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.name} onChange={(e) => setNewService({...newService, name: e.target.value})} />
-                         <input type="number" placeholder="₹ Price" className="bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.price} onChange={(e) => setNewService({...newService, price: e.target.value})} />
-                         <input type="number" placeholder="Mins" className="bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.time} onChange={(e) => setNewService({...newService, time: e.target.value})} />
-                         <button onClick={handleAddService} className="col-span-3 bg-emerald-500 text-white rounded-xl py-3 font-bold hover:bg-emerald-400 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"><Plus size={16}/> Add Service</button>
-                      </div>
+                     <div className="grid grid-cols-3 gap-2">
+                        <input type="text" placeholder="Service Name" className="col-span-3 bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.name} onChange={(e) => setNewService({...newService, name: e.target.value})} />
+                        <input type="number" placeholder="₹ Price" className="bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.price} onChange={(e) => setNewService({...newService, price: e.target.value})} />
+                        <input type="number" placeholder="Mins" className="bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.time} onChange={(e) => setNewService({...newService, time: e.target.value})} />
+                        <button onClick={handleAddService} className="col-span-3 bg-emerald-500 text-white rounded-xl py-3 font-bold hover:bg-emerald-400 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"><Plus size={16}/> Add Service</button>
+                     </div>
                   </div>
 
                   {/* LIST */}
                   <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar">
-                      {services.length === 0 ? <p className="text-zinc-500 text-sm text-center py-4">No services added.</p> : services.map((s, i) => (
-                         <div key={i} className="flex items-center justify-between p-3 bg-zinc-900 rounded-xl border border-white/5">
-                            <div><h4 className="font-bold text-sm text-white">{s.name}</h4><p className="text-xs text-zinc-400">₹{s.price} • {s.time} mins</p></div>
-                            <button onClick={() => handleDeleteService(i)} className="p-2 text-zinc-600 hover:text-red-400 transition-colors"><Trash2 size={16}/></button>
-                         </div>
-                      ))}
+                     {services.length === 0 ? <p className="text-zinc-500 text-sm text-center py-4">No services added.</p> : services.map((s, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 bg-zinc-900 rounded-xl border border-white/5">
+                           <div><h4 className="font-bold text-sm text-white">{s.name}</h4><p className="text-xs text-zinc-400">₹{s.price} • {s.time} mins</p></div>
+                           <button onClick={() => handleDeleteService(i)} className="p-2 text-zinc-600 hover:text-red-400 transition-colors"><Trash2 size={16}/></button>
+                        </div>
+                     ))}
                   </div>
                </div>
 
-               {/* 2. Right Column (Photos & Staff) */}
+               {/* 2. Staff & Status */}
                <div className="space-y-6">
-                  
-                  {/* 🔥 GALLERY MANAGER 🔥 */}
-                  <div className="bg-zinc-900/50 border border-white/5 rounded-3xl p-5 lg:p-6">
-                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-bold text-lg text-white flex items-center gap-2"><ImageIcon className="text-purple-400" size={20}/> Salon Photos</h3>
-                        <span className="text-xs font-bold text-zinc-500">{gallery.length}/4</span>
-                     </div>
-                     
-                     <div className="grid grid-cols-2 gap-3 mb-4">
-                        {/* Display Photos */}
-                        {gallery.map((img, index) => (
-                            <div key={index} className="relative aspect-video rounded-xl overflow-hidden group border border-white/10">
-                                <img src={img} alt="Salon" className="w-full h-full object-cover" />
-                                
-                                {/* Overlay Actions */}
-                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                    <button 
-                                        onClick={() => handleSetMainPhoto(index)}
-                                        title="Set as Cover"
-                                        className={`p-2 rounded-full ${index === 0 ? 'bg-yellow-500 text-black' : 'bg-white/10 text-white hover:bg-yellow-500 hover:text-black'}`}
-                                    >
-                                        <Star size={14} fill={index === 0 ? "currentColor" : "none"} />
-                                    </button>
-                                    <button 
-                                        onClick={() => handleDeletePhoto(index)}
-                                        className="p-2 rounded-full bg-white/10 text-white hover:bg-red-500 hover:text-white"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
-                                {index === 0 && <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-yellow-500 text-black text-[9px] font-bold rounded uppercase">Main</div>}
-                            </div>
-                        ))}
-
-                        {/* Upload Button */}
-                        {gallery.length < 4 && (
-                            <div 
-                                onClick={() => galleryInputRef.current.click()}
-                                className="aspect-video rounded-xl border-2 border-dashed border-white/10 hover:border-emerald-500/50 hover:bg-white/5 flex flex-col items-center justify-center cursor-pointer transition-all group"
-                            >
-                                {uploading ? <Loader2 className="animate-spin text-emerald-500"/> : <UploadCloud className="text-zinc-600 group-hover:text-emerald-500 mb-2"/>}
-                                <span className="text-xs font-bold text-zinc-500 group-hover:text-zinc-300">{uploading ? "Uploading..." : "Add Photo"}</span>
-                                <input type="file" ref={galleryInputRef} className="hidden" accept="image/*" onChange={handleGalleryUpload} />
-                            </div>
-                        )}
-                     </div>
-                     <p className="text-[10px] text-zinc-500">*The first photo will be your Main Cover.</p>
-                  </div>
-
-                  {/* Staff Manager */}
                   <div className="bg-zinc-900/50 border border-white/5 rounded-3xl p-5 lg:p-6">
                      <h3 className="font-bold text-lg text-white mb-4 flex items-center gap-2"><UserCheck className="text-blue-400" size={20}/> Staff</h3>
                      <div className="flex gap-2 mb-4">

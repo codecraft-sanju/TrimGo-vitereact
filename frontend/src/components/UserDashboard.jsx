@@ -1,8 +1,22 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
-  MapPin, Clock, Users, Star, Ticket, X, Filter, Search, Check, Sparkles,
-  Navigation, Crosshair, Menu, Gift, BadgeCheck, Loader2, AlertCircle,
-  Image as ImageIcon, ChevronLeft, ChevronRight
+  MapPin,
+  Clock,
+  Users,
+  Star,
+  Ticket,
+  X,
+  Filter,
+  Search,
+  Check,
+  Sparkles,
+  Navigation, 
+  Crosshair, 
+  Menu,
+  Gift,
+  BadgeCheck,
+  Loader2,
+  AlertCircle
 } from "lucide-react";
 import { io } from "socket.io-client"; 
 import Lenis from 'lenis'; 
@@ -14,71 +28,11 @@ import { BackgroundAurora, NoiseOverlay, Logo } from "./SharedUI";
 import AIConcierge from "./AIConcierge"; 
 
 /* ---------------------------------
-   HELPER: SALON GALLERY MODAL (NEW)
----------------------------------- */
-const SalonGalleryModal = ({ isOpen, onClose, images, salonName }) => {
-    const [currentIndex, setCurrentIndex] = useState(0);
-
-    if (!isOpen || !images || images.length === 0) return null;
-
-    const nextImage = (e) => {
-        e.stopPropagation();
-        setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
-    };
-
-    const prevImage = (e) => {
-        e.stopPropagation();
-        setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
-    };
-
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-200" onClick={onClose}>
-            <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white z-50 p-2">
-                <X size={32} />
-            </button>
-            
-            <div className="relative w-full max-w-4xl h-[80vh] flex flex-col items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                {/* Main Image */}
-                <div className="relative w-full h-full flex items-center justify-center px-4">
-                    <img 
-                        src={images[currentIndex]} 
-                        alt={`View ${currentIndex + 1}`} 
-                        className="max-h-full max-w-full object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-300"
-                    />
-                    
-                    {/* Navigation Arrows (Only if > 1 image) */}
-                    {images.length > 1 && (
-                        <>
-                            <button onClick={prevImage} className="absolute left-4 p-3 rounded-full bg-black/50 text-white hover:bg-white/20 transition backdrop-blur-sm">
-                                <ChevronLeft size={24} />
-                            </button>
-                            <button onClick={nextImage} className="absolute right-4 p-3 rounded-full bg-black/50 text-white hover:bg-white/20 transition backdrop-blur-sm">
-                                <ChevronRight size={24} />
-                            </button>
-                        </>
-                    )}
-                </div>
-
-                {/* Caption / Counter */}
-                <div className="absolute bottom-4 left-0 w-full text-center pointer-events-none">
-                    <div className="inline-block bg-black/60 backdrop-blur-md px-4 py-2 rounded-2xl">
-                        <h3 className="text-white font-bold text-lg mb-1">{salonName}</h3>
-                        <div className="flex gap-2 items-center justify-center mt-1">
-                            {images.map((_, idx) => (
-                                <div key={idx} className={`h-1.5 rounded-full transition-all ${idx === currentIndex ? 'w-4 bg-white' : 'w-1.5 bg-white/30'}`} />
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-/* ---------------------------------
    HELPER: HAVERSINE DISTANCE FORMULA
 ---------------------------------- */
-const deg2rad = (deg) => deg * (Math.PI / 180);
+const deg2rad = (deg) => {
+  return deg * (Math.PI / 180);
+};
 
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
   if (!lat1 || !lon1 || !lat2 || !lon2) return null;
@@ -93,7 +47,9 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const d = R * c; // Distance in km
   
-  if (d < 1) return `${Math.round(d * 1000)} m`; 
+  if (d < 1) {
+    return `${Math.round(d * 1000)} m`; 
+  }
   return `${d.toFixed(1)} km`; 
 };
 
@@ -214,11 +170,10 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
   const [activeBookingSalon, setActiveBookingSalon] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); 
   
-  // 🔥 Gallery State
-  const [galleryModal, setGalleryModal] = useState({ isOpen: false, images: [], name: "" });
-
+  // 🔥 Active Ticket State
   const [activeTicket, setActiveTicket] = useState(null);
   const [canceling, setCanceling] = useState(false);
+
   const [userLocation, setUserLocation] = useState(null); 
   const [heading, setHeading] = useState(0); 
   const [routeDestination, setRouteDestination] = useState(null); 
@@ -354,8 +309,10 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         );
     });
 
+    // 🔥 Socket Listeners for Ticket Status
     socket.on("request_accepted", (ticket) => {
         setActiveTicket(ticket);
+        // Maybe show a toast notification here
     });
 
     socket.on("request_rejected", () => {
@@ -462,6 +419,8 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
     setActiveBookingSalon(salon);
   };
 
+  const handleCloseBooking = () => setActiveBookingSalon(null);
+
   const handleConfirmBooking = async (salon, services, totals) => {
     try {
         const payload = {
@@ -479,6 +438,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         const { data } = await api.post("/queue/join", payload);
 
         if(data.success) {
+            // Update Local State directly
             setActiveTicket(data.ticket);
             setActiveBookingSalon(null);
         }
@@ -487,6 +447,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
     }
   };
 
+  // 🔥 NEW: CANCEL TICKET FUNCTION
   const handleCancelTicket = async () => {
       if(!activeTicket) return;
       if(!window.confirm("Are you sure you want to cancel your spot?")) return;
@@ -505,33 +466,18 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
       }
   };
 
-  // 🔥 Open Gallery Modal
-  const handleOpenGallery = (salon) => {
-      if(salon.gallery && salon.gallery.length > 0) {
-          setGalleryModal({ isOpen: true, images: salon.gallery, name: salon.salonName });
-      }
-  };
-
   return (
     <div className="min-h-screen w-full bg-zinc-50 font-sans overflow-x-hidden pb-32">
       <BackgroundAurora />
       <NoiseOverlay />
 
-      {/* --- MODALS --- */}
       {activeBookingSalon && (
         <ServiceSelectionModal 
             salon={activeBookingSalon} 
-            onClose={() => setActiveBookingSalon(null)} 
+            onClose={handleCloseBooking} 
             onConfirm={handleConfirmBooking} 
         />
       )}
-
-      <SalonGalleryModal 
-        isOpen={galleryModal.isOpen} 
-        onClose={() => setGalleryModal({isOpen: false, images: [], name: ""})} 
-        images={galleryModal.images} 
-        salonName={galleryModal.name} 
-      />
 
       {/* HEADER */}
       <header className="fixed top-0 left-0 w-full z-40 bg-white/80 backdrop-blur-xl border-b border-zinc-200/60 transition-all duration-300">
@@ -680,48 +626,23 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {sortedSalons.map((salon) => (
-                <div key={salon._id} className="group relative rounded-2xl bg-white border border-zinc-200 shadow-sm overflow-hidden flex flex-col hover:shadow-lg transition-shadow duration-300">
-                
-                {/* 🔥 MODERN COVER IMAGE SECTION 🔥 */}
-                <div className="relative h-48 w-full bg-zinc-100 overflow-hidden">
-                    {salon.gallery && salon.gallery.length > 0 ? (
-                        <img 
-                            src={salon.gallery[0]} 
-                            alt={salon.salonName} 
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                    ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center text-zinc-300 bg-zinc-50">
-                            <ImageIcon size={40} />
-                        </div>
-                    )}
-                    
-                    {/* Status Badge */}
-                    <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
-                         {salon.isOnline ? 
-                            <span className="px-2 py-1 rounded-md bg-emerald-500 text-[10px] font-bold text-white shadow-sm">OPEN</span> : 
-                            <span className="px-2 py-1 rounded-md bg-red-500 text-[10px] font-bold text-white shadow-sm">CLOSED</span>
-                         }
-                    </div>
-
-                    {/* Gallery Trigger Button (if more than 1 image) */}
-                    {salon.gallery && salon.gallery.length > 1 && (
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); handleOpenGallery(salon); }}
-                            className="absolute bottom-3 right-3 px-2.5 py-1.5 bg-black/50 backdrop-blur-md text-white text-[10px] font-bold rounded-lg flex items-center gap-1.5 hover:bg-black/70 transition"
-                        >
-                            <ImageIcon size={12} />
-                            <span>+{salon.gallery.length - 1} photos</span>
-                        </button>
-                    )}
-                </div>
-
-                <div className="p-4 sm:p-5 flex flex-col gap-4 flex-1">
+                <div key={salon._id} className="group relative rounded-2xl bg-white border border-zinc-200 shadow-sm overflow-hidden flex flex-col">
+                <div className="p-4 sm:p-5 flex flex-col gap-4">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h2 className="text-lg font-bold text-zinc-900 line-clamp-1">{salon.salonName}</h2>
-                          {salon.verified && <BadgeCheck size={18} className="text-blue-500 fill-white ml-0.5 shrink-0" />}
+                        <div className="flex items-center flex-wrap gap-2 mb-1">
+                          <h2 className="text-base sm:text-lg font-bold text-zinc-900 line-clamp-1">{salon.salonName}</h2>
+                          
+                          {salon.verified && (
+                             <div className="flex items-center justify-center" title="Verified Partner">
+                                <BadgeCheck size={18} className="text-blue-500 fill-white ml-0.5 shrink-0" />
+                             </div>
+                          )}
+
+                          {salon.isOnline ? 
+                            <span className="px-2 py-0.5 rounded-md bg-emerald-500 text-[9px] font-bold text-white ml-2">OPEN</span> : 
+                            <span className="px-2 py-0.5 rounded-md bg-red-500 text-[9px] font-bold text-white ml-2">CLOSED</span>
+                          }
                         </div>
                         <div className="flex items-center gap-2 text-[11px] text-zinc-500">
                             {salon.distance ? (
@@ -733,13 +654,21 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                             <span className="font-semibold">{salon.salonType || "Unisex"}</span>
                         </div>
                       </div>
-                      
-                      <div className="flex flex-col items-end">
-                        <div className="flex items-center justify-end gap-1 text-sm font-bold text-zinc-900 bg-zinc-50 px-2 py-1 rounded-lg">
+
+                      <div className="flex flex-col items-end gap-2">
+                        <button 
+                            onClick={() => handleRoute(salon)}
+                            className="p-2 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors border border-blue-100 shadow-sm"
+                            title="Get Directions"
+                        >
+                             <Navigation size={18} fill="currentColor" className="transform rotate-45" />
+                        </button>
+
+                        <div className="flex items-center justify-end gap-1 text-sm font-bold text-zinc-900">
                           <Star className="text-yellow-400 fill-yellow-400" size={14} />
                           {salon.rating ? salon.rating.toFixed(1) : "New"}
                         </div>
-                        <p className="text-[10px] text-zinc-400 text-right mt-1">{salon.reviewsCount || 0} reviews</p>
+                        <p className="text-[10px] text-zinc-400 text-right">{salon.reviewsCount || 0} reviews</p>
                       </div>
                     </div>
 
@@ -769,29 +698,19 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between gap-3 pt-1 mt-auto">
+                    <div className="flex items-center justify-between gap-3 pt-1">
                       <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 font-bold bg-emerald-50/50 px-2 py-1 rounded-lg">
                         <Sparkles size={12} />
                         <span className="truncate max-w-[100px]">{salon.tag || "Top Rated"}</span>
                       </div>
-                      
-                      <div className="flex gap-2">
-                        <button 
-                            onClick={() => handleRoute(salon)}
-                            className="p-2.5 rounded-xl bg-zinc-50 text-zinc-600 hover:bg-zinc-100 transition-colors border border-zinc-100"
-                            title="Get Directions"
-                        >
-                             <Navigation size={18} fill="currentColor" className="transform rotate-45" />
-                        </button>
-                        <button 
-                            onClick={() => handleOpenBooking(salon)} 
-                            disabled={!salon.isOnline || (activeTicket && activeTicket.salonId?._id !== salon._id)} 
-                            className={`px-5 py-2.5 rounded-xl text-white text-[11px] font-bold transition-all flex items-center gap-2 shadow-sm ${!salon.isOnline ? 'bg-zinc-300 cursor-not-allowed' : activeTicket ? 'bg-zinc-400 cursor-not-allowed' : 'bg-zinc-900 active:scale-95'}`}
-                        >
-                            {salon.isOnline ? (activeTicket ? "Busy" : "Join Queue") : "Offline"} 
-                            <Ticket size={14} />
-                        </button>
-                      </div>
+                      <button 
+                        onClick={() => handleOpenBooking(salon)} 
+                        disabled={!salon.isOnline || (activeTicket && activeTicket.salonId?._id !== salon._id)} 
+                        className={`px-5 py-2.5 rounded-xl text-white text-[11px] font-bold transition-all flex items-center gap-2 shadow-sm ${!salon.isOnline ? 'bg-zinc-300 cursor-not-allowed' : activeTicket ? 'bg-zinc-400 cursor-not-allowed' : 'bg-zinc-900 active:scale-95'}`}
+                      >
+                        {salon.isOnline ? (activeTicket ? "Busy" : "Join Queue") : "Offline"} 
+                        <Ticket size={14} />
+                      </button>
                     </div>
                 </div>
                 </div>
@@ -834,16 +753,22 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                 </div>
                 
                 <div className="flex gap-3">
-                    <button 
-                        onClick={() => {
-                            const sId = activeTicket.salonId?._id || activeTicket.salonId;
-                            const targetSalon = salons.find(s => s._id === sId) || activeTicket.salonId;
-                            handleRoute(targetSalon);
-                        }}
-                        className="flex-1 bg-white/10 hover:bg-white/20 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
-                    >
-                        <Navigation size={16} /> Directions
-                    </button>
+                  {/* Change only this button inside the Active Ticket Card */}
+<button 
+    onClick={() => {
+        // 1. Salon ID nikalo (Safe check agar object hai ya string)
+        const sId = activeTicket.salonId?._id || activeTicket.salonId;
+        
+        // 2. Main 'salons' list se match karo jisme Lat/Lng confirm hai
+        const targetSalon = salons.find(s => s._id === sId) || activeTicket.salonId;
+        
+        // 3. Ab route function call karo
+        handleRoute(targetSalon);
+    }}
+    className="flex-1 bg-white/10 hover:bg-white/20 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+>
+    <Navigation size={16} /> Directions
+</button>
                     <button 
                         onClick={handleCancelTicket}
                         disabled={canceling}
