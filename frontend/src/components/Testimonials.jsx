@@ -1,6 +1,57 @@
-
 import React from 'react';
 import { BadgeCheck, Quote } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+// --- Sub-Component: FallingText ---
+const FallingText = ({ text, className = "", delay = 0 }) => {
+  const letters = text.split("");
+
+  const container = {
+    hidden: { opacity: 0 },
+    visible: (i = 1) => ({
+      opacity: 1,
+      transition: { staggerChildren: 0.05, delayChildren: 0.04 * i + delay },
+    }),
+  };
+
+  const child = {
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        damping: 12,
+        stiffness: 100,
+      },
+    },
+    hidden: {
+      opacity: 0,
+      y: -50,
+      transition: {
+        type: "spring",
+        damping: 12,
+        stiffness: 100,
+      },
+    },
+  };
+
+  return (
+    <motion.span
+      style={{ display: "inline-block" }}
+      variants={container}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-100px" }}
+      className={className}
+    >
+      {letters.map((letter, index) => (
+        <motion.span variants={child} key={index} style={{ display: "inline-block", minWidth: letter === " " ? "0.3em" : "auto" }}>
+          {letter}
+        </motion.span>
+      ))}
+    </motion.span>
+  );
+};
 
 // 1. Data Structure
 const testimonials = [
@@ -52,7 +103,7 @@ const testimonials = [
     quote: "I recommend TrimGo to everyone. It's not just about booking; it's about discovering great stylists you didn't know existed near you.",
     rating: 5,
   },
-   {
+  {
     id: 7,
     name: "Rohan Das",
     role: "Medical Student",
@@ -76,29 +127,29 @@ const TestimonialCard = ({ data }) => {
   return (
     // GLASS EFFECT + GRADIENT BORDER
     <div className="group relative rounded-2xl p-[1px] bg-gradient-to-b from-zinc-200 to-transparent hover:from-green-400/50 hover:to-blue-400/50 transition-all duration-500">
-      
+
       {/* Inner Card Content */}
       <div className="bg-white/60 backdrop-blur-xl p-6 rounded-2xl h-full flex flex-col gap-4 shadow-[0_2px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-all duration-500 hover:-translate-y-1">
-        
+
         {/* Top Row: User & Verification */}
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
-             <div className="relative">
-                <img 
-                  src={data.image} 
-                  alt={data.name} 
-                  className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-md"
-                />
-                <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-0.5 border-2 border-white">
-                   <BadgeCheck size={10} className="text-white" />
-                </div>
-             </div>
-             <div>
-                <h4 className="font-bold text-zinc-900 text-sm leading-tight">{data.name}</h4>
-                <p className="text-xs text-zinc-500 font-medium">{data.role}</p>
-             </div>
+            <div className="relative">
+              <img
+                src={data.image}
+                alt={data.name}
+                className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-md"
+              />
+              <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-0.5 border-2 border-white">
+                <BadgeCheck size={10} className="text-white" />
+              </div>
+            </div>
+            <div>
+              <h4 className="font-bold text-zinc-900 text-sm leading-tight">{data.name}</h4>
+              <p className="text-xs text-zinc-500 font-medium">{data.role}</p>
+            </div>
           </div>
-          
+
           {/* Subtle Quote Icon */}
           <Quote className="text-zinc-200 fill-zinc-100 transform rotate-180" size={32} />
         </div>
@@ -110,12 +161,12 @@ const TestimonialCard = ({ data }) => {
 
         {/* Rating & Footer */}
         <div className="mt-auto pt-3 border-t border-zinc-100 flex items-center justify-between">
-           <div className="flex gap-0.5">
-              {[...Array(5)].map((_, i) => (
-                 i < data.rating ? <StarIcon key={i} /> : null
-              ))}
-           </div>
-           <span className="text-[10px] uppercase tracking-widest font-bold text-zinc-400 group-hover:text-green-600 transition-colors">Verified Visit</span>
+          <div className="flex gap-0.5">
+            {[...Array(5)].map((_, i) => (
+              i < data.rating ? <StarIcon key={i} /> : null
+            ))}
+          </div>
+          <span className="text-[10px] uppercase tracking-widest font-bold text-zinc-400 group-hover:text-green-600 transition-colors">Verified Visit</span>
         </div>
 
       </div>
@@ -128,7 +179,7 @@ const TestimonialCard = ({ data }) => {
 export default function Testimonials() {
   return (
     <section className="relative py-24 min-h-screen flex flex-col items-center justify-center overflow-hidden bg-zinc-50/50">
-      
+
       {/* ADVANCED BACKGROUND PATTERN */}
       {/* Grid Pattern */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
@@ -138,23 +189,25 @@ export default function Testimonials() {
       {/* Header Section */}
       <div className="relative text-center mb-16 px-4 z-10 max-w-3xl mx-auto">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100/50 border border-green-200 text-green-700 text-[10px] font-bold tracking-wider uppercase mb-6 backdrop-blur-sm">
-           <BadgeCheck size={12} /> Trusted by Jodhpur
+          <BadgeCheck size={12} /> Trusted by Jodhpur
         </div>
-        
-        <h2 className="text-4xl md:text-6xl font-black text-zinc-900 tracking-tighter mb-6 drop-shadow-sm">
-          Loved by Locals. <br/>
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-teal-500">Trusted by Salons.</span>
+
+        <h2 className="text-4xl md:text-6xl font-black text-zinc-900 tracking-tighter mb-6 drop-shadow-sm flex flex-col items-center">
+          <FallingText text="Loved by Locals." />
+          <div className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-teal-500 pb-2">
+            <FallingText text="Trusted by Salons." delay={0.5} />
+          </div>
         </h2>
-        
+
         <p className="text-zinc-500 text-lg leading-relaxed font-medium">
-          Join thousands of users who have stopped waiting in lines. 
+          Join thousands of users who have stopped waiting in lines.
           Real stories from the <span className="font-bold text-zinc-800">TrimGo community</span>.
         </p>
       </div>
 
       {/* Marquee Container */}
       <div className="relative w-full max-w-[1400px] mx-auto h-[700px] overflow-hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4 z-10">
-        
+
         {/* Superior Gradient Overlays (Masking) */}
         <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-zinc-50 via-zinc-50/80 to-transparent z-20 pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-zinc-50 via-zinc-50/80 to-transparent z-20 pointer-events-none"></div>
@@ -175,7 +228,7 @@ export default function Testimonials() {
 
         {/* Column 3 - Different Speed */}
         <div className="marquee-column space-y-6 hidden lg:block" style={{ animationDuration: '50s' }}>
-           {[...testimonials, ...testimonials].slice(4, 10).map((item, idx) => (
+          {[...testimonials, ...testimonials].slice(4, 10).map((item, idx) => (
             <TestimonialCard key={`col3-${idx}`} data={item} />
           ))}
         </div>
