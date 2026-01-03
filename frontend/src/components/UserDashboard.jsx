@@ -1,8 +1,25 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
-  MapPin, Clock, Users, Star, Ticket, X, Filter, Search, Check, Sparkles,
-  Navigation, Crosshair, Menu, Gift, BadgeCheck, Loader2, AlertCircle,
-  Image as ImageIcon, ChevronLeft, ChevronRight
+  MapPin,
+  Clock,
+  Users,
+  Star,
+  Ticket,
+  X,
+  Filter,
+  Search,
+  Check,
+  Sparkles,
+  Navigation, 
+  Crosshair, 
+  Menu,
+  Gift,
+  BadgeCheck,
+  Loader2,
+  AlertCircle,
+  Image as ImageIcon,
+  ChevronLeft, 
+  ChevronRight
 } from "lucide-react";
 import { io } from "socket.io-client"; 
 import Lenis from 'lenis'; 
@@ -512,7 +529,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
       }
   };
 
-  // 🔥 Open Gallery Modal
+  // 🔥 Open Gallery Modal Handler
   const handleOpenGallery = (salon) => {
       if(salon.gallery && salon.gallery.length > 0) {
           setGalleryModal({ isOpen: true, images: salon.gallery, name: salon.salonName });
@@ -732,12 +749,16 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                           <h2 className="text-lg font-bold text-zinc-900 line-clamp-1">{salon.salonName}</h2>
                           {salon.verified && <BadgeCheck size={18} className="text-blue-500 fill-white ml-0.5 shrink-0" />}
                         </div>
+                        {/* 🔥 ADDRESS ADDED HERE */}
+                        <p className="text-[11px] text-zinc-500 line-clamp-1 mb-1.5 flex items-center gap-1">
+                            <MapPin size={12} className="shrink-0" />
+                            {salon.address || "Address not available"}
+                        </p>
+                        
                         <div className="flex items-center gap-2 text-[11px] text-zinc-500">
                             {salon.distance ? (
                                 <span className="flex items-center gap-1 text-emerald-600 font-bold"><Navigation size={10} fill="currentColor" /> {salon.distance} away</span>
-                            ) : (
-                                <span className="flex items-center gap-1"><MapPin size={10} /> {salon.address || "Unknown"}</span>
-                            )}
+                            ) : null}
                             <span className="w-1 h-1 bg-zinc-300 rounded-full"></span>
                             <span className="font-semibold">{salon.salonType || "Unisex"}</span>
                         </div>
