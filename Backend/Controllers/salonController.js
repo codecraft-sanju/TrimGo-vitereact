@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import Salon from "../Models/Salon.js";
 import Ticket from "../Models/Ticket.js"; 
-import User from "../Models/User.js"; // 1. User Model import kiya (Referral ke liye)
+import User from "../Models/User.js"; 
 
 const createToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -25,7 +25,7 @@ export const registerSalon = async (req, res) => {
     const { 
       salonName, ownerName, email, phone, address, zipCode, password, 
       type, latitude, longitude,
-      referralCode // 2. Frontend se Referral Code receive kiya
+      referralCode 
     } = req.body;
 
     if (!salonName || !ownerName || !email || !phone || !address || !zipCode || !password || !latitude || !longitude) {
@@ -36,12 +36,11 @@ export const registerSalon = async (req, res) => {
     if (existingSalon) return res.status(400).json({ success: false, message: "Salon already registered." });
 
     // -------------------------------------------------------
-    // 3. Referral Logic Start
+    // Referral Logic
     // -------------------------------------------------------
     let referringUserId = null;
 
     if (referralCode) {
-      // Check agar code valid hai
       const referrer = await User.findOne({ referralCode });
       
       if (!referrer) {
@@ -52,9 +51,6 @@ export const registerSalon = async (req, res) => {
       }
       referringUserId = referrer._id;
     }
-    // -------------------------------------------------------
-    // Referral Logic End
-    // -------------------------------------------------------
 
     const salon = await Salon.create({
       salonName,
@@ -71,10 +67,10 @@ export const registerSalon = async (req, res) => {
       verified: false,
       services: [],
       staff: [],
-      referredBy: referringUserId // 4. Salon model me ID save ki
+      gallery: [], // Initialize empty gallery
+      referredBy: referringUserId 
     });
 
-    // 5. Agar referral tha, to User (Agent) ki list update karo
     if (referringUserId) {
         await User.findByIdAndUpdate(referringUserId, {
             $push: { referredSalons: salon._id }
@@ -123,7 +119,7 @@ export const logoutSalon = (req, res) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/* PUBLIC API: GET ALL SALONS (DYNAMIC TIME CALCULATION ADDED)                */
+/* PUBLIC API: GET ALL SALONS                                                 */
 /* -------------------------------------------------------------------------- */
 export const getAllSalons = async (req, res) => {
   try {
@@ -143,33 +139,27 @@ export const getAllSalons = async (req, res) => {
     }
     
     // 1. Fetch Salons
+    // .lean() is fast and allows us to modify the object below
     const salons = await Salon.find(query)
-      .select("-password")
+      .select("-password") 
       .sort({ isOnline: -1, rating: -1 })
       .lean(); 
 
-    // 🔥 2. DYNAMIC CALCULATION LOOP
+    // 2. DYNAMIC CALCULATION LOOP
     const salonsWithData = await Promise.all(salons.map(async (salon) => {
         
-        // Active tickets dhundo (Waiting + Serving)
-        // Sirf 'totalTime' field laao taaki database fast rahe
         const activeTickets = await Ticket.find({
             salonId: salon._id,
             status: { $in: ["waiting", "serving"] } 
         }).select("totalTime");
 
-        // A. Waiting Count (Kitne log hain)
         const waitingCount = activeTickets.length;
-
-        // B. Total Estimated Time (Sabka time jodkar)
-        // Reduce function use karke saare tickets ka time sum kar rahe hain
         const totalEstTime = activeTickets.reduce((sum, ticket) => sum + (ticket.totalTime || 0), 0);
 
-        // Salon object mein dono cheezein add kar do
         return { 
             ...salon, 
             waiting: waitingCount, 
-            estTime: totalEstTime // 🔥 Ab ye Real Time (mins) frontend par jayega
+            estTime: totalEstTime 
         };
     }));
 
@@ -184,26 +174,44 @@ export const getAllSalons = async (req, res) => {
   }
 };
 
-
+/* -------------------------------------------------------------------------- */
+/* UPDATE SALON PROFILE (UPDATED FOR GALLERY)                                 */
+/* -------------------------------------------------------------------------- */
 export const updateSalonProfile = async (req, res) => {
   try {
     const salonId = req.salon._id;
     const updates = req.body; 
+
+    // 🔥 Validation for Gallery Size (Extra Safety)
+    if (updates.gallery && updates.gallery.length > 4) {
+        return res.status(400).json({ success: false, message: "Maximum 4 photos allowed." });
+    }
 
     const updatedSalon = await Salon.findByIdAndUpdate(salonId, updates, {
       new: true,
       runValidators: true,
     });
     
+    // Real-time Update Broadcast
+    // Isse user dashboard par status update turant dikhega
     if (updates.isOnline !== undefined) {
         req.io.emit("salon_updated", { 
             id: salonId, 
             isOnline: updatedSalon.isOnline 
         });
     }
+    
+    // Agar gallery update hui hai, toh pura object bhej do taaki user dashboard par photo refresh ho jaye
+    if (updates.gallery) {
+        req.io.emit("salon_updated", {
+            id: salonId,
+            gallery: updatedSalon.gallery
+        });
+    }
 
     res.status(200).json({ success: true, salon: updatedSalon });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ success: false, message: "Update Failed" });
   }
 };

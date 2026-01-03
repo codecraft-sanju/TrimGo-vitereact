@@ -103,6 +103,13 @@ const salonSchema = new mongoose.Schema(
       }
     ],
 
+    // 🔥 NEW: GALLERY FIELD ADDED HERE 🔥
+    gallery: {
+        type: [String], // Array of image URLs strings
+        default: [],
+        validate: [arrayLimit, '{PATH} exceeds the limit of 4 photos'] // Validation to allow max 4
+    },
+
     // --- NEW REFERRAL FIELD ---
     // Kis user ne is Salon ko refer kiya hai?
     referredBy: {
@@ -116,6 +123,10 @@ const salonSchema = new mongoose.Schema(
   }
 );
 
+// Helper function to limit array size to 4
+function arrayLimit(val) {
+  return val.length <= 4;
+}
 
 salonSchema.pre("save", async function () {
   if (!this.isModified("password")) return;

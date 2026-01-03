@@ -4,10 +4,37 @@ import {
   Bell, DollarSign, TrendingUp, Clock, CheckCircle, Scissors,
   Play, CheckSquare, X, Camera, Mail, Phone, MapPin, User,
   Armchair, UserCheck, Plus, Trash2, Menu, Save, Edit3, Power,
-  AlertTriangle, Sparkles, Zap, ArrowRight, UserPlus, Home, LayoutDashboard, XCircle
+  AlertTriangle, Sparkles, Zap, ArrowRight, UserPlus, Home, LayoutDashboard, XCircle,
+  Image as ImageIcon, Star, Loader2, UploadCloud
 } from "lucide-react";
 import api from "../utils/api";
 import { io } from "socket.io-client";
+
+// --- CLOUDINARY UPLOAD HELPER ---
+// 1. Create a Cloudinary account.
+// 2. Go to Settings > Upload > Add Upload Preset (Mode: Unsigned).
+// 3. Replace the values below:
+const CLOUDINARY_UPLOAD_URL = "https://api.cloudinary.com/v1_1/dvoenforj/image/upload";
+const UPLOAD_PRESET = "salon_preset"; 
+
+const uploadToCloudinary = async (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", UPLOAD_PRESET);
+
+  try {
+    const res = await fetch(CLOUDINARY_UPLOAD_URL, { method: "POST", body: formData });
+    const data = await res.json();
+    if(data.secure_url) {
+        return data.secure_url;
+    } else {
+        throw new Error("Cloudinary upload failed");
+    }
+  } catch (error) {
+    console.error("Upload Error", error);
+    throw error;
+  }
+};
 
 // --- CONSTANTS: SUGGESTED SERVICES (Quick Add Menu) ---
 const SUGGESTED_SERVICES = [
@@ -259,6 +286,11 @@ const SalonDashboard = ({ salon, onLogout }) => {
   const [staff, setStaff] = useState([]);
   const [newService, setNewService] = useState({ name: "", price: "", time: "", category: "Hair" });
   const [newStaffName, setNewStaffName] = useState("");
+  
+  // 🔥 Gallery Data
+  const [gallery, setGallery] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const galleryInputRef = useRef(null);
 
   const [isOnline, setIsOnline] = useState(true);
   const [stats, setStats] = useState({ revenue: 0, customers: 0 });
@@ -341,6 +373,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
           if(data.success) {
               setServices(data.salon.services || []);
               setStaff(data.salon.staff || [{name: data.salon.ownerName, status: 'available'}]);
+              setGallery(data.salon.gallery || []); // Load Gallery
               setIsOnline(data.salon.isOnline);
           }
       } catch (error) { console.error("Profile Fetch Error", error); }
@@ -355,7 +388,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
     } catch (error) { alert("Failed to accept"); }
   };
 
-  // 🔥 NEW: REJECT HANDLER
   const handleRejectRequest = async (req) => {
     if(!window.confirm("Reject this customer request?")) return;
     try {
@@ -397,7 +429,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
     } catch (error) { alert("Error completing service"); }
   };
 
-  // Handle Walk-in Submission
   const handleAddWalkIn = async (customerData) => {
     try {
         const totalPrice = customerData.services.reduce((sum, s) => sum + Number(s.price), 0);
@@ -460,7 +491,61 @@ const SalonDashboard = ({ salon, onLogout }) => {
           await api.put("/salon/update", { isOnline: newStatus });
           setIsOnline(newStatus);
       } catch (error) { alert("Update failed"); }
-  }
+  };
+
+  // 🔥 GALLERY LOGIC HANDLERS
+  const handleGalleryUpload = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (gallery.length >= 4) {
+          alert("Maximum 4 photos allowed.");
+          return;
+      }
+
+      setUploading(true);
+      try {
+          // 1. Upload to Cloudinary (or fallback logic)
+          let imageUrl;
+          if (UPLOAD_PRESET !== "YOUR_UNSIGNED_PRESET") {
+            imageUrl = await uploadToCloudinary(file);
+          } else {
+            // Mock upload if no keys provided yet
+            alert("Please set your Cloudinary Keys in code. Using Local Preview for now.");
+            imageUrl = URL.createObjectURL(file); 
+          }
+
+          // 2. Save to Backend
+          const updatedGallery = [...gallery, imageUrl];
+          await api.put("/salon/update", { gallery: updatedGallery });
+          setGallery(updatedGallery);
+      } catch (error) {
+          console.error(error);
+          alert("Failed to upload image");
+      } finally {
+          setUploading(false);
+      }
+  };
+
+  const handleDeletePhoto = async (index) => {
+      if (!window.confirm("Remove this photo?")) return;
+      const updatedGallery = gallery.filter((_, i) => i !== index);
+      try {
+          await api.put("/salon/update", { gallery: updatedGallery });
+          setGallery(updatedGallery);
+      } catch (error) { alert("Delete failed"); }
+  };
+
+  const handleSetMainPhoto = async (index) => {
+      if (index === 0) return; // Already main
+      const photo = gallery[index];
+      const others = gallery.filter((_, i) => i !== index);
+      const updatedGallery = [photo, ...others]; // Move to front
+      
+      try {
+        await api.put("/salon/update", { gallery: updatedGallery });
+        setGallery(updatedGallery);
+      } catch (error) { alert("Update failed"); }
+  };
 
   // --- HELPERS ---
   const getAvatarGradient = (name) => {
@@ -476,37 +561,11 @@ const SalonDashboard = ({ salon, onLogout }) => {
     <div className="flex h-screen w-full bg-zinc-950 font-sans text-white overflow-hidden selection:bg-emerald-500 selection:text-white">
       
       {/* --- MODALS --- */}
-      <WalkInModal 
-        isOpen={isWalkInOpen}
-        onClose={() => setIsWalkInOpen(false)}
-        services={services}
-        onConfirm={handleAddWalkIn}
-      />
+      <WalkInModal isOpen={isWalkInOpen} onClose={() => setIsWalkInOpen(false)} services={services} onConfirm={handleAddWalkIn} />
+      <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} salon={salon} profileImage={profileImage} onImageUpload={setProfileImage} />
+      <AssignmentModal isOpen={assignmentModal.isOpen} onClose={() => setAssignmentModal({ ...assignmentModal, isOpen: false })} customer={assignmentModal.customer} availableChairs={assignmentModal.availableChairs} staffList={staff} onConfirm={handleStartService} />
 
-      <ProfileModal 
-        isOpen={isProfileOpen} 
-        onClose={() => setIsProfileOpen(false)}
-        salon={salon}
-        profileImage={profileImage}
-        onImageUpload={setProfileImage}
-      />
-
-      <AssignmentModal 
-        isOpen={assignmentModal.isOpen}
-        onClose={() => setAssignmentModal({ ...assignmentModal, isOpen: false })}
-        customer={assignmentModal.customer}
-        availableChairs={assignmentModal.availableChairs}
-        staffList={staff}
-        onConfirm={handleStartService}
-      />
-
-      {/* --- BACKGROUND EFFECTS --- */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900 via-zinc-950 to-black"></div>
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px] animate-pulse-slow"></div>
-      </div>
-
-      {/* --- DESKTOP SIDEBAR (Hidden on Mobile) --- */}
+      {/* --- DESKTOP SIDEBAR --- */}
       <aside className="hidden lg:flex w-64 border-r border-white/5 bg-zinc-900/40 backdrop-blur-xl flex-col z-20">
         <div className="h-20 flex items-center px-6 border-b border-white/5 gap-3">
            <div className="w-10 h-10 bg-white text-black rounded-xl flex items-center justify-center font-bold text-sm shadow-[0_0_20px_rgba(255,255,255,0.3)]">TG</div>
@@ -532,10 +591,9 @@ const SalonDashboard = ({ salon, onLogout }) => {
       {/* --- MAIN CONTENT AREA --- */}
       <main className="flex-1 flex flex-col relative z-10 h-full overflow-hidden">
         
-        {/* --- HEADER (Responsive) --- */}
+        {/* --- HEADER --- */}
         <header className="h-16 lg:h-20 border-b border-white/5 bg-zinc-900/60 backdrop-blur-md flex items-center justify-between px-4 lg:px-8 shrink-0 z-30">
            <div className="flex items-center gap-3">
-             {/* Logo for Mobile */}
              <div className="lg:hidden w-8 h-8 bg-white text-black rounded-lg flex items-center justify-center font-bold text-xs">TG</div>
              <div className="flex flex-col">
                <h1 className="text-lg lg:text-xl font-bold text-white tracking-tight truncate max-w-[150px] sm:max-w-none">
@@ -581,7 +639,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
                    </div>
                )}
 
-               {/* 2. STATS GRID (Responsive) */}
+               {/* 2. STATS GRID */}
                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                  <div className="bg-zinc-900/50 border border-white/5 rounded-2xl p-4 flex flex-col justify-between h-24 lg:h-32">
                      <div className="flex justify-between items-start">
@@ -613,7 +671,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
                  </div>
                </div>
 
-               {/* 3. NEW REQUESTS (With Cancel Option) */}
+               {/* 3. REQUESTS */}
                {requests.length > 0 && (
                  <div className="animate-in fade-in slide-in-from-top-4">
                     <div className="flex items-center justify-between mb-3">
@@ -634,19 +692,11 @@ const SalonDashboard = ({ salon, onLogout }) => {
                                     <span className="text-sm font-bold text-zinc-300">Total</span>
                                     <span className="text-lg font-black text-white">₹{req.totalPrice}</span>
                                 </div>
-                                
-                                {/* 🔥 NEW: ACCEPT / CANCEL BUTTONS */}
                                 <div className="grid grid-cols-2 gap-2">
-                                    <button 
-                                        onClick={() => handleRejectRequest(req)} 
-                                        className="py-2.5 bg-zinc-800 text-red-400 border border-white/5 hover:bg-red-500/10 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1"
-                                    >
+                                    <button onClick={() => handleRejectRequest(req)} className="py-2.5 bg-zinc-800 text-red-400 border border-white/5 hover:bg-red-500/10 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1">
                                         <X size={14} /> Cancel
                                     </button>
-                                    <button 
-                                        onClick={() => handleAcceptRequest(req)} 
-                                        className="py-2.5 bg-white text-black text-xs font-bold rounded-xl hover:bg-emerald-400 transition-colors flex items-center justify-center gap-1 shadow-lg shadow-white/5"
-                                    >
+                                    <button onClick={() => handleAcceptRequest(req)} className="py-2.5 bg-white text-black text-xs font-bold rounded-xl hover:bg-emerald-400 transition-colors flex items-center justify-center gap-1 shadow-lg shadow-white/5">
                                         <CheckCircle size={14} /> Accept
                                     </button>
                                 </div>
@@ -663,9 +713,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
                  <div className="lg:col-span-4 bg-zinc-900/30 border border-white/5 rounded-3xl overflow-hidden flex flex-col h-[400px] lg:h-full">
                     <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between sticky top-0 backdrop-blur-sm z-10">
                         <h3 className="font-bold text-sm text-zinc-100">Waiting Queue</h3>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-md">{activeQueue.length}</span>
-                        </div>
+                        <span className="text-xs font-bold bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-md">{activeQueue.length}</span>
                     </div>
                     <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
                         {activeQueue.length === 0 ? (
@@ -676,19 +724,19 @@ const SalonDashboard = ({ salon, onLogout }) => {
                            </div>
                         ) : activeQueue.map((cust) => (
                            <div key={cust._id} className="relative group bg-zinc-900 border border-white/10 p-4 rounded-2xl active:scale-98 transition-all">
-                              {cust.isGuest && <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-zinc-800 text-[9px] text-zinc-400 rounded uppercase font-bold tracking-wider">WALK-IN</div>}
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                   <span className="text-xl font-black text-zinc-700 w-8">#{cust.queueNumber}</span>
-                                   <div>
-                                     <h4 className="font-bold text-sm text-white">{cust.userId?.name || cust.guestName}</h4>
-                                     <p className="text-xs text-zinc-400">{cust.services[0]?.name}</p>
-                                   </div>
-                                </div>
-                                <button onClick={() => openAssignmentModal(cust)} className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 border border-white/5 transition-all">
-                                   <Play size={16} fill="currentColor" />
-                                </button>
-                              </div>
+                             {cust.isGuest && <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-zinc-800 text-[9px] text-zinc-400 rounded uppercase font-bold tracking-wider">WALK-IN</div>}
+                             <div className="flex items-center justify-between">
+                               <div className="flex items-center gap-3">
+                                  <span className="text-xl font-black text-zinc-700 w-8">#{cust.queueNumber}</span>
+                                  <div>
+                                    <h4 className="font-bold text-sm text-white">{cust.userId?.name || cust.guestName}</h4>
+                                    <p className="text-xs text-zinc-400">{cust.services[0]?.name}</p>
+                                  </div>
+                               </div>
+                               <button onClick={() => openAssignmentModal(cust)} className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 border border-white/5 transition-all">
+                                  <Play size={16} fill="currentColor" />
+                               </button>
+                             </div>
                            </div>
                         ))}
                     </div>
@@ -703,7 +751,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
                     <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto custom-scrollbar flex-1">
                         {chairs.map((chair) => (
                           <div key={chair.id} className={`relative rounded-2xl p-4 border transition-all flex flex-col justify-between min-h-[160px] ${chair.status === 'occupied' ? 'bg-zinc-900 border-emerald-500/30 shadow-lg shadow-emerald-900/10' : 'bg-zinc-900/50 border-white/5 border-dashed'}`}>
-                             {/* Chair Header */}
                              <div className="flex justify-between items-start mb-2">
                                 <div className="flex items-center gap-2">
                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${chair.status === 'occupied' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-600'}`}><Armchair size={16} /></div>
@@ -715,7 +762,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
                                 {chair.assignedStaff && <div className="flex items-center gap-1 bg-zinc-950 px-2 py-1 rounded border border-white/5"><UserCheck size={10} className="text-zinc-400"/><span className="text-[10px] font-medium text-zinc-300">{chair.assignedStaff}</span></div>}
                              </div>
 
-                             {/* Chair Body */}
                              {chair.status === 'occupied' && chair.currentCustomer ? (
                                <div className="mt-2">
                                  <div className="flex items-center gap-3 mb-4 p-2 bg-zinc-950/50 rounded-xl">
@@ -739,7 +785,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
                         ))}
                     </div>
                  </div>
-
                </div>
              </div>
            )}
@@ -754,39 +799,89 @@ const SalonDashboard = ({ salon, onLogout }) => {
                   
                   {/* QUICK ADD */}
                   <div className="mb-6">
-                     <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2 flex items-center gap-1"><Zap size={10} className="text-yellow-400"/> Quick Add</p>
-                     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                         {SUGGESTED_SERVICES.map((s, i) => (
+                      <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2 flex items-center gap-1"><Zap size={10} className="text-yellow-400"/> Quick Add</p>
+                      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                          {SUGGESTED_SERVICES.map((s, i) => (
                              <button key={i} onClick={() => fillServiceSuggestion(s)} className="shrink-0 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-white/5 rounded-lg text-xs text-zinc-300 transition-colors flex items-center gap-1 whitespace-nowrap">
                                {s.name} <span className="opacity-50">• ₹{s.price}</span>
                              </button>
-                         ))}
-                     </div>
+                          ))}
+                      </div>
                   </div>
 
                   {/* INPUTS */}
                   <div className="space-y-3 mb-6 bg-zinc-900/80 p-4 rounded-2xl border border-white/5">
-                     <div className="grid grid-cols-3 gap-2">
-                        <input type="text" placeholder="Service Name" className="col-span-3 bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.name} onChange={(e) => setNewService({...newService, name: e.target.value})} />
-                        <input type="number" placeholder="₹ Price" className="bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.price} onChange={(e) => setNewService({...newService, price: e.target.value})} />
-                        <input type="number" placeholder="Mins" className="bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.time} onChange={(e) => setNewService({...newService, time: e.target.value})} />
-                        <button onClick={handleAddService} className="col-span-3 bg-emerald-500 text-white rounded-xl py-3 font-bold hover:bg-emerald-400 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"><Plus size={16}/> Add Service</button>
-                     </div>
+                      <div className="grid grid-cols-3 gap-2">
+                         <input type="text" placeholder="Service Name" className="col-span-3 bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.name} onChange={(e) => setNewService({...newService, name: e.target.value})} />
+                         <input type="number" placeholder="₹ Price" className="bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.price} onChange={(e) => setNewService({...newService, price: e.target.value})} />
+                         <input type="number" placeholder="Mins" className="bg-zinc-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-emerald-500 outline-none" value={newService.time} onChange={(e) => setNewService({...newService, time: e.target.value})} />
+                         <button onClick={handleAddService} className="col-span-3 bg-emerald-500 text-white rounded-xl py-3 font-bold hover:bg-emerald-400 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"><Plus size={16}/> Add Service</button>
+                      </div>
                   </div>
 
                   {/* LIST */}
                   <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar">
-                     {services.length === 0 ? <p className="text-zinc-500 text-sm text-center py-4">No services added.</p> : services.map((s, i) => (
-                        <div key={i} className="flex items-center justify-between p-3 bg-zinc-900 rounded-xl border border-white/5">
-                           <div><h4 className="font-bold text-sm text-white">{s.name}</h4><p className="text-xs text-zinc-400">₹{s.price} • {s.time} mins</p></div>
-                           <button onClick={() => handleDeleteService(i)} className="p-2 text-zinc-600 hover:text-red-400 transition-colors"><Trash2 size={16}/></button>
-                        </div>
-                     ))}
+                      {services.length === 0 ? <p className="text-zinc-500 text-sm text-center py-4">No services added.</p> : services.map((s, i) => (
+                         <div key={i} className="flex items-center justify-between p-3 bg-zinc-900 rounded-xl border border-white/5">
+                            <div><h4 className="font-bold text-sm text-white">{s.name}</h4><p className="text-xs text-zinc-400">₹{s.price} • {s.time} mins</p></div>
+                            <button onClick={() => handleDeleteService(i)} className="p-2 text-zinc-600 hover:text-red-400 transition-colors"><Trash2 size={16}/></button>
+                         </div>
+                      ))}
                   </div>
                </div>
 
-               {/* 2. Staff & Status */}
+               {/* 2. Right Column (Photos & Staff) */}
                <div className="space-y-6">
+                  
+                  {/* 🔥 GALLERY MANAGER 🔥 */}
+                  <div className="bg-zinc-900/50 border border-white/5 rounded-3xl p-5 lg:p-6">
+                     <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-bold text-lg text-white flex items-center gap-2"><ImageIcon className="text-purple-400" size={20}/> Salon Photos</h3>
+                        <span className="text-xs font-bold text-zinc-500">{gallery.length}/4</span>
+                     </div>
+                     
+                     <div className="grid grid-cols-2 gap-3 mb-4">
+                        {/* Display Photos */}
+                        {gallery.map((img, index) => (
+                            <div key={index} className="relative aspect-video rounded-xl overflow-hidden group border border-white/10">
+                                <img src={img} alt="Salon" className="w-full h-full object-cover" />
+                                
+                                {/* Overlay Actions */}
+                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                    <button 
+                                        onClick={() => handleSetMainPhoto(index)}
+                                        title="Set as Cover"
+                                        className={`p-2 rounded-full ${index === 0 ? 'bg-yellow-500 text-black' : 'bg-white/10 text-white hover:bg-yellow-500 hover:text-black'}`}
+                                    >
+                                        <Star size={14} fill={index === 0 ? "currentColor" : "none"} />
+                                    </button>
+                                    <button 
+                                        onClick={() => handleDeletePhoto(index)}
+                                        className="p-2 rounded-full bg-white/10 text-white hover:bg-red-500 hover:text-white"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                                {index === 0 && <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-yellow-500 text-black text-[9px] font-bold rounded uppercase">Main</div>}
+                            </div>
+                        ))}
+
+                        {/* Upload Button */}
+                        {gallery.length < 4 && (
+                            <div 
+                                onClick={() => galleryInputRef.current.click()}
+                                className="aspect-video rounded-xl border-2 border-dashed border-white/10 hover:border-emerald-500/50 hover:bg-white/5 flex flex-col items-center justify-center cursor-pointer transition-all group"
+                            >
+                                {uploading ? <Loader2 className="animate-spin text-emerald-500"/> : <UploadCloud className="text-zinc-600 group-hover:text-emerald-500 mb-2"/>}
+                                <span className="text-xs font-bold text-zinc-500 group-hover:text-zinc-300">{uploading ? "Uploading..." : "Add Photo"}</span>
+                                <input type="file" ref={galleryInputRef} className="hidden" accept="image/*" onChange={handleGalleryUpload} />
+                            </div>
+                        )}
+                     </div>
+                     <p className="text-[10px] text-zinc-500">*The first photo will be your Main Cover.</p>
+                  </div>
+
+                  {/* Staff Manager */}
                   <div className="bg-zinc-900/50 border border-white/5 rounded-3xl p-5 lg:p-6">
                      <h3 className="font-bold text-lg text-white mb-4 flex items-center gap-2"><UserCheck className="text-blue-400" size={20}/> Staff</h3>
                      <div className="flex gap-2 mb-4">
