@@ -6,9 +6,34 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import { motion, useInView, animate } from "framer-motion";
+
 /* ---------------------------------
    LOCAL HOOKS & UTILS
 ---------------------------------- */
+
+// --- Sub-Component: Counter ---
+const Counter = ({ from = 0, to, duration = 1.5, prefix = "", suffix = "", className = "" }) => {
+  const nodeRef = useRef();
+  const inView = useInView(nodeRef, { once: true, margin: "-20px" });
+
+  useEffect(() => {
+    const node = nodeRef.current;
+    if (!node || !inView) return;
+
+    const controls = animate(from, to, {
+      duration: duration,
+      onUpdate(value) {
+        node.textContent = `${prefix}${Math.floor(value)}${suffix}`;
+      },
+      ease: "easeOut"
+    });
+
+    return () => controls.stop();
+  }, [from, to, duration, inView, prefix, suffix]);
+
+  return <span ref={nodeRef} className={className}>{prefix}{from}{suffix}</span>;
+}
 
 const useOnScreen = (options) => {
   const ref = useRef(null);
@@ -161,9 +186,9 @@ const AdvancedDashboardSection = () => {
               <div className="text-xs text-zinc-400 mb-1 flex items-center gap-2">
                 <Clock size={14} /> Avg wait today
               </div>
-              <div className="text-2xl font-bold">
-                11
-                <span className="text-sm text-zinc-400 ml-1">min</span>
+              <div className="text-2xl font-bold flex items-baseline">
+                <Counter from={0} to={11} />
+                <span className="text-sm text-zinc-400 ml-1 font-normal">min</span>
               </div>
             </SpotlightCard>
 
@@ -171,14 +196,18 @@ const AdvancedDashboardSection = () => {
               <div className="text-xs text-zinc-400 mb-1 flex items-center gap-2">
                 <TrendingUp size={14} /> Revenue uplift
               </div>
-              <div className="text-2xl font-bold">+28%</div>
+              <div className="text-2xl font-bold">
+                <Counter from={0} to={28} prefix="+" suffix="%" />
+              </div>
             </SpotlightCard>
 
             <SpotlightCard className="p-4 bg-zinc-900 text-white border-zinc-800">
               <div className="text-xs text-zinc-400 mb-1 flex items-center gap-2">
                 <Users size={14} /> Returning users
               </div>
-              <div className="text-2xl font-bold">73%</div>
+              <div className="text-2xl font-bold">
+                <Counter from={0} to={73} suffix="%" />
+              </div>
             </SpotlightCard>
           </div>
         </div>
@@ -201,7 +230,7 @@ const AdvancedDashboardSection = () => {
 
               {/* Dashboard Content Grid */}
               <div className="p-4 md:p-7 grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-5 lg:gap-6">
-                
+
                 {/* Stat 1: Current Wait */}
                 <div className="p-4 rounded-xl border border-zinc-200 bg-zinc-50 col-span-1">
                   <div className="text-zinc-500 text-[10px] md:text-[11px] uppercase font-bold tracking-wider mb-1.5">
@@ -254,7 +283,7 @@ const AdvancedDashboardSection = () => {
                       SYNCED
                     </span>
                   </div>
-                  
+
                   {/* List Items */}
                   <div className="p-2 space-y-1">
                     {[1, 2, 3, 4].map((i) => (
@@ -275,7 +304,7 @@ const AdvancedDashboardSection = () => {
                       </div>
                     ))}
                   </div>
-                  
+
                   {/* Footer */}
                   <div className="mt-auto px-4 py-2 md:py-3 border-t border-white/10 text-[10px] md:text-[11px] text-zinc-400 flex items-center justify-between bg-zinc-950/80">
                     <span>Auto-assign ON</span>
