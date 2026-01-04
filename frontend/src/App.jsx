@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { Bell, Ticket, X, CheckCircle, Sparkles, Scissors } from "lucide-react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
-import { Toaster } from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 
 // --- API & COMPONENTS IMPORTS ---
 import api from "./utils/api";
@@ -141,28 +141,8 @@ const PremiumPreloader = ({ onLoadingComplete, dataLoaded }) => {
 };
 
 // ----------------------------------------------------------------------
-// 1. Toast Notification
+// 1. Toast Notification - REMOVED (Replaced by react-hot-toast)
 // ----------------------------------------------------------------------
-const Toast = ({ message, type, onClose }) => {
-  useEffect(() => {
-    const timer = setTimeout(onClose, 3000);
-    return () => clearTimeout(timer);
-  }, [onClose]);
-  return (
-    <div className="fixed top-24 right-6 z-[100] animate-[slideIn_0.3s_ease-out]">
-      <div className="bg-white/90 backdrop-blur-xl border border-zinc-200 shadow-2xl rounded-2xl p-4 flex items-center gap-3 pr-8 min-w-[300px]">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${type === 'success' ? 'bg-green-100 text-green-600' : type === 'error' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
-          {type === 'success' ? <CheckCircle size={20} /> : type === 'error' ? <X size={20} /> : <Bell size={20} />}
-        </div>
-        <div>
-          <h4 className="font-bold text-sm text-zinc-900">{type === 'success' ? 'Success' : type === 'error' ? 'Error' : 'Notification'}</h4>
-          <p className="text-xs text-zinc-500">{message}</p>
-        </div>
-        <button onClick={onClose} className="absolute top-2 right-2 text-zinc-400 hover:text-zinc-900"><X size={14} /></button>
-      </div>
-    </div>
-  );
-};
 
 // ----------------------------------------------------------------------
 // 2. Live Ticket Widget
@@ -257,7 +237,6 @@ const AppContent = () => {
   const location = useLocation();
 
   const [salons, setSalons] = useState([]);
-  const [toast, setToast] = useState(null);
   const [activeTicket, setActiveTicket] = useState(null);
 
   // AUTH STATES
@@ -269,11 +248,6 @@ const AppContent = () => {
 
   // PRELOADER STATE
   const [showPreloader, setShowPreloader] = useState(true);
-
-  const showToast = (msg, type = "success") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
-  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -321,7 +295,7 @@ const AppContent = () => {
 
   const handleUserLoginSuccess = (userData) => {
     setCurrentUser(userData);
-    showToast(`Welcome, ${userData.name}!`);
+    // Toast handled in UserLogin component now
     navigate("/dashboard/user");
   };
 
@@ -330,11 +304,11 @@ const AppContent = () => {
       const { data } = await api.post("/salon/register", formData);
       if (data.success) {
         setCurrentSalon(data.salon);
-        showToast("Registration successful! Welcome Partner.");
+        toast.success("Registration successful! Welcome Partner.");
         navigate("/dashboard/salon");
       }
     } catch (error) {
-      showToast(error.response?.data?.message || "Registration Failed", "error");
+      toast.error(error.response?.data?.message || "Registration Failed");
     }
   };
 
@@ -343,11 +317,11 @@ const AppContent = () => {
       const { data } = await api.post("/salon/login", credentials);
       if (data.success) {
         setCurrentSalon(data.salon);
-        showToast("Salon Login Successful!");
+        toast.success("Salon Login Successful!");
         navigate("/dashboard/salon");
       }
     } catch (error) {
-      showToast(error.response?.data?.message || "Login Failed", "error");
+      toast.error(error.response?.data?.message || "Login Failed");
     }
   };
 
@@ -359,31 +333,31 @@ const AppContent = () => {
       setCurrentUser(null);
       setCurrentSalon(null);
       setActiveTicket(null);
-      showToast("Logged out successfully");
+      toast.success("Logged out successfully");
       navigate("/");
     } catch (error) {
-      showToast("Error logging out", "error");
+      toast.error("Error logging out");
     }
   };
 
   const handleAdminLogin = () => {
     localStorage.setItem("adminAuth", "true");
-    showToast("Welcome Founder!");
+    toast.success("Welcome Founder!");
     navigate("/admin/dashboard", { replace: true });
   };
 
   const handleAdminLogout = () => {
     localStorage.removeItem("adminAuth");
-    showToast("Admin Logged Out");
+    toast.success("Admin Logged Out");
     navigate("/admin/login", { replace: true });
   };
 
   const handleJoinQueue = (ticketData) => {
     if (activeTicket) {
-      showToast("You are already in a queue!", "error");
+      toast.error("You are already in a queue!");
       return;
     }
-    showToast(`Request sent to ${ticketData.salonName}`);
+    toast.success(`Request sent to ${ticketData.salonName}`);
     setActiveTicket({
       salonName: ticketData.salonName,
       number: ticketData.number,
@@ -398,12 +372,6 @@ const AppContent = () => {
     <>
       <UpdateNotification />
 
-      {/* AESTHETIC PRELOADER OVERLAY 
-         We pass `dataLoaded={!authLoading}`. 
-         The Preloader handles the visual logic:
-         - Waits if data isn't ready.
-         - Finishes fast if data IS ready.
-      */}
       <AnimatePresence mode="wait">
         {showPreloader && (
           <PremiumPreloader
@@ -414,8 +382,6 @@ const AppContent = () => {
       </AnimatePresence>
 
       <div className={showPreloader ? "h-screen overflow-hidden" : "min-h-screen bg-neutral-50"}>
-
-        {!showPreloader && toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
         {activeTicket && !isDashboard && !showPreloader && (
           <LiveTicket
