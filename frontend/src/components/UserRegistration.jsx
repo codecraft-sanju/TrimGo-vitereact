@@ -205,7 +205,7 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }
         setLocationStatus("denied");
         setLocationLoading(false);
         if (err.code === 1) {
-          toast.error("Please enable location permissions in your browser settings.");
+          toast.error("Please enable location permissions in your browser settings.", { id: "location-permission-error" });
         }
       },
       { enableHighAccuracy: true, timeout: 5000 }
@@ -290,8 +290,8 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }
           variants={fadeInUp}
           onClick={!locationLoading ? handleRequestLocation : undefined}
           className={`group flex items-center justify-between p-4 rounded-3xl border transition-all cursor-pointer mb-8 ${locationStatus === "granted"
-              ? "bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800"
-              : "bg-zinc-50 dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
+            ? "bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800"
+            : "bg-zinc-50 dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
             } ${locationLoading ? "opacity-75 cursor-wait" : ""}`}
         >
           <div className="flex items-center gap-4">
