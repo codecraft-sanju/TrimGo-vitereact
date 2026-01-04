@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { 
-  Store, User, Phone, MapPin, ArrowRight, ChevronLeft, 
-  Mail, Lock, Hash, Crosshair, Tag, Loader2, ArrowLeft 
+import {
+  Store, User, Phone, MapPin, ArrowRight, ChevronLeft,
+  Mail, Lock, Hash, Crosshair, Tag, Loader2, ArrowLeft
 } from "lucide-react";
 // Assuming LocationPicker is in the same directory
-import LocationPicker from "./LocationPicker"; 
+import LocationPicker from "./LocationPicker";
+import toast from 'react-hot-toast';
 
 // --- ANIMATIONS ---
 const fadeInUp = {
@@ -59,19 +60,19 @@ const ShimmerButton = ({ children, isLoading, className = "", onClick }) => (
 );
 
 const AuthLayout = ({ children, title, subtitle, onBack, illustration }) => (
-  <motion.main 
+  <motion.main
     initial="initial"
     animate="animate"
     className="min-h-screen w-full bg-zinc-50 dark:bg-black flex items-center justify-center p-4 pt-24 relative overflow-hidden font-sans"
   >
     <BackgroundAurora />
-    
+
     {/* --- NEW GLASS HEADER --- */}
     <header className="absolute top-0 left-0 right-0 z-50 px-6 py-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between bg-white/70 dark:bg-zinc-900/60 backdrop-blur-md rounded-full px-2 py-2 pr-6 border border-white/50 dark:border-zinc-800 shadow-sm">
-          <button 
-            onClick={onBack} 
+          <button
+            onClick={onBack}
             className="p-3 rounded-full bg-white dark:bg-zinc-900 shadow-sm border border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all active:scale-90 group"
           >
             <ArrowLeft size={20} className="text-zinc-600 dark:text-zinc-400 group-hover:-translate-x-1 transition-transform" />
@@ -85,7 +86,7 @@ const AuthLayout = ({ children, title, subtitle, onBack, illustration }) => (
     </header>
 
     <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
-      <motion.div 
+      <motion.div
         variants={staggerContainer}
         className="order-2 lg:order-1 max-h-[85vh] overflow-y-auto pr-2 
                    [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
@@ -143,19 +144,19 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
     e.preventDefault();
     setIsLoading(true);
     console.log("Submitting Data with Location:", formData);
-    
+
     // Simulate API call or perform action
     if (onRegister) {
       await onRegister(formData);
     }
-    
+
     // Stop loading (in real app, do this after success/failure)
-    setTimeout(() => setIsLoading(false), 1500); 
+    setTimeout(() => setIsLoading(false), 1500);
   };
 
   return (
-    <AuthLayout 
-      title="Partner" 
+    <AuthLayout
+      title="Partner"
       subtitle="Transform your salon business today."
       onBack={onBack}
       illustration={
@@ -181,10 +182,10 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
           <div className="md:col-span-2">
             <InputGroup icon={Store} name="salonName" value={formData.salonName} onChange={handleChange} type="text" label="Salon Name" />
           </div>
-          
+
           <InputGroup icon={User} name="ownerName" value={formData.ownerName} onChange={handleChange} type="text" label="Owner Name" />
           <InputGroup icon={Phone} name="phone" value={formData.phone} onChange={handleChange} type="tel" label="Mobile" />
-          
+
           <div className="md:col-span-2">
             <InputGroup icon={Mail} name="email" value={formData.email} onChange={handleChange} type="email" label="Email Address" />
             <InputGroup icon={Lock} name="password" value={formData.password} onChange={handleChange} type="password" label="Password" />
@@ -211,14 +212,14 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
 
         <div className="grid grid-cols-2 gap-8">
           <InputGroup icon={Hash} name="zipCode" value={formData.zipCode} onChange={handleChange} type="text" label="Zip Code" />
-          
+
           {/* CUSTOM SELECT DROPDOWN STYLE */}
           <motion.div variants={fadeInUp} className="relative mb-10 group border-b-2 border-zinc-200 dark:border-zinc-800 focus-within:border-black dark:focus-within:border-white transition-all duration-300">
             <span className="absolute left-0 -top-4 text-zinc-400 text-[10px] font-bold uppercase tracking-widest">Salon Type</span>
-            <select 
-              name="type" 
-              value={formData.type} 
-              onChange={handleChange} 
+            <select
+              name="type"
+              value={formData.type}
+              onChange={handleChange}
               className="w-full bg-transparent py-3 outline-none appearance-none text-zinc-900 dark:text-white font-bold cursor-pointer relative z-10"
             >
               <option value="Unisex">Unisex</option>
@@ -252,21 +253,21 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
 export const SalonLogin = ({ onBack, onLogin, onNavigateRegister }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [credentials, setCredentials] = useState({ identifier: "", password: "" });
-  
+
   const handleChange = (e) => setCredentials({ ...credentials, [e.target.name]: e.target.value });
-  
-  const handleSubmit = async (e) => { 
-    e.preventDefault(); 
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setIsLoading(true);
-    
+
     if (onLogin) await onLogin(credentials);
-    
+
     setTimeout(() => setIsLoading(false), 1500);
   };
 
   return (
-    <AuthLayout 
-      title="Welcome" 
+    <AuthLayout
+      title="Welcome"
       subtitle="Manage your salon queue and revenue."
       onBack={onBack}
       illustration={
@@ -285,12 +286,12 @@ export const SalonLogin = ({ onBack, onLogin, onNavigateRegister }) => {
       <form onSubmit={handleSubmit} className="space-y-4 pt-4">
         <InputGroup icon={User} name="identifier" value={credentials.identifier} onChange={handleChange} type="text" label="Login ID (Email/Mobile)" />
         <InputGroup icon={Lock} name="password" value={credentials.password} onChange={handleChange} type="password" label="Password" />
-        
+
         <ShimmerButton isLoading={isLoading} className="w-full mt-10 text-base">
           Access Dashboard <ArrowRight size={18} />
         </ShimmerButton>
       </form>
-      
+
       <motion.p variants={fadeInUp} className="mt-8 text-center text-zinc-500 text-sm font-medium">
         New to TrimGo? <button onClick={onNavigateRegister} className="text-black dark:text-white font-bold hover:underline">Register Salon</button>
       </motion.p>

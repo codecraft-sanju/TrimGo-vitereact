@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { Bell, Ticket, X, CheckCircle, Sparkles, Scissors } from "lucide-react";
-import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion"; 
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
+import { Toaster } from 'react-hot-toast';
 
 // --- API & COMPONENTS IMPORTS ---
 import api from "./utils/api";
 import LegalLayout from "./components/LegalPages";
 import { SalonRegistration, SalonLogin } from "./components/SalonRegistration";
 import UserRegistration from "./components/UserRegistration";
-import UserLogin from "./components/UserLogin"; 
+import UserLogin from "./components/UserLogin";
 import { UserProfile } from "./components/UserProfile";
 import { AdminLogin, AdminDashboard } from "./components/AdminDashboard";
 import SalonDashboard from "./components/SalonDashboard";
@@ -59,7 +60,7 @@ const PremiumPreloader = ({ onLoadingComplete, dataLoaded }) => {
       transition: {
         delay: i * 0.05,
         duration: 0.8,
-        ease: [0.215, 0.61, 0.355, 1], 
+        ease: [0.215, 0.61, 0.355, 1],
       },
     }),
   };
@@ -67,12 +68,12 @@ const PremiumPreloader = ({ onLoadingComplete, dataLoaded }) => {
   return (
     <motion.div
       initial={{ y: 0 }}
-      exit={{ y: "-100%", transition: { duration: 0.8, ease: [0.76, 0, 0.24, 1] } }} 
+      exit={{ y: "-100%", transition: { duration: 0.8, ease: [0.76, 0, 0.24, 1] } }}
       className="fixed inset-0 z-[9999] bg-neutral-950 text-white flex flex-col justify-between p-6 md:p-12 overflow-hidden"
     >
       {/* Noise Overlay - Optimized: CSS only, no calculations */}
       <div className="hidden md:block absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay">
-         <div className="w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+        <div className="w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
       </div>
 
       {/* Top Header */}
@@ -84,55 +85,55 @@ const PremiumPreloader = ({ onLoadingComplete, dataLoaded }) => {
       {/* Center Content: Massive Typography */}
       <div className="relative z-10 flex flex-col items-center justify-center h-full">
         <div className="overflow-hidden flex items-center justify-center">
-            {["T", "R", "I", "M", "G", "O"].map((char, index) => (
-              <motion.span
-                key={index}
-                custom={index}
-                variants={letterVariants}
-                initial="hidden"
-                animate="visible"
-                className="text-6xl sm:text-8xl md:text-[10rem] font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-b from-white via-neutral-200 to-neutral-600"
-              >
-                {char}
-              </motion.span>
-            ))}
+          {["T", "R", "I", "M", "G", "O"].map((char, index) => (
+            <motion.span
+              key={index}
+              custom={index}
+              variants={letterVariants}
+              initial="hidden"
+              animate="visible"
+              className="text-6xl sm:text-8xl md:text-[10rem] font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-b from-white via-neutral-200 to-neutral-600"
+            >
+              {char}
+            </motion.span>
+          ))}
         </div>
-        
-        <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5, duration: 1 }}
-            className="mt-4 md:mt-8 overflow-hidden"
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5, duration: 1 }}
+          className="mt-4 md:mt-8 overflow-hidden"
         >
-             <p className="text-[10px] md:text-sm font-medium tracking-[0.4em] text-neutral-500 uppercase text-center">
-               Queue Management System
-             </p>
+          <p className="text-[10px] md:text-sm font-medium tracking-[0.4em] text-neutral-500 uppercase text-center">
+            Queue Management System
+          </p>
         </motion.div>
       </div>
 
       {/* Bottom Footer: The Counter & Bar */}
       <div className="w-full z-10">
         <div className="flex justify-between items-end mb-4">
-            <div className="flex flex-col">
-                <span className="text-[10px] md:text-xs text-neutral-500 uppercase tracking-widest mb-1">Status</span>
-                <span className="text-sm font-medium text-emerald-400">
-                    {!isFinished ? (dataLoaded ? "Finalizing..." : "Loading resources...") : "Ready"}
-                </span>
-            </div>
-            
-            {/* Huge Number Counter using Framer Motion (No Re-renders) */}
-            <div className="flex items-baseline text-6xl md:text-8xl font-thin tracking-tighter leading-none text-white">
-                <motion.span>{rounded}</motion.span>
-                <span className="text-2xl md:text-4xl text-neutral-600 font-normal">%</span>
-            </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] md:text-xs text-neutral-500 uppercase tracking-widest mb-1">Status</span>
+            <span className="text-sm font-medium text-emerald-400">
+              {!isFinished ? (dataLoaded ? "Finalizing..." : "Loading resources...") : "Ready"}
+            </span>
+          </div>
+
+          {/* Huge Number Counter using Framer Motion (No Re-renders) */}
+          <div className="flex items-baseline text-6xl md:text-8xl font-thin tracking-tighter leading-none text-white">
+            <motion.span>{rounded}</motion.span>
+            <span className="text-2xl md:text-4xl text-neutral-600 font-normal">%</span>
+          </div>
         </div>
 
         {/* Smooth Progress Line */}
         <div className="w-full h-[1px] bg-neutral-800 relative overflow-hidden">
-            <motion.div 
-                className="absolute top-0 left-0 h-full bg-white"
-                style={{ width: useTransform(count, (value) => `${value}%`) }}
-            />
+          <motion.div
+            className="absolute top-0 left-0 h-full bg-white"
+            style={{ width: useTransform(count, (value) => `${value}%`) }}
+          />
         </div>
       </div>
     </motion.div>
@@ -174,9 +175,9 @@ const LiveTicket = ({ ticket, onCancel }) => {
     }, 60000);
     return () => clearInterval(timer);
   }, []);
-  
+
   if (!ticket) return null;
-  
+
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-md z-50">
       <div className="bg-zinc-900 text-white rounded-3xl p-5 shadow-2xl border border-white/10 relative overflow-hidden">
@@ -204,7 +205,7 @@ const LiveTicket = ({ ticket, onCancel }) => {
           </div>
         </div>
         <div className="flex items-center justify-between text-xs text-zinc-500 bg-black/20 p-2 rounded-lg">
-          <span className="flex items-center gap-1"><Sparkles size={12} className="text-yellow-400"/> AI calculating speed</span>
+          <span className="flex items-center gap-1"><Sparkles size={12} className="text-yellow-400" /> AI calculating speed</span>
           <span>Updated live</span>
         </div>
       </div>
@@ -217,7 +218,7 @@ const LiveTicket = ({ ticket, onCancel }) => {
 ---------------------------------- */
 
 const ProtectedRoute = ({ user, authLoading, children }) => {
-  if (authLoading) return null; 
+  if (authLoading) return null;
   if (!user) {
     return <Navigate to="/user/login" replace />;
   }
@@ -225,7 +226,7 @@ const ProtectedRoute = ({ user, authLoading, children }) => {
 };
 
 const PublicRoute = ({ user, salon, authLoading, children }) => {
-  if (authLoading) return null; 
+  if (authLoading) return null;
   if (user) return <Navigate to="/dashboard/user" replace />;
   if (salon) return <Navigate to="/dashboard/salon" replace />;
   return children;
@@ -254,7 +255,7 @@ const AdminPublicRoute = ({ children }) => {
 const AppContent = () => {
   const navigate = useNavigate();
   const location = useLocation();
-      
+
   const [salons, setSalons] = useState([]);
   const [toast, setToast] = useState(null);
   const [activeTicket, setActiveTicket] = useState(null);
@@ -262,10 +263,10 @@ const AppContent = () => {
   // AUTH STATES
   const [currentUser, setCurrentUser] = useState(null);
   const [currentSalon, setCurrentSalon] = useState(null);
-  
+
   // Important: We start with authLoading TRUE
-  const [authLoading, setAuthLoading] = useState(true); 
-  
+  const [authLoading, setAuthLoading] = useState(true);
+
   // PRELOADER STATE
   const [showPreloader, setShowPreloader] = useState(true);
 
@@ -286,25 +287,25 @@ const AppContent = () => {
           setCurrentUser(userRes.value.data.user);
           // Fetch ticket immediately if user exists
           try {
-             const { data } = await api.get("/queue/my-ticket");
-             if(data.success && data.ticket) {
-                 setActiveTicket({
-                     salonName: data.ticket.salonId.salonName,
-                     number: data.ticket.queueNumber,
-                     eta: data.ticket.totalTime,
-                     status: data.ticket.status
-                 });
-             }
-          } catch(e) { console.log("No ticket"); }
+            const { data } = await api.get("/queue/my-ticket");
+            if (data.success && data.ticket) {
+              setActiveTicket({
+                salonName: data.ticket.salonId.salonName,
+                number: data.ticket.queueNumber,
+                eta: data.ticket.totalTime,
+                status: data.ticket.status
+              });
+            }
+          } catch (e) { console.log("No ticket"); }
         }
 
         if (salonRes.status === "fulfilled" && salonRes.value.data.success) {
           setCurrentSalon(salonRes.value.data.salon);
         }
-        
+
         // Load Salons quietly
         const salonListRes = await api.get("/salon/all");
-        if(salonListRes.data.success) {
+        if (salonListRes.data.success) {
           setSalons(salonListRes.data.salons);
         }
 
@@ -326,27 +327,27 @@ const AppContent = () => {
 
   const handleRegisterSalon = async (formData) => {
     try {
-        const { data } = await api.post("/salon/register", formData);
-        if(data.success) {
-            setCurrentSalon(data.salon);
-            showToast("Registration successful! Welcome Partner.");
-            navigate("/dashboard/salon");
-        }
+      const { data } = await api.post("/salon/register", formData);
+      if (data.success) {
+        setCurrentSalon(data.salon);
+        showToast("Registration successful! Welcome Partner.");
+        navigate("/dashboard/salon");
+      }
     } catch (error) {
-        showToast(error.response?.data?.message || "Registration Failed", "error");
+      showToast(error.response?.data?.message || "Registration Failed", "error");
     }
   };
 
   const handleSalonLogin = async (credentials) => {
     try {
-        const { data } = await api.post("/salon/login", credentials);
-        if(data.success) {
-            setCurrentSalon(data.salon);
-            showToast("Salon Login Successful!");
-            navigate("/dashboard/salon");
-        }
+      const { data } = await api.post("/salon/login", credentials);
+      if (data.success) {
+        setCurrentSalon(data.salon);
+        showToast("Salon Login Successful!");
+        navigate("/dashboard/salon");
+      }
     } catch (error) {
-        showToast(error.response?.data?.message || "Login Failed", "error");
+      showToast(error.response?.data?.message || "Login Failed", "error");
     }
   };
 
@@ -354,7 +355,7 @@ const AppContent = () => {
     try {
       await api.post("/auth/logout");
       await api.post("/salon/logout");
-      
+
       setCurrentUser(null);
       setCurrentSalon(null);
       setActiveTicket(null);
@@ -378,7 +379,7 @@ const AppContent = () => {
   };
 
   const handleJoinQueue = (ticketData) => {
-    if(activeTicket) {
+    if (activeTicket) {
       showToast("You are already in a queue!", "error");
       return;
     }
@@ -405,141 +406,141 @@ const AppContent = () => {
       */}
       <AnimatePresence mode="wait">
         {showPreloader && (
-          <PremiumPreloader 
-            dataLoaded={!authLoading} 
-            onLoadingComplete={() => setShowPreloader(false)} 
+          <PremiumPreloader
+            dataLoaded={!authLoading}
+            onLoadingComplete={() => setShowPreloader(false)}
           />
         )}
       </AnimatePresence>
 
       <div className={showPreloader ? "h-screen overflow-hidden" : "min-h-screen bg-neutral-50"}>
-        
+
         {!showPreloader && toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
-        
+
         {activeTicket && !isDashboard && !showPreloader && (
-            <LiveTicket 
-                ticket={activeTicket} 
-                onCancel={() => {
-                    setActiveTicket(null);
-                }} 
-            />
+          <LiveTicket
+            ticket={activeTicket}
+            onCancel={() => {
+              setActiveTicket(null);
+            }}
+          />
         )}
 
         {/* Content Rendered but Hidden underneath Preloader until ready */}
         <Routes>
-            <Route path="/" element={
-              <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
-                <LandingPage
-                  onNavigateUser={() => navigate("/register/user")}
-                  onNavigateSalon={() => navigate("/register/salon")}
-                  onNavigateAdmin={() => navigate("/admin/login")}
-                  onNavigateLogin={() => navigate("/user/login")} 
-                />
-              </PublicRoute>
-            } />
+          <Route path="/" element={
+            <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
+              <LandingPage
+                onNavigateUser={() => navigate("/register/user")}
+                onNavigateSalon={() => navigate("/register/salon")}
+                onNavigateAdmin={() => navigate("/admin/login")}
+                onNavigateLogin={() => navigate("/user/login")}
+              />
+            </PublicRoute>
+          } />
 
-            <Route path="/user/login" element={
-              <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
-                <UserLogin 
-                   onBack={() => navigate("/")}
-                   onLogin={handleUserLoginSuccess} 
-                   onNavigateSalonLogin={() => navigate("/salon/login")}
-                />
-              </PublicRoute>
-            } />
+          <Route path="/user/login" element={
+            <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
+              <UserLogin
+                onBack={() => navigate("/")}
+                onLogin={handleUserLoginSuccess}
+                onNavigateSalonLogin={() => navigate("/salon/login")}
+              />
+            </PublicRoute>
+          } />
 
-            <Route path="/register/user" element={
-              <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
-                <UserRegistration
-                  onBack={() => navigate("/")}
-                  onRegisterUser={handleUserLoginSuccess} 
-                  onNavigateLogin={() => navigate("/user/login")}
-                />
-              </PublicRoute>
-            } />
+          <Route path="/register/user" element={
+            <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
+              <UserRegistration
+                onBack={() => navigate("/")}
+                onRegisterUser={handleUserLoginSuccess}
+                onNavigateLogin={() => navigate("/user/login")}
+              />
+            </PublicRoute>
+          } />
 
-            <Route path="/register/salon" element={
-              <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
-                <SalonRegistration
-                  onBack={() => navigate("/")}
-                  onRegister={handleRegisterSalon}
-                  onNavigateLogin={() => navigate("/salon/login")} 
-                />
-              </PublicRoute>
-            } />
+          <Route path="/register/salon" element={
+            <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
+              <SalonRegistration
+                onBack={() => navigate("/")}
+                onRegister={handleRegisterSalon}
+                onNavigateLogin={() => navigate("/salon/login")}
+              />
+            </PublicRoute>
+          } />
 
-            <Route path="/salon/login" element={
-               <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
-                <SalonLogin
-                  onBack={() => navigate("/")}
-                  onLogin={handleSalonLogin}
-                  onNavigateRegister={() => navigate("/register/salon")}
-                />
-               </PublicRoute>
-            } />
-            <Route path="/legal/privacy" element={<LegalLayout type="privacy" />} />
-<Route path="/legal/terms" element={<LegalLayout type="terms" />} />
-<Route path="/legal/refund" element={<LegalLayout type="refund" />} />
+          <Route path="/salon/login" element={
+            <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
+              <SalonLogin
+                onBack={() => navigate("/")}
+                onLogin={handleSalonLogin}
+                onNavigateRegister={() => navigate("/register/salon")}
+              />
+            </PublicRoute>
+          } />
+          <Route path="/legal/privacy" element={<LegalLayout type="privacy" />} />
+          <Route path="/legal/terms" element={<LegalLayout type="terms" />} />
+          <Route path="/legal/refund" element={<LegalLayout type="refund" />} />
 
-            <Route path="/dashboard/user" element={
-              <ProtectedRoute user={currentUser} authLoading={authLoading}>
-                  <UserDashboard
-                    user={currentUser}
-                    onLogout={handleLogout}
-                    salons={salons} 
-                    onJoinQueue={handleJoinQueue}
-                    onProfileClick={() => navigate("/dashboard/user/profile")}
-                    onReferralClick={() => navigate("/dashboard/user/referrals")} 
-                  />
-              </ProtectedRoute>
-            } />
+          <Route path="/dashboard/user" element={
+            <ProtectedRoute user={currentUser} authLoading={authLoading}>
+              <UserDashboard
+                user={currentUser}
+                onLogout={handleLogout}
+                salons={salons}
+                onJoinQueue={handleJoinQueue}
+                onProfileClick={() => navigate("/dashboard/user/profile")}
+                onReferralClick={() => navigate("/dashboard/user/referrals")}
+              />
+            </ProtectedRoute>
+          } />
 
-            <Route path="/dashboard/user/profile" element={
-              <ProtectedRoute user={currentUser} authLoading={authLoading}>
-                <UserProfile 
-                  user={currentUser} 
-                  onBack={() => navigate("/dashboard/user")} 
-                  onLogout={handleLogout}
-                />
-              </ProtectedRoute>
-            } />
+          <Route path="/dashboard/user/profile" element={
+            <ProtectedRoute user={currentUser} authLoading={authLoading}>
+              <UserProfile
+                user={currentUser}
+                onBack={() => navigate("/dashboard/user")}
+                onLogout={handleLogout}
+              />
+            </ProtectedRoute>
+          } />
 
-            <Route path="/dashboard/user/referrals" element={
-              <ProtectedRoute user={currentUser} authLoading={authLoading}>
-                <ReferralPage 
-                  user={currentUser} 
-                  onBack={() => navigate("/dashboard/user")} 
-                />
-              </ProtectedRoute>
-            } />
+          <Route path="/dashboard/user/referrals" element={
+            <ProtectedRoute user={currentUser} authLoading={authLoading}>
+              <ReferralPage
+                user={currentUser}
+                onBack={() => navigate("/dashboard/user")}
+              />
+            </ProtectedRoute>
+          } />
 
-            <Route path="/dashboard/salon" element={
-              authLoading ? null : (currentSalon ? (
-                <SalonDashboard
-                  salon={currentSalon} 
-                  onLogout={handleLogout}
-                />
-              ) : (
-                <Navigate to="/salon/login" replace />
-              ))
-            } />
+          <Route path="/dashboard/salon" element={
+            authLoading ? null : (currentSalon ? (
+              <SalonDashboard
+                salon={currentSalon}
+                onLogout={handleLogout}
+              />
+            ) : (
+              <Navigate to="/salon/login" replace />
+            ))
+          } />
 
-            <Route path="/admin/login" element={
-              <AdminPublicRoute>
-                <AdminLogin 
-                  onBack={() => navigate("/")}
-                  onLogin={handleAdminLogin}
-                />
-              </AdminPublicRoute>
-            } />
+          <Route path="/admin/login" element={
+            <AdminPublicRoute>
+              <AdminLogin
+                onBack={() => navigate("/")}
+                onLogin={handleAdminLogin}
+              />
+            </AdminPublicRoute>
+          } />
 
-            <Route path="/admin/dashboard" element={
-              <ProtectedAdminRoute>
-                <AdminDashboard 
-                  onLogout={handleAdminLogout}
-                />
-              </ProtectedAdminRoute>
-            } />
+          <Route path="/admin/dashboard" element={
+            <ProtectedAdminRoute>
+              <AdminDashboard
+                onLogout={handleAdminLogout}
+              />
+            </ProtectedAdminRoute>
+          } />
         </Routes>
       </div>
     </>
@@ -549,6 +550,7 @@ const AppContent = () => {
 export default function App() {
   return (
     <BrowserRouter>
+      <Toaster position="top-center" reverseOrder={false} />
       <AppContent />
     </BrowserRouter>
   );
