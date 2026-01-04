@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Store, User, Phone, MapPin, ArrowRight, ChevronLeft,
   Mail, Lock, Hash, Crosshair, Tag, Loader2, ArrowLeft
@@ -46,6 +46,59 @@ const InputGroup = ({ icon: Icon, type, label, name, value, onChange, required =
     <Icon className="absolute right-2 top-3 text-zinc-300 group-focus-within:text-black dark:group-focus-within:text-white transition-colors" size={18} />
   </motion.div>
 );
+
+const CustomDropdown = ({ icon: Icon, label, name, value, options, onChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleSelect = (option) => {
+    onChange({ target: { name, value: option } });
+    setIsOpen(false);
+  };
+
+  return (
+    <div className="relative w-full mb-8 group">
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className="relative w-full bg-transparent border-b-2 border-zinc-200 dark:border-zinc-800 py-3 cursor-pointer flex justify-between items-center"
+      >
+        <span className={`font-bold text-zinc-900 dark:text-white`}>
+          {value}
+        </span>
+        <Icon
+          size={18}
+          className={`text-zinc-300 transition-transform duration-300 group-hover:text-black dark:group-hover:text-white ${isOpen ? 'rotate-180' : ''}`}
+        />
+
+        {/* Floating Label Style (Always Active for Dropdown) */}
+        <span className="absolute left-0 -top-4 text-zinc-500 text-[10px] font-bold uppercase tracking-widest pointer-events-none">
+          {label}
+        </span>
+      </div>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="absolute left-0 top-full w-full z-50 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl shadow-xl mt-2 overflow-hidden p-2"
+          >
+            {options.map((opt) => (
+              <div
+                key={opt}
+                onClick={() => handleSelect(opt)}
+                className={`px-4 py-3 rounded-xl text-sm font-bold cursor-pointer transition-colors ${value === opt ? 'bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white' : 'text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+              >
+                {opt}
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 const ShimmerButton = ({ children, isLoading, className = "", onClick }) => (
   <motion.button
@@ -213,21 +266,14 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
         <div className="grid grid-cols-2 gap-8">
           <InputGroup icon={Hash} name="zipCode" value={formData.zipCode} onChange={handleChange} type="text" label="Zip Code" />
 
-          {/* CUSTOM SELECT DROPDOWN STYLE */}
-          <motion.div variants={fadeInUp} className="relative mb-10 group border-b-2 border-zinc-200 dark:border-zinc-800 focus-within:border-black dark:focus-within:border-white transition-all duration-300">
-            <span className="absolute left-0 -top-4 text-zinc-400 text-[10px] font-bold uppercase tracking-widest">Salon Type</span>
-            <select
-              name="type"
-              value={formData.type}
-              onChange={handleChange}
-              className="w-full bg-transparent py-3 outline-none appearance-none text-zinc-900 dark:text-white font-bold cursor-pointer relative z-10"
-            >
-              <option value="Unisex">Unisex</option>
-              <option value="Men Only">Men Only</option>
-              <option value="Women Only">Women Only</option>
-            </select>
-            <Crosshair className="absolute right-2 top-3 text-zinc-300 group-focus-within:text-black dark:group-focus-within:text-white pointer-events-none" size={18} />
-          </motion.div>
+          <CustomDropdown
+            icon={Crosshair}
+            name="type"
+            label="Salon Type"
+            value={formData.type}
+            options={["Unisex", "Men Only", "Women Only"]}
+            onChange={handleChange}
+          />
         </div>
 
         {/* REFERRAL CODE SECTION */}
