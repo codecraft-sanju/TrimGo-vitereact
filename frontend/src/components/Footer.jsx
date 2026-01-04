@@ -1,6 +1,7 @@
 import React from "react";
 import { Heart, Globe, Mail, Instagram, Twitter, Linkedin } from "lucide-react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom"; // Added for navigation
 
 const RevealText = ({ text, className }) => {
   const words = text.split(" ");
@@ -81,6 +82,7 @@ const SocialIcon = ({ icon: Icon, href }) => (
 );
 
 const Footer = ({ onNavigateAdmin }) => {
+  const navigate = useNavigate(); // Hook initialized
   // Current year automatically fetch karega
   const currentYear = new Date().getFullYear();
 
@@ -162,11 +164,25 @@ const Footer = ({ onNavigateAdmin }) => {
             <li className="hover:text-zinc-900 transition-colors cursor-pointer">
               Partner with us
             </li>
-            <li className="hover:text-zinc-900 transition-colors cursor-pointer">
+            
+            {/* UPDATED LINKS BELOW */}
+            <li 
+              onClick={() => navigate("/legal/privacy")} 
+              className="hover:text-zinc-900 transition-colors cursor-pointer"
+            >
               Privacy Policy
             </li>
-            <li className="hover:text-zinc-900 transition-colors cursor-pointer">
+            <li 
+              onClick={() => navigate("/legal/terms")} 
+              className="hover:text-zinc-900 transition-colors cursor-pointer"
+            >
               Terms of Service
+            </li>
+            <li 
+              onClick={() => navigate("/legal/refund")} 
+              className="hover:text-zinc-900 transition-colors cursor-pointer"
+            >
+              Refund Policy
             </li>
           </ul>
         </motion.div>

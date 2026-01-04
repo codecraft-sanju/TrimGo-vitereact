@@ -5,6 +5,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "
 
 // --- API & COMPONENTS IMPORTS ---
 import api from "./utils/api";
+import LegalLayout from "./components/LegalPages";
 import { SalonRegistration, SalonLogin } from "./components/SalonRegistration";
 import UserRegistration from "./components/UserRegistration";
 import UserLogin from "./components/UserLogin"; 
@@ -476,6 +477,9 @@ const AppContent = () => {
                 />
                </PublicRoute>
             } />
+            <Route path="/legal/privacy" element={<LegalLayout type="privacy" />} />
+<Route path="/legal/terms" element={<LegalLayout type="terms" />} />
+<Route path="/legal/refund" element={<LegalLayout type="refund" />} />
 
             <Route path="/dashboard/user" element={
               <ProtectedRoute user={currentUser} authLoading={authLoading}>
