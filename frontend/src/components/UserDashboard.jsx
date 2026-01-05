@@ -31,7 +31,40 @@ import { BackgroundAurora, NoiseOverlay, Logo } from "./SharedUI";
 import AIConcierge from "./AIConcierge"; 
 
 /* ---------------------------------
-   HELPER: SALON GALLERY MODAL (NEW)
+   🔥 NEW COMPONENT: PREMIUM IMAGE LOADER
+   (Yeh component image load hone tak dark loader dikhayega)
+---------------------------------- */
+const PremiumImageLoader = ({ src, alt, className }) => {
+    const [isLoaded, setIsLoaded] = useState(false);
+  
+    return (
+      <div className={`relative w-full h-full overflow-hidden bg-zinc-100 ${className}`}>
+        {/* 1. Loading State (Dark Aesthetic Skeleton) */}
+        {!isLoaded && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-zinc-50 animate-pulse">
+            {/* Inner Dark Card Pulse */}
+            <div className="w-full h-full bg-zinc-200/50 flex items-center justify-center">
+                <Loader2 className="text-zinc-400 animate-spin" size={24} />
+            </div>
+          </div>
+        )}
+  
+        {/* 2. Actual Image with Fade-in Effect */}
+        <img 
+          src={src} 
+          alt={alt} 
+          onLoad={() => setIsLoaded(true)}
+          className={`
+            w-full h-full object-cover transition-all duration-700 ease-out
+            ${isLoaded ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-110 blur-sm'}
+          `}
+        />
+      </div>
+    );
+};
+
+/* ---------------------------------
+   HELPER: SALON GALLERY MODAL
 ---------------------------------- */
 const SalonGalleryModal = ({ isOpen, onClose, images, salonName }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -49,40 +82,40 @@ const SalonGalleryModal = ({ isOpen, onClose, images, salonName }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-200" onClick={onClose}>
-            <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white z-50 p-2">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-xl animate-in fade-in duration-300" onClick={onClose}>
+            <button onClick={onClose} className="absolute top-6 right-6 text-white/50 hover:text-white z-50 p-2 transition-colors">
                 <X size={32} />
             </button>
             
-            <div className="relative w-full max-w-4xl h-[80vh] flex flex-col items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            <div className="relative w-full max-w-5xl h-[85vh] flex flex-col items-center justify-center" onClick={(e) => e.stopPropagation()}>
                 {/* Main Image */}
-                <div className="relative w-full h-full flex items-center justify-center px-4">
+                <div className="relative w-full h-full flex items-center justify-center px-4 md:px-10">
                     <img 
                         src={images[currentIndex]} 
                         alt={`View ${currentIndex + 1}`} 
-                        className="max-h-full max-w-full object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-300"
+                        className="max-h-full max-w-full object-contain rounded-sm shadow-2xl animate-in zoom-in-95 duration-500"
                     />
                     
-                    {/* Navigation Arrows (Only if > 1 image) */}
+                    {/* Navigation Arrows */}
                     {images.length > 1 && (
                         <>
-                            <button onClick={prevImage} className="absolute left-4 p-3 rounded-full bg-black/50 text-white hover:bg-white/20 transition backdrop-blur-sm">
-                                <ChevronLeft size={24} />
+                            <button onClick={prevImage} className="absolute left-4 md:left-0 p-4 rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-all">
+                                <ChevronLeft size={40} />
                             </button>
-                            <button onClick={nextImage} className="absolute right-4 p-3 rounded-full bg-black/50 text-white hover:bg-white/20 transition backdrop-blur-sm">
-                                <ChevronRight size={24} />
+                            <button onClick={nextImage} className="absolute right-4 md:right-0 p-4 rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-all">
+                                <ChevronRight size={40} />
                             </button>
                         </>
                     )}
                 </div>
 
                 {/* Caption / Counter */}
-                <div className="absolute bottom-4 left-0 w-full text-center pointer-events-none">
-                    <div className="inline-block bg-black/60 backdrop-blur-md px-4 py-2 rounded-2xl">
-                        <h3 className="text-white font-bold text-lg mb-1">{salonName}</h3>
-                        <div className="flex gap-2 items-center justify-center mt-1">
+                <div className="absolute bottom-6 left-0 w-full text-center pointer-events-none">
+                    <div className="inline-block bg-zinc-900/80 backdrop-blur-md px-6 py-3 rounded-full border border-white/10">
+                        <h3 className="text-white font-medium text-sm tracking-wide">{salonName}</h3>
+                        <div className="flex gap-1.5 items-center justify-center mt-2">
                             {images.map((_, idx) => (
-                                <div key={idx} className={`h-1.5 rounded-full transition-all ${idx === currentIndex ? 'w-4 bg-white' : 'w-1.5 bg-white/30'}`} />
+                                <div key={idx} className={`h-1 rounded-full transition-all duration-300 ${idx === currentIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/20'}`} />
                             ))}
                         </div>
                     </div>
@@ -707,13 +740,12 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
             {sortedSalons.map((salon) => (
                 <div key={salon._id} className="group relative rounded-2xl bg-white border border-zinc-200 shadow-sm overflow-hidden flex flex-col hover:shadow-lg transition-shadow duration-300">
                 
-                {/* 🔥 MODERN COVER IMAGE SECTION 🔥 */}
+                {/* 🔥 MODERN COVER IMAGE SECTION WITH NEW LOADER 🔥 */}
                 <div className="relative h-48 w-full bg-zinc-100 overflow-hidden">
                     {salon.gallery && salon.gallery.length > 0 ? (
-                        <img 
+                        <PremiumImageLoader 
                             src={salon.gallery[0]} 
-                            alt={salon.salonName} 
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            alt={salon.salonName}
                         />
                     ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center text-zinc-300 bg-zinc-50">
@@ -722,18 +754,18 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                     )}
                     
                     {/* Status Badge */}
-                    <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
-                         {salon.isOnline ? 
+                    <div className="absolute top-3 right-3 flex flex-col items-end gap-1 z-20">
+                          {salon.isOnline ? 
                             <span className="px-2 py-1 rounded-md bg-emerald-500 text-[10px] font-bold text-white shadow-sm">OPEN</span> : 
                             <span className="px-2 py-1 rounded-md bg-red-500 text-[10px] font-bold text-white shadow-sm">CLOSED</span>
-                         }
+                          }
                     </div>
 
                     {/* Gallery Trigger Button (if more than 1 image) */}
                     {salon.gallery && salon.gallery.length > 1 && (
                         <button 
                             onClick={(e) => { e.stopPropagation(); handleOpenGallery(salon); }}
-                            className="absolute bottom-3 right-3 px-2.5 py-1.5 bg-black/50 backdrop-blur-md text-white text-[10px] font-bold rounded-lg flex items-center gap-1.5 hover:bg-black/70 transition"
+                            className="absolute bottom-3 right-3 px-2.5 py-1.5 bg-black/50 backdrop-blur-md text-white text-[10px] font-bold rounded-lg flex items-center gap-1.5 hover:bg-black/70 transition z-20"
                         >
                             <ImageIcon size={12} />
                             <span>+{salon.gallery.length - 1} photos</span>
