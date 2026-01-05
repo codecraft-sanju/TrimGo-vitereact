@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import { Clock, Users, MapPin, Navigation, Scissors, Sparkles } from "lucide-react"; 
+import { Clock, Users, MapPin, Navigation, Scissors } from "lucide-react"; 
 import "leaflet/dist/leaflet.css";
 import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 import L from "leaflet";
@@ -66,36 +66,25 @@ const RoutingMachine = ({ userLocation, destination, setLoading }) => {
         distMoved = getDistanceFromLatLonInMeters(prev.userLat, prev.userLng, userLocation.lat, userLocation.lng);
     }
 
-    // Optimization: Agar same destination hai aur user 80m se kam hila hai, toh reload mat karo
     if (!destChanged && distMoved < 80 && routingControlRef.current) return; 
 
-    // 🔥 START LOADING (Trigger Loader)
+    // 🔥 START LOADING
     if (setLoading) setLoading(true);
 
-    lastRoutedRef.current = {
-        userLat: userLocation.lat,
-        userLng: userLocation.lng,
-        destLat: destination.lat,
-        destLng: destination.lng
-    };
+    lastRoutedRef.current = { userLat: userLocation.lat, userLng: userLocation.lng, destLat: destination.lat, destLng: destination.lng };
 
-    // Cleanup old route
     if (routingControlRef.current) {
       try { map.removeControl(routingControlRef.current); } catch (error) { console.warn("Cleanup error:", error); }
       routingControlRef.current = null;
     }
 
-    // Create new route
     const routingControl = L.Routing.control({
       waypoints: [
         L.latLng(userLocation.lat, userLocation.lng),
         L.latLng(destination.lat, destination.lng)
       ],
       lineOptions: { styles: [{ color: "#2563eb", weight: 6, opacity: 0.8 }] },
-      router: L.Routing.osrmv1({
-        serviceUrl: 'https://router.project-osrm.org/route/v1',
-        profile: 'driving', 
-      }),
+      router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1', profile: 'driving' }),
       createMarker: () => null, 
       addWaypoints: false,      
       draggableWaypoints: false,
@@ -104,17 +93,8 @@ const RoutingMachine = ({ userLocation, destination, setLoading }) => {
       containerClassName: 'routing-container-hidden', 
     });
 
-    // 🔥 STOP LOADING (Jab Route Mil Jaye)
-    routingControl.on('routesfound', function(e) {
-      console.log("Route found!");
-      if (setLoading) setLoading(false);
-    });
-
-    // 🔥 STOP LOADING (Agar Error Aaye)
-    routingControl.on('routingerror', function(e) {
-      console.error('Routing failed:', e);
-      if (setLoading) setLoading(false);
-    });
+    routingControl.on('routesfound', function(e) { if (setLoading) setLoading(false); });
+    routingControl.on('routingerror', function(e) { console.error('Routing failed:', e); if (setLoading) setLoading(false); });
 
     routingControl.addTo(map);
     routingControlRef.current = routingControl;
@@ -123,11 +103,7 @@ const RoutingMachine = ({ userLocation, destination, setLoading }) => {
     if (!document.getElementById(styleId)) {
         const style = document.createElement('style');
         style.id = styleId;
-        style.innerHTML = `
-            .leaflet-routing-container, .leaflet-routing-alternatives-container { 
-                display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important;
-            }
-        `;
+        style.innerHTML = `.leaflet-routing-container, .leaflet-routing-alternatives-container { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }`;
         document.head.appendChild(style);
     }
     return () => {};
@@ -150,26 +126,15 @@ const MapAutoCenter = ({ center, isRouting }) => {
   return null;
 };
 
-// --- 🔥 PREMIUM MAP LOADER (User Location Search) ---
+// --- 🔥 PREMIUM MAP LOADER ---
 const MapPremiumLoader = () => {
   const [progress, setProgress] = useState(0);
   const [messageIndex, setMessageIndex] = useState(0);
-  
-  const messages = [
-    "Locating you...",
-    "Scanning nearby salons...",
-    "Calculating distances...",
-    "Checking wait times...",
-    "Optimizing routes...",
-  ];
+  const messages = ["Locating you...", "Scanning nearby salons...", "Calculating distances...", "Checking wait times...", "Optimizing routes..."];
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setProgress((old) => (old >= 100 ? 100 : Math.min(old + Math.random() * 15, 100)));
-    }, 150);
-    const msgTimer = setInterval(() => {
-      setMessageIndex((prev) => (prev + 1) % messages.length);
-    }, 1000);
+    const timer = setInterval(() => { setProgress((old) => (old >= 100 ? 100 : Math.min(old + Math.random() * 15, 100))); }, 150);
+    const msgTimer = setInterval(() => { setMessageIndex((prev) => (prev + 1) % messages.length); }, 1000);
     return () => { clearInterval(timer); clearInterval(msgTimer); };
   }, []);
 
@@ -193,48 +158,36 @@ const MapPremiumLoader = () => {
           <p className="text-zinc-400 text-xs font-medium tracking-wide animate-pulse key={messageIndex}">{messages[messageIndex]}</p>
         </div>
         <div className="w-48 h-1 bg-zinc-800 rounded-full overflow-hidden relative">
-          <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-300 ease-out rounded-full" style={{ width: `${progress}%` }}>
-            <div className="absolute top-0 right-0 h-full w-10 bg-gradient-to-r from-transparent to-white/50 blur-[1px]"></div>
-          </div>
+          <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-300 ease-out rounded-full" style={{ width: `${progress}%` }}></div>
         </div>
       </div>
     </div>
   );
 };
 
-// --- 🔥 NEW: ROUTE CALCULATION LOADER (Specific for Routing) ---
-const RouteCalculationLoader = () => {
-  return (
+// --- ROUTE LOADER ---
+const RouteCalculationLoader = () => (
     <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm rounded-3xl animate-in fade-in duration-300">
       <div className="relative mb-4">
-        {/* Outer Rotating Ring */}
         <div className="w-16 h-16 rounded-full border-4 border-blue-500/30 border-t-blue-500 animate-spin"></div>
-        {/* Inner Icon */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Navigation size={24} className="text-white fill-white/20" />
-        </div>
+        <div className="absolute inset-0 flex items-center justify-center"><Navigation size={24} className="text-white fill-white/20" /></div>
       </div>
       <h3 className="text-white font-bold text-lg">Calculating Route</h3>
       <p className="text-zinc-300 text-xs mt-1 animate-pulse">Finding the fastest path...</p>
     </div>
-  );
-};
+);
 
-// --- MAIN MAP COMPONENT ---
+// --- MAIN COMPONENT ---
 const MapSalon = ({ salons, onSelect, userLocation, heading, routeDestination, onRouteClick }) => {
-  const defaultCenter = [26.2389, 73.0243];
-  
-  // 🔥 New State for Route Loader
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
 
   return (
-    <div className="w-full h-[450px] bg-zinc-900 rounded-3xl overflow-hidden relative border border-zinc-200 shadow-2xl z-0 group">
+    // 🔥 Added 'data-lenis-prevent' to stop page scroll interference when touching map
+    <div className="w-full h-[450px] bg-zinc-900 rounded-3xl overflow-hidden relative border border-zinc-200 shadow-2xl z-0 group" data-lenis-prevent>
       
-      {/* 1. Show Global Loader if NO user location */}
       {!userLocation ? (
         <MapPremiumLoader />
       ) : (
-        /* Actual Map Renders Here */
         <MapContainer
           center={[userLocation.lat, userLocation.lng]} 
           zoom={13}
@@ -242,77 +195,32 @@ const MapSalon = ({ salons, onSelect, userLocation, heading, routeDestination, o
           style={{ height: "100%", width: "100%" }}
           className="z-0 animate-in fade-in duration-700"
         >
-          <TileLayer
-            attribution='&copy; OpenStreetMap &copy; CARTO'
-            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-          />
+          <TileLayer attribution='&copy; CARTO' url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+          
+          <RoutingMachine userLocation={userLocation} destination={routeDestination} setLoading={setIsCalculatingRoute} />
 
-          {/* 🔥 Pass setLoading to Routing Machine */}
-          <RoutingMachine 
-             userLocation={userLocation} 
-             destination={routeDestination} 
-             setLoading={setIsCalculatingRoute} 
-          />
-
-          {/* User Marker */}
-          <Marker 
-            position={[userLocation.lat, userLocation.lng]} 
-            icon={getUserIcon(heading)} 
-            interactive={false}
-          >
+          <Marker position={[userLocation.lat, userLocation.lng]} icon={getUserIcon(heading)} interactive={false}>
             <Popup>Aap Yahan Hain</Popup>
           </Marker>
           <MapAutoCenter center={userLocation} isRouting={!!routeDestination} />
 
-          {/* Salon Markers */}
           {salons.map((salon) => (
             salon.latitude && salon.longitude && (
-              <Marker 
-                key={salon._id} 
-                position={[salon.latitude, salon.longitude]}
-              >
+              <Marker key={salon._id} position={[salon.latitude, salon.longitude]}>
                 <Popup className="custom-popup">
                   <div className="p-1 min-w-[180px]">
                     <div className="flex justify-between items-start mb-2">
                       <div>
                           <h3 className="font-bold text-sm text-zinc-900 line-clamp-1">{salon.salonName}</h3>
-                          <p className="text-[10px] text-zinc-500 flex items-center gap-1">
-                              <MapPin size={10} /> {salon.area || "City Center"}
-                          </p>
+                          <p className="text-[10px] text-zinc-500 flex items-center gap-1"><MapPin size={10} /> {salon.area || "City Center"}</p>
                       </div>
-                      <button 
-                          onClick={() => onRouteClick(salon)}
-                          className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center hover:bg-blue-200 transition-colors"
-                          title="Show Route"
-                      >
-                          <Navigation size={12} fill="currentColor" />
-                      </button>
+                      <button onClick={() => onRouteClick(salon)} className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center hover:bg-blue-200 transition-colors"><Navigation size={12} fill="currentColor" /></button>
                     </div>
-
                     <div className="grid grid-cols-2 gap-2 mb-3 bg-zinc-50 p-2 rounded-lg border border-zinc-100">
-                      <div className="flex flex-col items-center">
-                          <span className="text-[10px] text-zinc-400 font-bold uppercase">Waiting</span>
-                          <div className="flex items-center gap-1 font-bold text-zinc-900">
-                              <Users size={12} className="text-blue-500"/> {salon.waiting || 0}
-                          </div>
-                      </div>
-                      <div className="flex flex-col items-center border-l border-zinc-200">
-                          <span className="text-[10px] text-zinc-400 font-bold uppercase">ETA</span>
-                          <div className="flex items-center gap-1 font-bold text-zinc-900">
-                              <Clock size={12} className="text-emerald-500"/> {salon.estTime || 15}m
-                          </div>
-                      </div>
+                      <div className="flex flex-col items-center"><span className="text-[10px] text-zinc-400 font-bold uppercase">Waiting</span><div className="flex items-center gap-1 font-bold text-zinc-900"><Users size={12} className="text-blue-500"/> {salon.waiting || 0}</div></div>
+                      <div className="flex flex-col items-center border-l border-zinc-200"><span className="text-[10px] text-zinc-400 font-bold uppercase">ETA</span><div className="flex items-center gap-1 font-bold text-zinc-900"><Clock size={12} className="text-emerald-500"/> {salon.estTime || 15}m</div></div>
                     </div>
-
-                    <button
-                      onClick={() => onSelect(salon)}
-                      disabled={!salon.isOnline}
-                      className={`w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-colors ${
-                          salon.isOnline 
-                          ? 'bg-zinc-900 text-white hover:bg-black' 
-                          : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
-                      }`}
-                    >
+                    <button onClick={() => onSelect(salon)} disabled={!salon.isOnline} className={`w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-colors ${salon.isOnline ? 'bg-zinc-900 text-white hover:bg-black' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'}`}>
                       {salon.isOnline ? "Book Now" : "Closed"}
                     </button>
                   </div>
@@ -322,10 +230,7 @@ const MapSalon = ({ salons, onSelect, userLocation, heading, routeDestination, o
           ))}
         </MapContainer>
       )}
-
-      {/* 🔥 2. Show Route Calculation Loader on top of Map */}
       {isCalculatingRoute && <RouteCalculationLoader />}
-
     </div>
   );
 };
