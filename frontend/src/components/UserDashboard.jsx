@@ -15,7 +15,7 @@ import {
   Menu,
   Gift,
   BadgeCheck,
-  Loader2,
+  Loader2, // 🔥 Loader import kiya hua hai
   AlertCircle,
   Image as ImageIcon,
   ChevronLeft, 
@@ -31,25 +31,20 @@ import { BackgroundAurora, NoiseOverlay, Logo } from "./SharedUI";
 import AIConcierge from "./AIConcierge"; 
 
 /* ---------------------------------
-   🔥 NEW COMPONENT: PREMIUM IMAGE LOADER
-   (Yeh component image load hone tak dark loader dikhayega)
+   🔥 PREMIUM IMAGE LOADER
 ---------------------------------- */
 const PremiumImageLoader = ({ src, alt, className }) => {
     const [isLoaded, setIsLoaded] = useState(false);
   
     return (
       <div className={`relative w-full h-full overflow-hidden bg-zinc-100 ${className}`}>
-        {/* 1. Loading State (Dark Aesthetic Skeleton) */}
         {!isLoaded && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-zinc-50 animate-pulse">
-            {/* Inner Dark Card Pulse */}
             <div className="w-full h-full bg-zinc-200/50 flex items-center justify-center">
                 <Loader2 className="text-zinc-400 animate-spin" size={24} />
             </div>
           </div>
         )}
-  
-        {/* 2. Actual Image with Fade-in Effect */}
         <img 
           src={src} 
           alt={alt} 
@@ -88,15 +83,12 @@ const SalonGalleryModal = ({ isOpen, onClose, images, salonName }) => {
             </button>
             
             <div className="relative w-full max-w-5xl h-[85vh] flex flex-col items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                {/* Main Image */}
                 <div className="relative w-full h-full flex items-center justify-center px-4 md:px-10">
                     <img 
                         src={images[currentIndex]} 
                         alt={`View ${currentIndex + 1}`} 
                         className="max-h-full max-w-full object-contain rounded-sm shadow-2xl animate-in zoom-in-95 duration-500"
                     />
-                    
-                    {/* Navigation Arrows */}
                     {images.length > 1 && (
                         <>
                             <button onClick={prevImage} className="absolute left-4 md:left-0 p-4 rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-all">
@@ -108,8 +100,6 @@ const SalonGalleryModal = ({ isOpen, onClose, images, salonName }) => {
                         </>
                     )}
                 </div>
-
-                {/* Caption / Counter */}
                 <div className="absolute bottom-6 left-0 w-full text-center pointer-events-none">
                     <div className="inline-block bg-zinc-900/80 backdrop-blur-md px-6 py-3 rounded-full border border-white/10">
                         <h3 className="text-white font-medium text-sm tracking-wide">{salonName}</h3>
@@ -128,37 +118,28 @@ const SalonGalleryModal = ({ isOpen, onClose, images, salonName }) => {
 /* ---------------------------------
    HELPER: HAVERSINE DISTANCE FORMULA
 ---------------------------------- */
-const deg2rad = (deg) => {
-  return deg * (Math.PI / 180);
-};
+const deg2rad = (deg) => deg * (Math.PI / 180);
 
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
   if (!lat1 || !lon1 || !lat2 || !lon2) return null;
-
-  const R = 6371; // Radius of the earth in km
+  const R = 6371; 
   const dLat = deg2rad(lat2 - lat1);
   const dLon = deg2rad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  const d = R * c; // Distance in km
-  
-  if (d < 1) {
-    return `${Math.round(d * 1000)} m`; 
-  }
-  return `${d.toFixed(1)} km`; 
+  const d = R * c; 
+  return d < 1 ? `${Math.round(d * 1000)} m` : `${d.toFixed(1)} km`; 
 };
 
 /* ---------------------------------
-   HELPER COMPONENT: SERVICE MODAL 
+   🔥 UPDATED SERVICE MODAL WITH LOADER BUTTON
 ---------------------------------- */
-const ServiceSelectionModal = ({ salon, onClose, onConfirm }) => {
+const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => { // 🔥 Added isJoining prop
   const [selectedServices, setSelectedServices] = useState([]);
   const servicesList = salon.services || [];
 
   const toggleService = (serviceId) => {
+    if (isJoining) return; // Prevent toggling while loading
     setSelectedServices((prev) =>
       prev.includes(serviceId)
         ? prev.filter((id) => id !== serviceId)
@@ -181,7 +162,7 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm }) => {
   }, [selectedServices, servicesList]);
 
   const handleConfirm = () => {
-    if (selectedServices.length === 0) return;
+    if (selectedServices.length === 0 || isJoining) return;
     const finalServices = servicesList.filter((s) =>
       selectedServices.includes(s._id)
     );
@@ -190,17 +171,21 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={!isJoining ? onClose : undefined}></div>
       <div className="relative bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
+        
+        {/* Header */}
         <div className="px-6 py-4 bg-zinc-50 border-b border-zinc-100 flex justify-between items-start">
           <div>
             <h2 className="text-lg font-bold text-zinc-900">{salon.salonName}</h2>
             <p className="text-xs text-zinc-500">Select services to join queue</p>
           </div>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-zinc-200 transition">
+          <button onClick={onClose} disabled={isJoining} className="p-1 rounded-full hover:bg-zinc-200 transition disabled:opacity-50">
             <X size={20} className="text-zinc-500" />
           </button>
         </div>
+
+        {/* List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {servicesList.length === 0 ? (
              <div className="text-center text-zinc-400 py-10 text-sm">No services listed by this salon yet.</div>
@@ -213,7 +198,7 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm }) => {
                     onClick={() => toggleService(service._id)}
                     className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
                     isSelected ? "border-zinc-900 bg-zinc-50 ring-1 ring-zinc-900" : "border-zinc-200 hover:border-zinc-300 bg-white"
-                    }`}
+                    } ${isJoining ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                     <div className="flex items-start gap-3">
                     <div className={`mt-1 w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${isSelected ? "bg-zinc-900 border-zinc-900" : "border-zinc-300 bg-white"}`}>
@@ -230,6 +215,8 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm }) => {
             })
           )}
         </div>
+
+        {/* Footer with Loading Button */}
         <div className="p-4 bg-white border-t border-zinc-100">
           <div className="flex justify-between items-end mb-4 px-2">
             <div>
@@ -243,9 +230,28 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm }) => {
                 <span className="text-xs font-bold bg-zinc-100 px-2 py-1 rounded text-zinc-600">{selectedServices.length} items</span>
             </div>
           </div>
-          <button onClick={handleConfirm} disabled={selectedServices.length === 0} className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${selectedServices.length > 0 ? "bg-zinc-900 text-white shadow-lg shadow-zinc-900/20 hover:scale-[1.02]" : "bg-zinc-100 text-zinc-400 cursor-not-allowed"}`}>
-            <span>Confirm & Join Queue</span>
-            <Ticket size={16} />
+          
+          <button 
+            onClick={handleConfirm} 
+            disabled={selectedServices.length === 0 || isJoining} 
+            className={`
+                w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all 
+                ${selectedServices.length > 0 && !isJoining 
+                    ? "bg-zinc-900 text-white shadow-lg shadow-zinc-900/20 hover:scale-[1.02]" 
+                    : "bg-zinc-100 text-zinc-400 cursor-not-allowed"}
+            `}
+          >
+            {isJoining ? (
+                <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Securing Spot...</span>
+                </>
+            ) : (
+                <>
+                    <span>Confirm & Join Queue</span>
+                    <Ticket size={16} />
+                </>
+            )}
           </button>
         </div>
       </div>
@@ -265,10 +271,13 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
   
   const [salons, setSalons] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // 🔥 New State for Joining Process
+  const [isJoiningQueue, setIsJoiningQueue] = useState(false);
+
   const [activeBookingSalon, setActiveBookingSalon] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); 
   
-  // 🔥 Active Ticket & Gallery State
   const [activeTicket, setActiveTicket] = useState(null);
   const [canceling, setCanceling] = useState(false);
   const [galleryModal, setGalleryModal] = useState({ isOpen: false, images: [], name: "" });
@@ -299,7 +308,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
     };
   }, []);
 
-  // --- LOCATION TRACKING ---
+  // --- LOCATION TRACKING (Keeping existing logic) ---
   const startLocationTracking = () => {
     if (!navigator.geolocation) {
         alert("Geolocation is not supported by your browser.");
@@ -351,11 +360,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                 setSelectedCity("Location Offline");
             }
         },
-        { 
-          enableHighAccuracy: true, 
-          timeout: 20000, 
-          maximumAge: 5000 
-        } 
+        { enableHighAccuracy: true, timeout: 20000, maximumAge: 5000 } 
     );
   };
  
@@ -382,7 +387,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
   // --- SOCKETS & INITIAL DATA ---
   useEffect(() => {
     startLocationTracking();
-    fetchActiveTicket(); // Check if user already has a ticket
+    fetchActiveTicket(); 
 
     const socket = io(import.meta.env.VITE_BACKEND_URL);
     if(user?._id) socket.emit("join_room", `user_${user._id}`); 
@@ -408,7 +413,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         );
     });
 
-    // 🔥 Socket Listeners for Ticket Status
     socket.on("request_accepted", (ticket) => {
         setActiveTicket(ticket);
     });
@@ -517,9 +521,12 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
     setActiveBookingSalon(salon);
   };
 
-  const handleCloseBooking = () => setActiveBookingSalon(null);
+  const handleCloseBooking = () => {
+      if(!isJoiningQueue) setActiveBookingSalon(null); // Prevent closing while loading
+  };
 
   const handleConfirmBooking = async (salon, services, totals) => {
+    setIsJoiningQueue(true); // 🔥 Start Loading
     try {
         const payload = {
             salonId: salon._id, 
@@ -541,6 +548,8 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         }
     } catch (error) {
         alert(error.response?.data?.message || "Failed to join queue");
+    } finally {
+        setIsJoiningQueue(false); // 🔥 Stop Loading
     }
   };
 
@@ -562,7 +571,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
       }
   };
 
-  // 🔥 Open Gallery Modal Handler
   const handleOpenGallery = (salon) => {
       if(salon.gallery && salon.gallery.length > 0) {
           setGalleryModal({ isOpen: true, images: salon.gallery, name: salon.salonName });
@@ -580,6 +588,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
             salon={activeBookingSalon} 
             onClose={handleCloseBooking} 
             onConfirm={handleConfirmBooking} 
+            isJoining={isJoiningQueue} // 🔥 Pass Loading State
         />
       )}
 
@@ -781,7 +790,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                           <h2 className="text-lg font-bold text-zinc-900 line-clamp-1">{salon.salonName}</h2>
                           {salon.verified && <BadgeCheck size={18} className="text-blue-500 fill-white ml-0.5 shrink-0" />}
                         </div>
-                        {/* 🔥 ADDRESS ADDED HERE */}
                         <p className="text-[11px] text-zinc-500 line-clamp-1 mb-1.5 flex items-center gap-1">
                             <MapPin size={12} className="shrink-0" />
                             {salon.address || "Address not available"}
