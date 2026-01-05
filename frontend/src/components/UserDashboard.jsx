@@ -15,7 +15,7 @@ import {
   Menu,
   Gift,
   BadgeCheck,
-  Loader2, // 🔥 Loader import kiya hua hai
+  Loader2, 
   AlertCircle,
   Image as ImageIcon,
   ChevronLeft, 
@@ -30,9 +30,7 @@ import MapSalon from "./MapSalon";
 import { BackgroundAurora, NoiseOverlay, Logo } from "./SharedUI";
 import AIConcierge from "./AIConcierge"; 
 
-/* ---------------------------------
-   🔥 PREMIUM IMAGE LOADER
----------------------------------- */
+
 const PremiumImageLoader = ({ src, alt, className }) => {
     const [isLoaded, setIsLoaded] = useState(false);
   
