@@ -133,7 +133,7 @@ const KineticTransition = ({ type, onComplete }) => {
 };
 
 /* ---------------------------------
-   HELPER COMPONENTS (Untouched)
+   HELPER COMPONENTS
 ---------------------------------- */
 
 const ShimmerButton = ({
@@ -169,23 +169,85 @@ const ShimmerButton = ({
   );
 };
 
+/* --- UPDATED INTERACTIVE PHONE WITH LOADER --- */
 const InteractivePhone = () => {
+  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+
   return (
     <div className="relative mx-auto w-[320px] h-[640px] bg-zinc-900 rounded-[3rem] p-4 shadow-[0_0_50px_-12px_rgba(0,0,0,0.3)] border-[8px] border-zinc-950 ring-1 ring-white/20 select-none transform transition hover:scale-[1.02] duration-500">
+      
+      {/* Notch / Dynamic Island */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 h-7 w-32 bg-black rounded-b-2xl z-50 flex items-center justify-center gap-2">
         <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse"></div>
         <div className="w-10 h-1 rounded-full bg-zinc-800"></div>
       </div>
-      <div className="w-full h-full bg-zinc-950 rounded-[2.5rem] overflow-hidden relative flex flex-col">
-        <video
+
+      <div className="w-full h-full bg-zinc-950 rounded-[2.5rem] overflow-hidden relative flex flex-col isolate">
+        
+        {/* --- PREMIUM LOADER (Shows until video loads) --- */}
+        <AnimatePresence>
+          {!isVideoLoaded && (
+            <motion.div
+              initial={{ opacity: 1 }}
+              exit={{ opacity: 0, scale: 1.1, filter: "blur(10px)" }}
+              transition={{ duration: 0.8, ease: "easeInOut" }}
+              className="absolute inset-0 z-20 bg-zinc-950 flex flex-col items-center justify-center gap-4"
+            >
+              {/* Logo Container */}
+              <div className="relative">
+                <motion.div
+                  animate={{ 
+                    scale: [1, 1.05, 1],
+                    opacity: [0.8, 1, 0.8] 
+                  }}
+                  transition={{ 
+                    duration: 2, 
+                    repeat: Infinity, 
+                    ease: "easeInOut" 
+                  }}
+                  className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-zinc-800 to-zinc-900 border border-zinc-700 flex items-center justify-center shadow-2xl"
+                >
+                  <span className="text-3xl font-black text-white tracking-tighter">TG</span>
+                </motion.div>
+                
+                {/* Decoration Glow */}
+                <div className="absolute inset-0 bg-white/20 blur-xl rounded-full opacity-20 animate-pulse"></div>
+              </div>
+
+              {/* Loading Bar */}
+              <div className="w-24 h-1 bg-zinc-800 rounded-full overflow-hidden relative mt-2">
+                <motion.div 
+                  initial={{ x: "-100%" }}
+                  animate={{ x: "100%" }}
+                  transition={{ 
+                    repeat: Infinity, 
+                    duration: 1, 
+                    ease: "linear" 
+                  }}
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent w-1/2"
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* --- VIDEO LAYER --- */}
+        <motion.video
           src="/TrimGo.mp4"
           className="w-full h-full object-cover"
           autoPlay
           loop
           muted
           playsInline
+          // Video load hone par state update karega
+          onLoadedData={() => setIsVideoLoaded(true)}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: isVideoLoaded ? 1 : 0 }}
+          transition={{ duration: 0.5 }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
+        
+        {/* Overlay gradient over video */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none z-10"></div>
       </div>
     </div>
   );
