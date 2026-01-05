@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { X, Sparkles, Zap, DollarSign, Star, Clock, ChevronRight, User, Send, Instagram, ArrowUpRight, Mic, StopCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-// 🔥 PASTE YOUR GEMINI API KEY HERE 🔥
-const GEMINI_API_KEY = "AIzaSyBR9f_rQmsiAwhtu7802dzIPKNyR_ZrprM"; 
+// 🔥 PASTE YOUR API KEY HERE 🔥
+const GEMINI_API_KEY = "AIzaSyDrmoFCgwrRtZvjXEMPFTlvmv1dRl_sG1Q"; 
 
 const SUGGESTIONS = [
   { id: 1, label: "Shortest Queue", icon: <Zap size={14} />, text: "Which salon has the shortest wait time?", color: "text-amber-500" },
@@ -73,7 +73,7 @@ const AIConcierge = ({ salons = [], onSalonSelect }) => {
     if (!("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
     
-    // Clean text for speech (remove markdown)
+    // Clean text for speech (remove markdown like **bold**)
     const cleanText = text.replace(/[*#]/g, "").replace(/https?:\/\/[^\s]+/g, "link");
     
     const utterance = new SpeechSynthesisUtterance(cleanText);
@@ -81,7 +81,7 @@ const AIConcierge = ({ salons = [], onSalonSelect }) => {
     utterance.pitch = 1; 
 
     const voices = window.speechSynthesis.getVoices();
-    // Try to find a good voice
+    // Try to find a good voice (Google or Natural)
     const preferredVoice = voices.find(v => v.name.includes("Google US English") || v.name.includes("Samantha"));
     if (preferredVoice) utterance.voice = preferredVoice;
 
@@ -104,7 +104,8 @@ const AIConcierge = ({ salons = [], onSalonSelect }) => {
     }
 
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        // 🔥 FIXED: Switched to 'gemini-pro' to solve 404 error
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -129,6 +130,10 @@ const AIConcierge = ({ salons = [], onSalonSelect }) => {
                 }]
             })
         });
+
+        if (!response.ok) {
+            throw new Error(`API Error: ${response.status}`);
+        }
 
         const data = await response.json();
         return data?.candidates?.[0]?.content?.parts?.[0]?.text || "I'm not sure how to answer that, but I can help you find a salon!";
