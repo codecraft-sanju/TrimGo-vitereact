@@ -18,6 +18,9 @@ import { io } from "socket.io-client";
 const CLOUDINARY_UPLOAD_URL = "https://api.cloudinary.com/v1_1/dvoenforj/image/upload";
 const UPLOAD_PRESET = "salon_preset";
 
+// 🔥 NEW: Notification Sound URL (Distinct Bell Sound)
+const NOTIFICATION_SOUND_URL = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"; 
+
 const uploadToCloudinary = async (file) => {
   const formData = new FormData();
   formData.append("file", file);
@@ -396,6 +399,23 @@ const SalonDashboard = ({ salon, onLogout }) => {
   const [assignmentModal, setAssignmentModal] = useState({ isOpen: false, customer: null });
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
 
+  // 🔥 NEW: Play Sound Function
+  const playNotificationSound = () => {
+    try {
+      const audio = new Audio(NOTIFICATION_SOUND_URL);
+      audio.volume = 1.0; // Full volume
+      const playPromise = audio.play();
+
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+          console.warn("Audio play blocked by browser (user needs to interact first).", error);
+        });
+      }
+    } catch (err) {
+      console.error("Error playing sound:", err);
+    }
+  };
+
   // --- 1. INITIAL FETCH & SOCKET ---
   useEffect(() => {
     const socket = io(import.meta.env.VITE_BACKEND_URL);
@@ -405,6 +425,8 @@ const SalonDashboard = ({ salon, onLogout }) => {
 
     socket.on("new_request", (ticket) => {
       setRequests(prev => [...prev, ticket]);
+      // 🔥 NEW: Trigger sound when request arrives
+      playNotificationSound(); 
     });
 
     socket.on("queue_updated", () => {
@@ -925,7 +947,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
                 {/* 2. Right Column (Photos & Staff) */}
                 <div className="space-y-6">
 
-                  {/* 🔥 GALLERY MANAGER 🔥 */}
+                  {/* GALLERY MANAGER */}
                   <div className="bg-zinc-900/50 border border-white/5 rounded-3xl p-5 lg:p-6">
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="font-bold text-lg text-white flex items-center gap-2"><ImageIcon className="text-purple-400" size={20} /> Salon Photos</h3>
@@ -937,8 +959,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
                       {gallery.map((img, index) => (
                         <div key={index} className="relative aspect-video rounded-xl overflow-hidden group border border-white/10">
                           <img src={img} alt="Salon" className="w-full h-full object-cover" />
-
-                          {/* Overlay Actions */}
                           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                             <button
                               onClick={() => handleSetMainPhoto(index)}
@@ -988,11 +1008,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
                       ))}
                     </div>
                   </div>
-
-                  {/* Logout Area for Mobile */}
-                  {/* <button onClick={onLogout} className="lg:hidden w-full py-4 bg-red-500/10 text-red-400 font-bold rounded-2xl border border-red-500/20 flex items-center justify-center gap-2">
-                    <LogOut size={18} /> Sign Out
-                  </button> */}
                 </div>
               </div>
             )
