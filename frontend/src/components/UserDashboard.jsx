@@ -132,12 +132,12 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 /* ---------------------------------
    🔥 UPDATED SERVICE MODAL WITH LOADER BUTTON
 ---------------------------------- */
-const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => { // 🔥 Added isJoining prop
+const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => { 
   const [selectedServices, setSelectedServices] = useState([]);
   const servicesList = salon.services || [];
 
   const toggleService = (serviceId) => {
-    if (isJoining) return; // Prevent toggling while loading
+    if (isJoining) return; 
     setSelectedServices((prev) =>
       prev.includes(serviceId)
         ? prev.filter((id) => id !== serviceId)
@@ -438,6 +438,23 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
       }
     };
   }, [user]);
+
+  // 🔥🔥🔥 Play Store Testing Tracking Hook 🔥🔥🔥
+  // Yeh app khulte hi backend ko batayega ki user active hai
+  useEffect(() => {
+    const trackActivity = async () => {
+        if (!user) return; // Agar user login nahi hai toh mat bhejo
+        try {
+            await api.post("/auth/track-activity");
+            console.log("✅ User Activity Tracked");
+        } catch (error) {
+            // Silently fail (user ko error mat dikhana)
+            console.error("Tracking Error:", error);
+        }
+    };
+    trackActivity();
+  }, [user]);
+  // 🔥🔥🔥 End Tracking Hook 🔥🔥🔥
 
   const fetchSalons = async () => {
     try {

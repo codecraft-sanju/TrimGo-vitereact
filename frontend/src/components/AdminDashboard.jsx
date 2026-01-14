@@ -3,7 +3,7 @@ import {
   ShieldCheck, User, Lock, LayoutDashboard, Store, Users, CreditCard,
   LogOut, Globe2, Bell, DollarSign, Activity, Clock, Download, Zap,
   CheckCircle, AlertTriangle, Star, Ban, Settings, Search, Mail, Phone, 
-  Calendar, MapPin, Menu, X, Tag, Gift, Trash2, Loader2 // <--- Added Loader2
+  Calendar, MapPin, Menu, X, Tag, Gift, Trash2, Loader2 
 } from "lucide-react";
 import api from "../utils/api";
 import { io } from "socket.io-client"; 
@@ -546,7 +546,7 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
             </div>
           )}
 
-          {/* ---------------- USERS VIEW (UPDATED FOR REFERRALS & DELETE) ---------------- */}
+          {/* ---------------- USERS VIEW (UPDATED FOR REFERRALS & DELETE & TRACKING) ---------------- */}
           {activeTab === "users" && (
              <div className="animate-[slideUp_0.4s_ease-out]">
                 <div className="flex justify-between items-center mb-6">
@@ -574,14 +574,16 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                             <th className="px-6 py-4">User</th>
                             <th className="px-6 py-4">Referral Stats</th> 
                             <th className="px-6 py-4">Contact Info</th>
+                            {/* 🔥 NEW COLUMN HEADER 🔥 */}
+                            <th className="px-6 py-4">Last Active</th>
                             <th className="px-6 py-4">Joined Date</th>
-                            <th className="px-6 py-4 text-right">Actions</th> {/* Updated Header */}
+                            <th className="px-6 py-4 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-800/50">
                             {userList.length === 0 ? (
                                <tr>
-                                  <td colSpan="5" className="text-center py-10 text-zinc-600">No users found.</td>
+                                  <td colSpan="6" className="text-center py-10 text-zinc-600">No users found.</td>
                                </tr>
                             ) : (
                               userList.map((user) => {
@@ -631,6 +633,31 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                                         </div>
                                     </div>
                                   </td>
+
+                                  {/* 🔥 NEW: LAST ACTIVE CELL 🔥 */}
+                                  <td className="px-6 py-4">
+                                    <div className="flex flex-col">
+                                        <span className="text-xs font-bold text-white">
+                                            {user.lastActiveAt 
+                                                ? new Date(user.lastActiveAt).toLocaleDateString() 
+                                                : "Never"}
+                                        </span>
+                                        <span className="text-[10px] text-zinc-500">
+                                            {user.lastActiveAt 
+                                                ? new Date(user.lastActiveAt).toLocaleTimeString() 
+                                                : "-"}
+                                        </span>
+                                        
+                                        {/* Agar 24 ghante me active tha toh Green Dot dikhao */}
+                                        {user.lastActiveAt && (new Date() - new Date(user.lastActiveAt) < 86400000) && (
+                                             <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[9px] font-bold border border-emerald-500/20 w-fit">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                                Recently Active
+                                             </span>
+                                        )}
+                                    </div>
+                                  </td>
+
                                   <td className="px-6 py-4 text-xs font-mono text-zinc-500 whitespace-nowrap">
                                     <div className="flex items-center gap-2">
                                         <Calendar size={12}/>
@@ -638,7 +665,7 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                                     </div>
                                   </td>
                                   
-                                  {/* 🔥 DELETE ACTION COLUMN 🔥 */}
+                                  {/* DELETE ACTION COLUMN */}
                                   <td className="px-6 py-4 text-right">
                                     <div className="flex items-center justify-end gap-3">
                                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 text-[10px] font-bold border border-green-500/20">

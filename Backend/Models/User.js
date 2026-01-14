@@ -50,7 +50,14 @@ const userSchema = new mongoose.Schema(
         type: mongoose.Schema.Types.ObjectId,
         ref: "Salon"
       }
-    ]
+    ],
+
+    // --- NEW: Play Store Testing Tracker ---
+    // Is field me update hoga jab bhi user app open karega
+    lastActiveAt: {
+      type: Date,
+      default: Date.now,
+    }
   },
   {
     timestamps: true,
