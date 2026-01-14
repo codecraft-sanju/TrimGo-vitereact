@@ -6,14 +6,19 @@ import {
   Play, CheckSquare, X, Camera, Mail, Phone, MapPin, User,
   Armchair, UserCheck, Plus, Trash2, Menu, Save, Edit3, Power,
   AlertTriangle, Sparkles, Zap, ArrowRight, UserPlus, Home, LayoutDashboard, XCircle,
-  Image as ImageIcon, Star, Loader2, UploadCloud, UserX
+  Image as ImageIcon, Star, Loader2, UploadCloud
 } from "lucide-react";
 import api from "../utils/api";
 import { io } from "socket.io-client";
 
 // --- CLOUDINARY UPLOAD HELPER ---
+// 1. Create a Cloudinary account.
+// 2. Go to Settings > Upload > Add Upload Preset (Mode: Unsigned).
+// 3. Replace the values below:
 const CLOUDINARY_UPLOAD_URL = "https://api.cloudinary.com/v1_1/dvoenforj/image/upload";
 const UPLOAD_PRESET = "salon_preset";
+
+// 🔥 NEW: Notification Sound URL (Distinct Bell Sound)
 const NOTIFICATION_SOUND_URL = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"; 
 
 const uploadToCloudinary = async (file) => {
@@ -53,44 +58,15 @@ const SUGGESTED_SERVICES = [
 
 // --- SUB-COMPONENTS ---
 
-// 1. TIME EXTENSION MODAL
-const TimeExtensionModal = ({ isOpen, onClose, chairName, onConfirm }) => {
-    if (!isOpen) return null;
-  
-    const timeOptions = [5, 10, 15, 30];
-  
-    return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
-        <div className="relative w-full max-w-sm bg-zinc-900 border border-white/10 rounded-2xl p-6 shadow-2xl animate-in zoom-in-95">
-          <h3 className="text-lg font-bold text-white mb-2">Extend Service Time</h3>
-          <p className="text-zinc-400 text-sm mb-6">How much extra time do you need for <span className="text-white font-bold">{chairName}</span>?</p>
-          
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            {timeOptions.map((time) => (
-              <button 
-                key={time}
-                onClick={() => onConfirm(time)}
-                className="py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-white/5 text-white font-bold transition-all active:scale-95 flex items-center justify-center gap-2"
-              >
-                <Clock size={16} className="text-orange-400"/> +{time} min
-              </button>
-            ))}
-          </div>
-  
-          <button onClick={onClose} className="w-full py-3 text-zinc-500 font-bold text-sm hover:text-white transition-colors">
-            Cancel
-          </button>
-        </div>
-      </div>
-    );
-};
-
-// 2. CUSTOM DROPDOWN COMPONENT
+// 1. CUSTOM DROPDOWN COMPONENT
 const CustomDropdown = ({ icon: Icon, label, name, value, options, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
 
+  // Close dropdown when clicking outside could be added here for robustness, 
+  // but for now we keep it simple as requested.
+
   const handleSelect = (option) => {
+    // Mimic event object for compatibility
     onChange({ target: { name, value: option } });
     setIsOpen(false);
   };
@@ -135,7 +111,7 @@ const CustomDropdown = ({ icon: Icon, label, name, value, options, onChange }) =
   );
 };
 
-// 3. WALK-IN MODAL (Responsive)
+// 2. WALK-IN MODAL (Responsive)
 const WalkInModal = ({ isOpen, onClose, services, onConfirm }) => {
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -230,7 +206,7 @@ const WalkInModal = ({ isOpen, onClose, services, onConfirm }) => {
   );
 };
 
-// 4. PROFILE MODAL (Redesigned)
+// 2. PROFILE MODAL (Redesigned)
 const ProfileModal = ({ isOpen, onClose, salon, profileImage, onImageUpload, onLogout }) => {
   const fileInputRef = useRef(null);
   if (!isOpen) return null;
@@ -301,6 +277,9 @@ const ProfileModal = ({ isOpen, onClose, salon, profileImage, onImageUpload, onL
 
           {/* Actions */}
           <div className="space-y-3">
+            {/* <button className="w-full py-3 rounded-xl bg-zinc-800 border border-white/5 text-zinc-300 font-bold hover:bg-zinc-700 hover:text-white transition-colors flex items-center justify-center gap-2">
+              <Edit3 size={16} /> Edit Profile
+            </button> */}
             <button
               onClick={onLogout}
               className="w-full py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 font-bold hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2"
@@ -314,7 +293,7 @@ const ProfileModal = ({ isOpen, onClose, salon, profileImage, onImageUpload, onL
   );
 };
 
-// 5. ASSIGNMENT MODAL
+// 3. ASSIGNMENT MODAL
 const AssignmentModal = ({ isOpen, onClose, customer, availableChairs, staffList, onConfirm }) => {
   const [selectedChair, setSelectedChair] = useState("");
   const [selectedStaff, setSelectedStaff] = useState("");
@@ -419,20 +398,17 @@ const SalonDashboard = ({ salon, onLogout }) => {
   const [profileImage, setProfileImage] = useState(null);
   const [assignmentModal, setAssignmentModal] = useState({ isOpen: false, customer: null });
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
-  
-  // 🔥 NEW STATE FOR TIME EXTENSION
-  const [extensionModal, setExtensionModal] = useState({ isOpen: false, chairId: null, chairName: "" });
 
-  // Play Sound Function
+  // 🔥 NEW: Play Sound Function
   const playNotificationSound = () => {
     try {
       const audio = new Audio(NOTIFICATION_SOUND_URL);
-      audio.volume = 1.0; 
+      audio.volume = 1.0; // Full volume
       const playPromise = audio.play();
 
       if (playPromise !== undefined) {
         playPromise.catch((error) => {
-          console.warn("Audio play blocked by browser.", error);
+          console.warn("Audio play blocked by browser (user needs to interact first).", error);
         });
       }
     } catch (err) {
@@ -449,6 +425,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
 
     socket.on("new_request", (ticket) => {
       setRequests(prev => [...prev, ticket]);
+      // 🔥 NEW: Trigger sound when request arrives
       playNotificationSound(); 
     });
 
@@ -591,41 +568,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
     }
   };
 
-  // 🔥 NEW: HANDLE EXTEND TIME (Socket Event)
-  const handleExtendTime = async (minutes) => {
-    const chairId = extensionModal.chairId;
-    const chair = chairs.find(c => c.id === chairId);
-    
-    if(!chair?.currentCustomer) return;
-
-    try {
-      await api.post("/queue/extend", { 
-        ticketId: chair.currentCustomer._id, 
-        extraTime: minutes 
-      });
-      
-      setExtensionModal({ isOpen: false, chairId: null, chairName: "" });
-      alert(`Added ${minutes} mins to the service.`);
-    } catch (error) {
-      console.error(error);
-      alert("Failed to extend time.");
-    }
-  };
-
-  // 🔥 NEW: HANDLE NO-SHOW (Socket Event)
-  const handleNoShow = async (chairId) => {
-    if(!window.confirm("Mark this customer as No-Show? This will remove them from queue.")) return;
-    
-    const chair = chairs.find(c => c.id === chairId);
-    if(!chair?.currentCustomer) return;
-
-    try {
-      await api.post("/queue/no-show", { ticketId: chair.currentCustomer._id });
-    } catch (error) {
-      alert("Failed to update status.");
-    }
-  };
-
   // --- SETTINGS HANDLERS ---
   const fillServiceSuggestion = (s) => {
     setNewService({ name: s.name, price: s.price, time: s.time, category: s.category });
@@ -738,14 +680,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
       <WalkInModal isOpen={isWalkInOpen} onClose={() => setIsWalkInOpen(false)} services={services} onConfirm={handleAddWalkIn} />
       <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} salon={salon} profileImage={profileImage} onImageUpload={setProfileImage} onLogout={onLogout} />
       <AssignmentModal isOpen={assignmentModal.isOpen} onClose={() => setAssignmentModal({ ...assignmentModal, isOpen: false })} customer={assignmentModal.customer} availableChairs={assignmentModal.availableChairs} staffList={staff} onConfirm={handleStartService} />
-      
-      {/* ADD THE TIME MODAL HERE */}
-      <TimeExtensionModal 
-        isOpen={extensionModal.isOpen}
-        onClose={() => setExtensionModal({ isOpen: false, chairId: null, chairName: "" })}
-        chairName={extensionModal.chairName}
-        onConfirm={handleExtendTime}
-      />
 
       {/* --- DESKTOP SIDEBAR --- */}
       <aside className="hidden lg:flex w-64 border-r border-white/5 bg-zinc-900/40 backdrop-blur-xl flex-col z-20">
@@ -951,23 +885,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
                                   <p className="text-xs text-emerald-400">{chair.currentCustomer.services[0]?.name}</p>
                                 </div>
                               </div>
-                              
-                              {/* 🔥 NEW ACTION BUTTONS ROW 🔥 */}
-                              <div className="grid grid-cols-2 gap-2 mb-2">
-                                <button 
-                                    onClick={() => setExtensionModal({ isOpen: true, chairId: chair.id, chairName: chair.name })}
-                                    className="py-2 bg-orange-500/10 text-orange-400 border border-orange-500/20 text-[10px] font-bold rounded-lg hover:bg-orange-500 hover:text-white transition-colors flex items-center justify-center gap-1"
-                                >
-                                    <Clock size={12} /> Delay
-                                </button>
-                                <button 
-                                    onClick={() => handleNoShow(chair.id)}
-                                    className="py-2 bg-red-500/10 text-red-400 border border-red-500/20 text-[10px] font-bold rounded-lg hover:bg-red-500 hover:text-white transition-colors flex items-center justify-center gap-1"
-                                >
-                                    <UserX size={12} /> No Show
-                                </button>
-                              </div>
-
                               <button onClick={() => handleCompleteService(chair.id)} className="w-full py-2.5 bg-white text-black text-xs font-bold rounded-lg hover:bg-emerald-400 transition-colors flex items-center justify-center gap-2 active:scale-95"><CheckSquare size={14} /> Complete</button>
                             </div>
                           ) : (

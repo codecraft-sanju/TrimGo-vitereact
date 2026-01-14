@@ -21,23 +21,7 @@ export const cancelTicket = async (req, res) => {
     ticket.status = 'cancelled';
     await ticket.save();
 
-    // 3. Update Wait Time Broadcast
-    const salonId = ticket.salonId;
-    const activeTickets = await Ticket.find({
-        salonId,
-        status: { $in: ["waiting", "serving"] }
-    }).select("totalTime");
-
-    const currentWaitingCount = activeTickets.length;
-    const currentEstTime = activeTickets.reduce((sum, t) => sum + (t.totalTime || 0), 0);
-
-    req.io.emit("queue_update_broadcast", { 
-        salonId, 
-        waitingCount: currentWaitingCount,
-        estTime: currentEstTime
-    });
-
-    // 4. SOCKET EMIT: Salon Dashboard ko update bhejo ki user hat gaya
+    // 3. SOCKET EMIT: Salon Dashboard ko update bhejo ki user hat gaya
     req.io.to(`salon_${ticket.salonId}`).emit("queue_updated");
 
     res.status(200).json({ success: true, message: "Ticket cancelled successfully" });
@@ -306,110 +290,6 @@ export const completeService = async (req, res) => {
     res.status(200).json({ success: true, message: "Service Completed" });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-/* -------------------------------------------------------------------------- */
-/* 🔥 NEW: EXTEND SERVICE TIME (DELAY HANDLING)                               */
-/* -------------------------------------------------------------------------- */
-export const extendServiceTime = async (req, res) => {
-  try {
-    const { ticketId, extraTime } = req.body;
-    const salonId = req.salon._id;
-
-    // 1. Ticket dhundo
-    const ticket = await Ticket.findById(ticketId);
-    if (!ticket) return res.status(404).json({ success: false, message: "Ticket not found" });
-
-    // 2. Time update karo
-    ticket.totalTime += parseInt(extraTime);
-    await ticket.save();
-
-    // 3. Recalculate Salon Queue Time
-    const activeTickets = await Ticket.find({
-      salonId: salonId,
-      status: { $in: ["waiting", "serving"] },
-      createdAt: { $gte: new Date().setHours(0, 0, 0, 0) } 
-    });
-
-    // Approximate logic: Total minutes / Number of Staff (Rough estimate)
-    // Or just sum of all service times if strict queue.
-    const salon = await Salon.findById(salonId);
-    let totalWaitTime = activeTickets.reduce((acc, t) => acc + (t.totalTime || 0), 0);
-    // Adjusted estimate based on staff capacity (Optional improvement)
-    // totalWaitTime = totalWaitTime / (salon.staff.length || 1);
-
-    const waitingCount = await Ticket.countDocuments({ salonId: salonId, status: "waiting" });
-
-    // 4. Socket Broadcast
-    // Salon owner ko dikhao ki updated hai
-    req.io.to(`salon_${salon._id}`).emit("queue_updated"); 
-    
-    // Users ko batao ki time change hua hai
-    req.io.emit("queue_update_broadcast", {
-      salonId: salon._id,
-      waitingCount: waitingCount,
-      estTime: totalWaitTime,
-      delayedTicketId: ticket._id // User dashboard can use this to show specific alert
-    });
-
-    res.status(200).json({ success: true, message: "Time extended successfully" });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Server Error" });
-  }
-};
-
-/* -------------------------------------------------------------------------- */
-/* 🔥 NEW: MARK NO-SHOW (HANDLE GHOST CUSTOMERS)                              */
-/* -------------------------------------------------------------------------- */
-export const markNoShow = async (req, res) => {
-  try {
-    const { ticketId } = req.body;
-    const salonId = req.salon._id;
-
-    const ticket = await Ticket.findById(ticketId);
-    if (!ticket) return res.status(404).json({ success: false, message: "Ticket not found" });
-
-    // 1. Status change to cancelled (so it removed from active view)
-    ticket.status = "cancelled"; 
-    ticket.chairId = null; // Free up the chair if assigned
-    await ticket.save();
-    
-    // 2. Recalculate Waiting Metrics
-    const activeTickets = await Ticket.find({
-        salonId,
-        status: { $in: ["waiting", "serving"] }
-    }).select("totalTime");
-
-    const currentWaitingCount = activeTickets.length;
-    const currentEstTime = activeTickets.reduce((sum, t) => sum + (t.totalTime || 0), 0);
-
-    // 3. Socket Events
-    // Salon Dashboard Refresh
-    req.io.to(`salon_${salonId}`).emit("queue_updated"); 
-    
-    // Notify User (if applicable)
-    if(ticket.userId) {
-        req.io.to(`user_${ticket.userId}`).emit("status_change", { 
-        status: "cancelled",
-        chairId: null 
-        });
-    }
-
-    // Global broadcast (Queue reduced)
-    req.io.emit("queue_update_broadcast", {
-      salonId: salonId,
-      waitingCount: currentWaitingCount,
-      estTime: currentEstTime
-    });
-
-    res.status(200).json({ success: true, message: "Marked as No-Show" });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Server Error" });
   }
 };
 
