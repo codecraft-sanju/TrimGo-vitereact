@@ -3,8 +3,8 @@ import {
   registerSalon,
   loginSalon,
   logoutSalon,
-  getAllSalons,       // <-- New Import
-  updateSalonProfile  // <-- New Import
+  getAllSalons,       
+  updateSalonProfile  
 } from "../Controllers/salonController.js";
 import { protectSalon } from "../Middleware/salonMiddleware.js";
 
@@ -23,8 +23,7 @@ router.post("/login", loginSalon);
 // Logout Salon
 router.post("/logout", logoutSalon);
 
-// GET All Salons (For User Map & Search Filters)
-// User bina login kiye bhi salons dekh sakta hai, isliye public rakha hai
+// GET All Salons (Map & Filters)
 router.get("/all", getAllSalons); 
 
 
@@ -40,7 +39,7 @@ router.get("/me", protectSalon, (req, res) => {
     });
 });
 
-// Update Profile (Add Services, Toggle Online/Offline, etc.)
+// Update Profile (Services, Gallery, Status etc.)
 router.put("/update", protectSalon, updateSalonProfile);
 
 export default router;

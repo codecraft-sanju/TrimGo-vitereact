@@ -130,14 +130,14 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 };
 
 /* ---------------------------------
-   🔥 UPDATED SERVICE MODAL WITH LOADER BUTTON
+   SERVICE SELECTION MODAL
 ---------------------------------- */
-const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => { // 🔥 Added isJoining prop
+const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => { 
   const [selectedServices, setSelectedServices] = useState([]);
   const servicesList = salon.services || [];
 
   const toggleService = (serviceId) => {
-    if (isJoining) return; // Prevent toggling while loading
+    if (isJoining) return; 
     setSelectedServices((prev) =>
       prev.includes(serviceId)
         ? prev.filter((id) => id !== serviceId)
@@ -270,9 +270,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
   const [salons, setSalons] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // 🔥 New State for Joining Process
   const [isJoiningQueue, setIsJoiningQueue] = useState(false);
-
   const [activeBookingSalon, setActiveBookingSalon] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); 
   
@@ -306,7 +304,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
     };
   }, []);
 
-  // --- LOCATION TRACKING (Keeping existing logic) ---
+  // --- LOCATION TRACKING ---
   const startLocationTracking = () => {
     if (!navigator.geolocation) {
         alert("Geolocation is not supported by your browser.");
@@ -400,6 +398,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         setSalons((prevSalons) => [newSalon, ...prevSalons]);
     });
 
+    // 🔥 UPDATED: Smart Queue Update Listener
     socket.on("queue_update_broadcast", ({ salonId, waitingCount, estTime }) => {
         setSalons((prevSalons) => 
             prevSalons.map((salon) => {
@@ -409,6 +408,11 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                 return salon;
             })
         );
+
+        // 🔥 Check if my active ticket is in this salon, if so, refresh to get new estimated time
+        if(activeTicket && activeTicket.salonId?._id === salonId) {
+            fetchActiveTicket();
+        }
     });
 
     socket.on("request_accepted", (ticket) => {
@@ -437,7 +441,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         navigator.geolocation.clearWatch(watchId.current);
       }
     };
-  }, [user]);
+  }, [user, activeTicket]); // 🔥 Added activeTicket dependency
 
   const fetchSalons = async () => {
     try {
@@ -520,11 +524,11 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
   };
 
   const handleCloseBooking = () => {
-      if(!isJoiningQueue) setActiveBookingSalon(null); // Prevent closing while loading
+      if(!isJoiningQueue) setActiveBookingSalon(null); 
   };
 
   const handleConfirmBooking = async (salon, services, totals) => {
-    setIsJoiningQueue(true); // 🔥 Start Loading
+    setIsJoiningQueue(true); 
     try {
         const payload = {
             salonId: salon._id, 
@@ -547,7 +551,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
     } catch (error) {
         alert(error.response?.data?.message || "Failed to join queue");
     } finally {
-        setIsJoiningQueue(false); // 🔥 Stop Loading
+        setIsJoiningQueue(false); 
     }
   };
 
@@ -586,7 +590,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
             salon={activeBookingSalon} 
             onClose={handleCloseBooking} 
             onConfirm={handleConfirmBooking} 
-            isJoining={isJoiningQueue} // 🔥 Pass Loading State
+            isJoining={isJoiningQueue} 
         />
       )}
 

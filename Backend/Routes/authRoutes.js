@@ -1,10 +1,9 @@
-// routes/authRoutes.js
 import express from "express";
 import {
   registerUser,
   loginUser,
   logoutUser,
-  getAllUsers, // <--- 1. Import Added
+  getAllUsers, 
 } from "../Controllers/authController.js";
 import { protect } from "../Middleware/authMiddleware.js";
 
@@ -27,7 +26,7 @@ router.get("/me", protect, (req, res) => {
   });
 });
 
-// GET /api/auth/all (Admin Route to fetch all users)
-router.get("/all", getAllUsers); // <--- 2. Route Added
+// GET /api/auth/all (Admin Route)
+router.get("/all", getAllUsers); 
 
 export default router;

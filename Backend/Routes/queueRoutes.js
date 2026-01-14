@@ -8,45 +8,64 @@ import {
     getSalonData,
     getUserHistory,
     addWalkInClient,
-    rejectRequest ,
-     cancelTicket
+    rejectRequest,
+    cancelTicket,
+    // 🔥 NEW IMPORTS ADDED HERE
+    extendServiceTime,
+    markNoShow
 } from "../Controllers/queueController.js";
 
-// Middleware Imports (Security ke liye)
-import { protect } from "../Middleware/authMiddleware.js"; // Sirf logged-in Users ke liye
-import { protectSalon } from "../Middleware/salonMiddleware.js"; // Sirf logged-in Salons ke liye
+// Middleware Imports
+import { protect } from "../Middleware/authMiddleware.js"; // Logged-in Users ke liye
+import { protectSalon } from "../Middleware/salonMiddleware.js"; // Logged-in Salons ke liye
 
 const router = express.Router();
+
+/* ==========================
+   USER ROUTES
+   ========================== */
 
 // 1. Join Queue (User request bhejega)
 router.post("/join", protect, joinQueue);
 
-// 2. Check Active Ticket (User dashboard load hone par check karega)
+// 2. Check Active Ticket (User dashboard load hone par)
 router.get("/my-ticket", protect, getMyTicket);
 
-// 3. Get Booking History (Profile Page ke liye)
+// 3. Get Booking History (Profile Page)
 router.get("/history", protect, getUserHistory);
 
+// 4. Cancel Ticket (User khud cancel kare)
+router.post("/cancel", protect, cancelTicket);
 
-// 4. Get Dashboard Data (Salon login hone par initial data load karega)
+
+/* ==========================
+   SALON ROUTES (Barber Actions)
+   ========================== */
+
+// 5. Get Dashboard Data (Initial Load)
 router.get("/salon-dashboard", protectSalon, getSalonData);
 
-// 5. Accept Request (Pending -> Waiting)
+// 6. Accept Request (Pending -> Waiting)
 router.post("/accept", protectSalon, acceptRequest);
 
-// --- NEW ROUTE ADDED HERE ---
-// 5.5. Reject Request (Pending -> Cancelled)
+// 7. Reject Request (Pending -> Cancelled)
 router.post("/reject", protectSalon, rejectRequest); 
-router.post("/cancel", protect, cancelTicket);
-// ----------------------------
 
-// 6. Start Service (Waiting -> Serving + Chair Assignment)
+// 8. Start Service (Waiting -> Serving + Chair Assignment)
 router.post("/start", protectSalon, startService);
 
-// 7. Complete Service (Serving -> Completed + Payment/Rating trigger)
+// 9. Complete Service (Serving -> Completed + Revenue Update)
 router.post("/complete", protectSalon, completeService);
 
-//  8. Add Walk-in Client (Offline User - New Feature)
+// 10. Add Walk-in Client (Offline User)
 router.post("/add-walkin", protectSalon, addWalkInClient);
+
+// 🔥 NEW ROUTES FOR TIME DRIFT 🔥
+
+// 11. Extend Service Time (Jab barber ko aur time chahiye)
+router.post("/extend", protectSalon, extendServiceTime);
+
+// 12. Mark No-Show (Jab customer bhaag jaye)
+router.post("/no-show", protectSalon, markNoShow);
 
 export default router;
