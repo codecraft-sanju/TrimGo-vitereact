@@ -3,7 +3,7 @@ import {
   ShieldCheck, User, Lock, LayoutDashboard, Store, Users, CreditCard,
   LogOut, Globe2, Bell, DollarSign, Activity, Clock, Download, Zap,
   CheckCircle, AlertTriangle, Star, Ban, Settings, Search, Mail, Phone, 
-  Calendar, MapPin, Menu, X, Tag, Gift, Trash2, Loader2, Smartphone, History // <--- Added Smartphone, History
+  Calendar, MapPin, Menu, X, Tag, Gift, Trash2, Loader2, Smartphone, History 
 } from "lucide-react";
 import api from "../utils/api";
 import { io } from "socket.io-client"; 
@@ -589,15 +589,13 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                                 const referralCount = user.referredSalons ? user.referredSalons.length : 0;
                                 const isHighPerformer = referralCount > 0;
 
-                                // 🔥 ACTIVITY LOGIC FOR TESTING 🔥
-                                // Try to get 'lastLogin' (best) or fallback to 'updatedAt'
+                                // 🔥 ACTIVITY LOGIC FOR TESTING (FIXED) 🔥
+                                // Get 'lastLogin' (best) or fallback to 'updatedAt'
                                 const activityDate = user.lastLogin ? new Date(user.lastLogin) : new Date(user.updatedAt);
-                                const today = new Date();
                                 
-                                // Check if active today
-                                const isToday = activityDate.getDate() === today.getDate() &&
-                                                activityDate.getMonth() === today.getMonth() &&
-                                                activityDate.getFullYear() === today.getFullYear();
+                                // ✅ FIXED LOGIC: Compare Date Strings (ignores time/timezone)
+                                // "Wed Jan 14 2026" === "Wed Jan 14 2026"
+                                const isToday = activityDate.toDateString() === new Date().toDateString();
 
                                 return (
                                 <tr key={user._id} className={`hover:bg-white/[0.02] transition ${isHighPerformer ? 'bg-indigo-900/10' : ''}`}>
