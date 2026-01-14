@@ -38,7 +38,7 @@ const userSchema = new mongoose.Schema(
       select: false,
     },
 
-    // --- Referral System Fields ---
+    // --- NEW: Referral System Fields ---
     referralCode: {
       type: String,
       unique: true,
@@ -50,13 +50,7 @@ const userSchema = new mongoose.Schema(
         type: mongoose.Schema.Types.ObjectId,
         ref: "Salon"
       }
-    ],
-
-    // 🔥 NEW: Track Last App Open Time (For Testing/Activity)
-    lastLogin: {
-      type: Date,
-      default: Date.now
-    }
+    ]
   },
   {
     timestamps: true,

@@ -3,7 +3,7 @@ import {
   ShieldCheck, User, Lock, LayoutDashboard, Store, Users, CreditCard,
   LogOut, Globe2, Bell, DollarSign, Activity, Clock, Download, Zap,
   CheckCircle, AlertTriangle, Star, Ban, Settings, Search, Mail, Phone, 
-  Calendar, MapPin, Menu, X, Tag, Gift, Trash2, Loader2, Smartphone, History 
+  Calendar, MapPin, Menu, X, Tag, Gift, Trash2, Loader2 // <--- Added Loader2
 } from "lucide-react";
 import api from "../utils/api";
 import { io } from "socket.io-client"; 
@@ -546,13 +546,13 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
             </div>
           )}
 
-          {/* ---------------- USERS VIEW (UPDATED FOR PLAY STORE TESTING & ACTIVITY) ---------------- */}
+          {/* ---------------- USERS VIEW (UPDATED FOR REFERRALS & DELETE) ---------------- */}
           {activeTab === "users" && (
              <div className="animate-[slideUp_0.4s_ease-out]">
                 <div className="flex justify-between items-center mb-6">
                   <div>
                     <h2 className="text-2xl font-black text-white">User Base & Referrals</h2>
-                    <p className="text-zinc-500 text-sm">Monitor user growth and App Activity (Testing).</p>
+                    <p className="text-zinc-500 text-sm">Monitor user growth and referral performance.</p>
                   </div>
                   <div className="flex gap-2">
                       <span className="px-3 py-1 bg-zinc-800 rounded-full text-xs text-zinc-400 border border-zinc-700 whitespace-nowrap">
@@ -562,9 +562,9 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                 </div>
 
                 {loading ? (
-                    <div className="flex justify-center py-20">
+                   <div className="flex justify-center py-20">
                       <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
-                    </div>
+                   </div>
                 ) : (
                   <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl overflow-hidden">
                     <div className="overflow-x-auto">
@@ -573,9 +573,9 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                             <tr>
                             <th className="px-6 py-4">User</th>
                             <th className="px-6 py-4">Referral Stats</th> 
-                            <th className="px-6 py-4">App Activity (Testing)</th> {/* 🔥 NEW COLUMN 🔥 */}
                             <th className="px-6 py-4">Contact Info</th>
-                            <th className="px-6 py-4 text-right">Actions</th>
+                            <th className="px-6 py-4">Joined Date</th>
+                            <th className="px-6 py-4 text-right">Actions</th> {/* Updated Header */}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-800/50">
@@ -585,17 +585,9 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                                </tr>
                             ) : (
                               userList.map((user) => {
-                                // Referral Logic
+                                // Referral Logic Calculation
                                 const referralCount = user.referredSalons ? user.referredSalons.length : 0;
                                 const isHighPerformer = referralCount > 0;
-
-                                // 🔥 ACTIVITY LOGIC FOR TESTING (FIXED) 🔥
-                                // Get 'lastLogin' (best) or fallback to 'updatedAt'
-                                const activityDate = user.lastLogin ? new Date(user.lastLogin) : new Date(user.updatedAt);
-                                
-                                // ✅ FIXED LOGIC: Compare Date Strings (ignores time/timezone)
-                                // "Wed Jan 14 2026" === "Wed Jan 14 2026"
-                                const isToday = activityDate.toDateString() === new Date().toDateString();
 
                                 return (
                                 <tr key={user._id} className={`hover:bg-white/[0.02] transition ${isHighPerformer ? 'bg-indigo-900/10' : ''}`}>
@@ -608,6 +600,7 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                                     </div>
                                   </td>
                                   
+                                  {/* REFERRAL DATA COLUMN */}
                                   <td className="px-6 py-4">
                                     <div className="flex flex-col items-start gap-1">
                                         <div className="flex items-center gap-2">
@@ -620,28 +613,12 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                                             <Tag size={10} className="text-zinc-400"/>
                                             <span className="text-[10px] font-mono text-zinc-300">{user.referralCode || "---"}</span>
                                         </div>
-                                    </div>
-                                  </td>
-
-                                  {/* 🔥 NEW APP ACTIVITY COLUMN 🔥 */}
-                                  <td className="px-6 py-4">
-                                     <div className="flex flex-col gap-2">
-                                        {isToday ? (
-                                            <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20 w-fit">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                                                <span className="text-xs font-bold text-green-400">Opened Today</span>
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-orange-500/5 border border-orange-500/10 w-fit">
-                                                <History size={10} className="text-orange-400"/>
-                                                <span className="text-xs font-medium text-orange-400/80">Inactive Today</span>
+                                        {isHighPerformer && (
+                                            <div className="flex items-center gap-1 text-[9px] text-yellow-500 font-bold mt-1 animate-pulse">
+                                                <Gift size={10} /> Needs Payout
                                             </div>
                                         )}
-                                        <div className="flex items-center gap-1.5 text-[10px] text-zinc-500">
-                                            <Smartphone size={10} />
-                                            <span>Last: {activityDate.toLocaleDateString()} at {activityDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                                        </div>
-                                     </div>
+                                    </div>
                                   </td>
 
                                   <td className="px-6 py-4">
@@ -654,7 +631,14 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                                         </div>
                                     </div>
                                   </td>
-
+                                  <td className="px-6 py-4 text-xs font-mono text-zinc-500 whitespace-nowrap">
+                                    <div className="flex items-center gap-2">
+                                        <Calendar size={12}/>
+                                        {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}
+                                    </div>
+                                  </td>
+                                  
+                                  {/* 🔥 DELETE ACTION COLUMN 🔥 */}
                                   <td className="px-6 py-4 text-right">
                                     <div className="flex items-center justify-end gap-3">
                                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 text-[10px] font-bold border border-green-500/20">

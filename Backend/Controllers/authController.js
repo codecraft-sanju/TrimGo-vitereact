@@ -14,9 +14,8 @@ const cookieOptions = {
   maxAge: 7 * 24 * 60 * 60 * 1000, 
 };
 
-/* --------------------------------------- */
-/* Register User                           */
-/* --------------------------------------- */
+
+
 export const registerUser = async (req, res) => {
   try {
     const { name, email, phone, password } = req.body;
@@ -44,7 +43,6 @@ export const registerUser = async (req, res) => {
       email: email.toLowerCase(),
       phone,
       password,
-      lastLogin: new Date() // Set current time on registration
     });
 
     const token = createToken(user._id);
@@ -113,10 +111,6 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    // 🔥 Update Last Login immediately on successful login
-    user.lastLogin = new Date();
-    await user.save();
-
     const token = createToken(user._id);
 
     res.cookie("auth_token", token, cookieOptions);
@@ -142,6 +136,7 @@ export const loginUser = async (req, res) => {
 /* Logout User                             */
 /* --------------------------------------- */
 export const logoutUser = (req, res) => {
+  
   res.clearCookie("auth_token", {
     httpOnly: true,
     secure: true, 
@@ -155,7 +150,7 @@ export const logoutUser = (req, res) => {
 };
 
 /* --------------------------------------- */
-/* GET ALL USERS (Admin Dashboard)         */
+/* GET ALL USERS (New for Admin)           */
 /* --------------------------------------- */
 export const getAllUsers = async (req, res) => {
   try {
@@ -173,75 +168,5 @@ export const getAllUsers = async (req, res) => {
       success: false,
       message: "Server Error",
     });
-  }
-};
-
-/* --------------------------------------- */
-/* 🔥 UPDATE ACTIVITY (App Ping)         🔥 */
-/* --------------------------------------- */
-export const updateActivity = async (req, res) => {
-  try {
-    // req.user.id tumhare 'verifyToken' middleware se aayega
-    const userId = req.user.id; 
-    
-    // Sirf lastLogin update karo
-    await User.findByIdAndUpdate(userId, { lastLogin: new Date() });
-
-    return res.status(200).json({
-      success: true,
-      message: "Activity timestamp updated",
-    });
-  } catch (err) {
-    console.error("Activity Update Error:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
-  }
-};
-
-/* ----------------------------------------------------- */
-/* 🧪 SUPER RANDOMIZER (FIXED FOR REALISTIC TIMES)       */
-/* (Ye function sab users ka time alag-alag kar dega)    */
-/* ----------------------------------------------------- */
-export const randomizeUserActivity = async (req, res) => {
-  try {
-    const users = await User.find();
-
-    const updates = users.map(async (user, index) => {
-      // 60% Chance: Aaj active hai (Green Badge)
-      const isToday = Math.random() > 0.4; 
-      
-      let fakeDate;
-      const now = new Date();
-
-      if (isToday) {
-        // 🔥 CASE 1: ACTIVE TODAY
-        // Abhi ke time se 5 minute se lekar 10 ghante pehle tak ka koi bhi time
-        // 'index' use kiya taaki har user ka time pakka alag ho (collision avoid karne ke liye)
-        const randomMinutes = Math.floor(Math.random() * 600) + (index * 5); 
-        fakeDate = new Date(now.getTime() - (randomMinutes * 60 * 1000));
-      } else {
-        // 🔥 CASE 2: INACTIVE (Orange Badge)
-        // 1 se 7 din purana koi bhi time
-        const randomDays = Math.floor(Math.random() * 7) + 1;
-        const randomHours = Math.floor(Math.random() * 24);
-        fakeDate = new Date(now.getTime() - (randomDays * 24 * 60 * 60 * 1000) - (randomHours * 60 * 1000));
-      }
-      
-      user.lastLogin = fakeDate;
-      return user.save();
-    });
-
-    await Promise.all(updates);
-
-    return res.status(200).json({
-      success: true,
-      message: `Fixed! Randomized times for ${users.length} users with distinct timestamps.`,
-    });
-
-  } catch (error) {
-    console.error("Randomize Error:", error);
-    return res.status(500).json({ success: false, message: "Server Error" });
   }
 };

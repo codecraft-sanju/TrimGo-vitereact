@@ -285,19 +285,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
   const [routeDestination, setRouteDestination] = useState(null); 
   const watchId = useRef(null); 
 
-  // 🔥 1. TRACK ACTIVITY ON MOUNT (For Admin Dashboard "Active Today" Status)
-  useEffect(() => {
-    const updateActivity = async () => {
-        try {
-            await api.post("/auth/update-activity");
-            console.log("✅ User Activity Synced (Web)");
-        } catch (error) {
-            console.error("❌ Failed to sync activity:", error);
-        }
-    };
-    updateActivity();
-  }, []); // Runs once on component mount
-
   // --- LENIS SMOOTH SCROLL ---
   useEffect(() => {
     const lenis = new Lenis({
