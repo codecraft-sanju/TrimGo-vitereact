@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import User from "../Models/User.js"; // Path check kar lena aapke folder structure ke hisab se
+import User from "../Models/User.js";
 
 const createToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
@@ -12,6 +12,11 @@ const cookieOptions = {
   secure: true, 
   sameSite: "none", 
   maxAge: 7 * 24 * 60 * 60 * 1000, 
+};
+
+// Helper function to get today's date string (YYYY-MM-DD)
+const getTodayDateString = () => {
+    return new Date().toISOString().split('T')[0];
 };
 
 /* --------------------------------------- */
@@ -39,12 +44,16 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    // Note: lastActiveAt automatically set hoga (Schema default ki wajah se)
+    // New user create karte waqt aaj ki date activeDates me daal do
+    const today = getTodayDateString();
+
     const user = await User.create({
       name,
       email: email.toLowerCase(),
       phone,
       password,
+      lastActiveAt: new Date(),
+      activeDates: [today] // First day attendance marked automatically
     });
 
     const token = createToken(user._id);
@@ -113,10 +122,22 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    // --- NEW CHANGE: Login karte waqt bhi time update karo ---
+    // --- TRACKING LOGIC START ---
+    const today = getTodayDateString();
+    
+    // 1. Update Last Active Time (Just now)
     user.lastActiveAt = new Date();
+
+    // 2. Attendance Check: Agar aaj ki date list me nahi hai, toh add karo
+    // Hum initialize karte hai activeDates agar undefined ho (purane users ke liye)
+    if (!user.activeDates) user.activeDates = [];
+    
+    if (!user.activeDates.includes(today)) {
+        user.activeDates.push(today);
+    }
+
     await user.save({ validateBeforeSave: false }); 
-    // validateBeforeSave: false isliye taki baki fields check na ho, bas time update ho
+    // --- TRACKING LOGIC END ---
 
     const token = createToken(user._id);
 
@@ -160,7 +181,7 @@ export const logoutUser = (req, res) => {
 /* --------------------------------------- */
 export const getAllUsers = async (req, res) => {
   try {
-    // lastActiveAt bhi return hoga automatic
+    // lastActiveAt aur activeDates dono return honge
     const users = await User.find().select("-password").sort({ createdAt: -1 });
 
     return res.status(200).json({
@@ -178,22 +199,53 @@ export const getAllUsers = async (req, res) => {
 };
 
 /* --------------------------------------- */
-/* TRACK ACTIVITY (New for Play Store)     */
+/* TRACK ACTIVITY (Background Sync)        */
 /* --------------------------------------- */
-// Yeh function background me call hoga jab app open hogi
 export const trackUserActivity = async (req, res) => {
   try {
-    // req.user hume middleware se milega (jo token check karta hai)
-    // Hum seedha DB me update kar denge bina data wapas mangwaye
-    await User.findByIdAndUpdate(req.user.id, { lastActiveAt: new Date() });
+    const userId = req.user.id;
+    const today = getTodayDateString();
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+        return res.status(404).json({ message: "User not found" });
+    }
+
+    // 1. Time Update
+    user.lastActiveAt = new Date();
+
+    // 2. Attendance Update (Agar aaj ka din missing hai toh add karo)
+    if (!user.activeDates) user.activeDates = [];
+
+    if (!user.activeDates.includes(today)) {
+        user.activeDates.push(today);
+    }
+
+    await user.save({ validateBeforeSave: false });
 
     return res.status(200).json({
       success: true,
-      message: "Activity updated",
+      message: "Activity tracked",
     });
   } catch (err) {
-    // Agar fail bhi ho jaye, toh app user ko error mat dikhana, bas console log karo
     console.error("Activity Track Error:", err);
     return res.status(500).json({ message: "Server Error" });
   }
+};
+
+/* --------------------------------------- */
+/* RESET LOGS (For Testing Only)           */
+/* --------------------------------------- */
+// Isse call karke purana data saaf kar sakte ho testing start karne se pehle
+export const resetActivityLogs = async (req, res) => {
+    try {
+      await User.updateMany({}, { 
+          $unset: { lastActiveAt: 1 },
+          $set: { activeDates: [] }
+      });
+      res.json({ success: true, message: "Tracking Data Reset Successfully!" });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
 };

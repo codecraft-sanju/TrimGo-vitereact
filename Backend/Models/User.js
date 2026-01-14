@@ -38,13 +38,11 @@ const userSchema = new mongoose.Schema(
       select: false,
     },
 
-    // --- NEW: Referral System Fields ---
     referralCode: {
       type: String,
       unique: true,
     },
     
-    // Yahan hum save karenge ki is user ne kin salons ko refer kiya
     referredSalons: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -52,11 +50,20 @@ const userSchema = new mongoose.Schema(
       }
     ],
 
-    // --- NEW: Play Store Testing Tracker ---
-    // Is field me update hoga jab bhi user app open karega
+    // --- 🔥 NEW: Play Store 14-Day Tracker Logic ---
+    
+    // 1. Last Active Time (Sorting ke liye: "Just Now" dikhane ke liye)
     lastActiveAt: {
       type: Date,
-    }
+    },
+
+    // 2. Attendance Register (Isme dates save hongi: ["2024-01-14", "2024-01-15"])
+    // Isse hum 14 din ka calendar bana payenge
+    activeDates: [
+      {
+        type: String 
+      }
+    ]
   },
   {
     timestamps: true,
@@ -68,16 +75,12 @@ const userSchema = new mongoose.Schema(
 // -------------------------------------
 userSchema.pre("save", async function () {
   
-  // 1. Generate Referral Code (Agar pehle se nahi hai)
   if (!this.referralCode) {
-    // Logic: Name ke first 3 letters + 4 Random Numbers (e.g., SAN9821)
     const namePart = this.name ? this.name.substring(0, 3).toUpperCase() : "USR";
     const randomPart = Math.floor(1000 + Math.random() * 9000); 
     this.referralCode = `${namePart}${randomPart}`;
   }
 
-  // 2. Password Hashing (Existing Logic)
-  // Agar password change nahi hua, toh yahi return kar jao
   if (!this.isModified("password")) return;
 
   try {
@@ -88,16 +91,10 @@ userSchema.pre("save", async function () {
   }
 });
 
-// -------------------------------------
-// Compare password method
-// -------------------------------------
 userSchema.methods.comparePassword = async function (plainPassword) {
   return bcrypt.compare(plainPassword, this.password);
 };
 
-// -------------------------------------
-// Remove password from JSON response
-// -------------------------------------
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;
