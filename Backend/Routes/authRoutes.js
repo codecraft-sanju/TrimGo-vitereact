@@ -4,7 +4,8 @@ import {
   registerUser,
   loginUser,
   logoutUser,
-  getAllUsers, // <--- 1. Import Added
+  getAllUsers, 
+  updateActivity, // <--- 1. Import Added (Activity Updater)
 } from "../Controllers/authController.js";
 import { protect } from "../Middleware/authMiddleware.js";
 
@@ -28,6 +29,10 @@ router.get("/me", protect, (req, res) => {
 });
 
 // GET /api/auth/all (Admin Route to fetch all users)
-router.get("/all", getAllUsers); // <--- 2. Route Added
+router.get("/all", getAllUsers);
+
+// 🔥 POST /api/auth/update-activity (New: App Testing Signal)
+// Isse App backend ko batayega ki user abhi active hai
+router.post("/update-activity", protect, updateActivity); 
 
 export default router;

@@ -14,8 +14,9 @@ const cookieOptions = {
   maxAge: 7 * 24 * 60 * 60 * 1000, 
 };
 
-
-
+/* --------------------------------------- */
+/* Register User                           */
+/* --------------------------------------- */
 export const registerUser = async (req, res) => {
   try {
     const { name, email, phone, password } = req.body;
@@ -43,6 +44,7 @@ export const registerUser = async (req, res) => {
       email: email.toLowerCase(),
       phone,
       password,
+      // lastLogin automatic default 'now' le lega model se
     });
 
     const token = createToken(user._id);
@@ -111,6 +113,10 @@ export const loginUser = async (req, res) => {
       });
     }
 
+    // 🔥 Update Last Login immediately on successful login
+    user.lastLogin = new Date();
+    await user.save();
+
     const token = createToken(user._id);
 
     res.cookie("auth_token", token, cookieOptions);
@@ -136,7 +142,6 @@ export const loginUser = async (req, res) => {
 /* Logout User                             */
 /* --------------------------------------- */
 export const logoutUser = (req, res) => {
-  
   res.clearCookie("auth_token", {
     httpOnly: true,
     secure: true, 
@@ -164,6 +169,30 @@ export const getAllUsers = async (req, res) => {
     });
   } catch (err) {
     console.error("Fetch Users Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
+
+/* --------------------------------------- */
+/* 🔥 UPDATE ACTIVITY (Testing/Tracking) 🔥 */
+/* --------------------------------------- */
+export const updateActivity = async (req, res) => {
+  try {
+    // req.user.id tumhare 'verifyToken' middleware se aayega
+    const userId = req.user.id; 
+
+    // Sirf lastLogin update karo
+    await User.findByIdAndUpdate(userId, { lastLogin: new Date() });
+
+    return res.status(200).json({
+      success: true,
+      message: "Activity timestamp updated",
+    });
+  } catch (err) {
+    console.error("Activity Update Error:", err);
     return res.status(500).json({
       success: false,
       message: "Server Error",
