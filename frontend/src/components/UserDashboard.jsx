@@ -19,7 +19,8 @@ import {
   AlertCircle,
   Image as ImageIcon,
   ChevronLeft, 
-  ChevronRight
+  ChevronRight,
+  Timer
 } from "lucide-react";
 import { io } from "socket.io-client"; 
 import Lenis from 'lenis'; 
@@ -108,6 +109,44 @@ const SalonGalleryModal = ({ isOpen, onClose, images, salonName }) => {
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    );
+};
+
+/* ---------------------------------
+   HELPER: COUNTDOWN TIMER (The "Ulti Ginti")
+---------------------------------- */
+const QueueTimer = ({ minutes }) => {
+    const [secondsLeft, setSecondsLeft] = useState(minutes * 60);
+
+    useEffect(() => {
+        // Sync state if prop changes (e.g., socket update updates the estimate)
+        setSecondsLeft(minutes * 60);
+    }, [minutes]);
+
+    useEffect(() => {
+        if (secondsLeft <= 0) return;
+        const intervalId = setInterval(() => {
+            setSecondsLeft((prev) => prev - 1);
+        }, 1000);
+        return () => clearInterval(intervalId);
+    }, [secondsLeft]);
+
+    const formatTime = (totalSeconds) => {
+        if (totalSeconds <= 0) return "00:00";
+        const m = Math.floor(totalSeconds / 60);
+        const s = totalSeconds % 60;
+        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
+    return (
+        <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-xl px-4 py-2 flex flex-col items-center justify-center min-w-[80px]">
+            <div className="text-xl font-mono font-bold text-white tracking-widest leading-none">
+                {formatTime(secondsLeft)}
+            </div>
+            <div className="text-[9px] font-medium text-emerald-400 uppercase tracking-wider mt-1">
+                Est. Wait
             </div>
         </div>
     );
@@ -893,15 +932,19 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
       {activeTicket && (
         <div className="fixed bottom-4 left-4 right-4 z-50 animate-in slide-in-from-bottom-20 duration-500">
             <div className="bg-zinc-900/95 backdrop-blur-lg rounded-2xl shadow-2xl p-4 border border-white/10 text-white flex flex-col gap-3 max-w-lg mx-auto">
-                <div className="flex justify-between items-center">
-                    <div>
+                <div className="flex justify-between items-center gap-4">
+                    <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                             <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
                             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Current Status</span>
                         </div>
-                        <h3 className="font-bold text-lg">{activeTicket.salonId?.salonName || "Salon"}</h3>
+                        <h3 className="font-bold text-lg leading-tight mb-0.5">{activeTicket.salonId?.salonName || "Salon"}</h3>
                         <p className="text-xs text-zinc-400">Queue #{activeTicket.queueNumber} • {activeTicket.status.toUpperCase()}</p>
                     </div>
+
+                    {/* 🔥 THE NEW TIMER COMPONENT ("ULTI GINTI") 🔥 */}
+                    <QueueTimer minutes={activeTicket.estimatedWaitTime || activeTicket.totalTime || 15} />
+
                     <div className="text-right">
                         <div className="text-2xl font-black">₹{activeTicket.totalPrice}</div>
                         <div className="text-xs text-zinc-400">to pay</div>
