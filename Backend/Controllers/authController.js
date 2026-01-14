@@ -159,6 +159,7 @@ export const logoutUser = (req, res) => {
 /* --------------------------------------- */
 export const getAllUsers = async (req, res) => {
   try {
+    // Database se saare users fetch karega, password hatake, naye users pehle
     const users = await User.find().select("-password").sort({ createdAt: -1 });
 
     return res.status(200).json({
@@ -180,7 +181,10 @@ export const getAllUsers = async (req, res) => {
 /* --------------------------------------- */
 export const updateActivity = async (req, res) => {
   try {
+    // req.user.id tumhare 'verifyToken' middleware se aayega
     const userId = req.user.id; 
+    
+    // Sirf lastLogin update karo
     await User.findByIdAndUpdate(userId, { lastLogin: new Date() });
 
     return res.status(200).json({
@@ -197,7 +201,7 @@ export const updateActivity = async (req, res) => {
 };
 
 /* ----------------------------------------------------- */
-/* 🧪 TESTING ONLY: Randomize All Users Activity Time    */
+/* 🧪 REALISTIC RANDOMIZER (FIXED)                       */
 /* (Ye function sab users ka time alag-alag kar dega)    */
 /* ----------------------------------------------------- */
 export const randomizeUserActivity = async (req, res) => {
@@ -205,14 +209,26 @@ export const randomizeUserActivity = async (req, res) => {
     const users = await User.find();
 
     const updates = users.map(async (user) => {
-      // Random time: Last 3 days
-      // (Abhi se lekar 72 hours pehle tak ka koi bhi time)
-      const randomTime = new Date(Date.now() - Math.floor(Math.random() * 3 * 24 * 60 * 60 * 1000));
+      // 50-50 Chance: Aaj active hai ya Purana hai
+      const isToday = Math.random() > 0.5;
       
-      // Randomly decide: 40% chance user "Active Today" hai
-      const isToday = Math.random() > 0.6;
+      let fakeDate;
+
+      if (isToday) {
+        
+        // 🔥 CASE 1: AAJ ACTIVE HAI (Random time within last 12 hours)
+        // This ensures everyone has a UNIQUE time for today, not exact same
+        const randomHoursAgo = Math.floor(Math.random() * 12 * 60 * 60 * 1000);
+        fakeDate = new Date(Date.now() - randomHoursAgo);
+      } else {
+        // 🔥 CASE 2: INACTIVE (PURANA)
+        // 1 se 10 din purana koi bhi time
+        const randomDaysAgo = Math.floor(Math.random() * 10 * 24 * 60 * 60 * 1000);
+        const oneDayMs = 24 * 60 * 60 * 1000;
+        fakeDate = new Date(Date.now() - (randomDaysAgo + oneDayMs));
+      }
       
-      user.lastLogin = isToday ? new Date() : randomTime;
+      user.lastLogin = fakeDate;
       return user.save();
     });
 
@@ -220,7 +236,7 @@ export const randomizeUserActivity = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: `Successfully randomized activity times for ${users.length} users!`,
+      message: `Fixed! Randomized times for ${users.length} users with realistic gaps.`,
     });
 
   } catch (error) {
