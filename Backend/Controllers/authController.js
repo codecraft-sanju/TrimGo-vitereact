@@ -14,14 +14,8 @@ const cookieOptions = {
   maxAge: 7 * 24 * 60 * 60 * 1000, 
 };
 
-// Helper function to get today's date string (YYYY-MM-DD)
-const getTodayDateString = () => {
-    return new Date().toISOString().split('T')[0];
-};
 
-/* --------------------------------------- */
-/* Register User                           */
-/* --------------------------------------- */
+
 export const registerUser = async (req, res) => {
   try {
     const { name, email, phone, password } = req.body;
@@ -44,16 +38,11 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    // New user create karte waqt aaj ki date activeDates me daal do
-    const today = getTodayDateString();
-
     const user = await User.create({
       name,
       email: email.toLowerCase(),
       phone,
       password,
-      lastActiveAt: new Date(),
-      activeDates: [today] // First day attendance marked automatically
     });
 
     const token = createToken(user._id);
@@ -122,23 +111,6 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    // --- TRACKING LOGIC START ---
-    const today = getTodayDateString();
-    
-    // 1. Update Last Active Time (Just now)
-    user.lastActiveAt = new Date();
-
-    // 2. Attendance Check: Agar aaj ki date list me nahi hai, toh add karo
-    // Hum initialize karte hai activeDates agar undefined ho (purane users ke liye)
-    if (!user.activeDates) user.activeDates = [];
-    
-    if (!user.activeDates.includes(today)) {
-        user.activeDates.push(today);
-    }
-
-    await user.save({ validateBeforeSave: false }); 
-    // --- TRACKING LOGIC END ---
-
     const token = createToken(user._id);
 
     res.cookie("auth_token", token, cookieOptions);
@@ -164,6 +136,7 @@ export const loginUser = async (req, res) => {
 /* Logout User                             */
 /* --------------------------------------- */
 export const logoutUser = (req, res) => {
+  
   res.clearCookie("auth_token", {
     httpOnly: true,
     secure: true, 
@@ -177,11 +150,11 @@ export const logoutUser = (req, res) => {
 };
 
 /* --------------------------------------- */
-/* GET ALL USERS (Admin)                   */
+/* GET ALL USERS (New for Admin)           */
 /* --------------------------------------- */
 export const getAllUsers = async (req, res) => {
   try {
-    // lastActiveAt aur activeDates dono return honge
+    // Database se saare users fetch karega, password hatake, naye users pehle
     const users = await User.find().select("-password").sort({ createdAt: -1 });
 
     return res.status(200).json({
@@ -196,56 +169,4 @@ export const getAllUsers = async (req, res) => {
       message: "Server Error",
     });
   }
-};
-
-/* --------------------------------------- */
-/* TRACK ACTIVITY (Background Sync)        */
-/* --------------------------------------- */
-export const trackUserActivity = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const today = getTodayDateString();
-
-    const user = await User.findById(userId);
-
-    if (!user) {
-        return res.status(404).json({ message: "User not found" });
-    }
-
-    // 1. Time Update
-    user.lastActiveAt = new Date();
-
-    // 2. Attendance Update (Agar aaj ka din missing hai toh add karo)
-    if (!user.activeDates) user.activeDates = [];
-
-    if (!user.activeDates.includes(today)) {
-        user.activeDates.push(today);
-    }
-
-    await user.save({ validateBeforeSave: false });
-
-    return res.status(200).json({
-      success: true,
-      message: "Activity tracked",
-    });
-  } catch (err) {
-    console.error("Activity Track Error:", err);
-    return res.status(500).json({ message: "Server Error" });
-  }
-};
-
-/* --------------------------------------- */
-/* RESET LOGS (For Testing Only)           */
-/* --------------------------------------- */
-// Isse call karke purana data saaf kar sakte ho testing start karne se pehle
-export const resetActivityLogs = async (req, res) => {
-    try {
-      await User.updateMany({}, { 
-          $unset: { lastActiveAt: 1 },
-          $set: { activeDates: [] }
-      });
-      res.json({ success: true, message: "Tracking Data Reset Successfully!" });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
 };

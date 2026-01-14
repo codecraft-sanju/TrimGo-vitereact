@@ -4,8 +4,7 @@ import {
   registerUser,
   loginUser,
   logoutUser,
-  getAllUsers,
-  trackUserActivity, // <--- 1. Import Added (Yeh naya function yaha laye)
+  getAllUsers, // <--- 1. Import Added
 } from "../Controllers/authController.js";
 import { protect } from "../Middleware/authMiddleware.js";
 
@@ -29,11 +28,6 @@ router.get("/me", protect, (req, res) => {
 });
 
 // GET /api/auth/all (Admin Route to fetch all users)
-router.get("/all", getAllUsers);
-
-// --- NEW ROUTE FOR PLAY STORE TRACKING ---
-// POST /api/auth/track-activity
-// 'protect' lagana zaroori hai taki hume pata chale kaun user hai (req.user.id)
-router.post("/track-activity", protect, trackUserActivity); 
+router.get("/all", getAllUsers); // <--- 2. Route Added
 
 export default router;
