@@ -5,7 +5,8 @@ import {
   loginUser,
   logoutUser,
   getAllUsers, 
-  updateActivity, // <--- 1. Import Added (Activity Updater)
+  updateActivity, 
+  randomizeUserActivity, // <--- 1. Import Added (Magic Function)
 } from "../Controllers/authController.js";
 import { protect } from "../Middleware/authMiddleware.js";
 
@@ -31,8 +32,12 @@ router.get("/me", protect, (req, res) => {
 // GET /api/auth/all (Admin Route to fetch all users)
 router.get("/all", getAllUsers);
 
-// 🔥 POST /api/auth/update-activity (New: App Testing Signal)
+// 🔥 POST /api/auth/update-activity (Real: App Signal)
 // Isse App backend ko batayega ki user abhi active hai
 router.post("/update-activity", protect, updateActivity); 
+
+// 🧪 GET /api/auth/randomize-test (Testing Only: Magic Button)
+// Browser me hit karo: http://localhost:5000/api/auth/randomize-test
+router.get("/randomize-test", randomizeUserActivity); 
 
 export default router;

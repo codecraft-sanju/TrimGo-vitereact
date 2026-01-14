@@ -44,7 +44,7 @@ export const registerUser = async (req, res) => {
       email: email.toLowerCase(),
       phone,
       password,
-      // lastLogin automatic default 'now' le lega model se
+      lastLogin: new Date() // Set current time on registration
     });
 
     const token = createToken(user._id);
@@ -155,11 +155,10 @@ export const logoutUser = (req, res) => {
 };
 
 /* --------------------------------------- */
-/* GET ALL USERS (New for Admin)           */
+/* GET ALL USERS (Admin Dashboard)         */
 /* --------------------------------------- */
 export const getAllUsers = async (req, res) => {
   try {
-    // Database se saare users fetch karega, password hatake, naye users pehle
     const users = await User.find().select("-password").sort({ createdAt: -1 });
 
     return res.status(200).json({
@@ -177,14 +176,11 @@ export const getAllUsers = async (req, res) => {
 };
 
 /* --------------------------------------- */
-/* 🔥 UPDATE ACTIVITY (Testing/Tracking) 🔥 */
+/* 🔥 UPDATE ACTIVITY (App Ping)         🔥 */
 /* --------------------------------------- */
 export const updateActivity = async (req, res) => {
   try {
-    // req.user.id tumhare 'verifyToken' middleware se aayega
     const userId = req.user.id; 
-
-    // Sirf lastLogin update karo
     await User.findByIdAndUpdate(userId, { lastLogin: new Date() });
 
     return res.status(200).json({
@@ -197,5 +193,38 @@ export const updateActivity = async (req, res) => {
       success: false,
       message: "Server Error",
     });
+  }
+};
+
+/* ----------------------------------------------------- */
+/* 🧪 TESTING ONLY: Randomize All Users Activity Time    */
+/* (Ye function sab users ka time alag-alag kar dega)    */
+/* ----------------------------------------------------- */
+export const randomizeUserActivity = async (req, res) => {
+  try {
+    const users = await User.find();
+
+    const updates = users.map(async (user) => {
+      // Random time: Last 3 days
+      // (Abhi se lekar 72 hours pehle tak ka koi bhi time)
+      const randomTime = new Date(Date.now() - Math.floor(Math.random() * 3 * 24 * 60 * 60 * 1000));
+      
+      // Randomly decide: 40% chance user "Active Today" hai
+      const isToday = Math.random() > 0.6;
+      
+      user.lastLogin = isToday ? new Date() : randomTime;
+      return user.save();
+    });
+
+    await Promise.all(updates);
+
+    return res.status(200).json({
+      success: true,
+      message: `Successfully randomized activity times for ${users.length} users!`,
+    });
+
+  } catch (error) {
+    console.error("Randomize Error:", error);
+    return res.status(500).json({ success: false, message: "Server Error" });
   }
 };
