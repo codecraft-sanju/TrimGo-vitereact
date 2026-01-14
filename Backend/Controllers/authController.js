@@ -201,31 +201,32 @@ export const updateActivity = async (req, res) => {
 };
 
 /* ----------------------------------------------------- */
-/* 🧪 REALISTIC RANDOMIZER (FIXED)                       */
+/* 🧪 SUPER RANDOMIZER (FIXED FOR REALISTIC TIMES)       */
 /* (Ye function sab users ka time alag-alag kar dega)    */
 /* ----------------------------------------------------- */
 export const randomizeUserActivity = async (req, res) => {
   try {
     const users = await User.find();
 
-    const updates = users.map(async (user) => {
-      // 50-50 Chance: Aaj active hai ya Purana hai
-      const isToday = Math.random() > 0.5;
+    const updates = users.map(async (user, index) => {
+      // 60% Chance: Aaj active hai (Green Badge)
+      const isToday = Math.random() > 0.4; 
       
       let fakeDate;
+      const now = new Date();
 
       if (isToday) {
-        
-        // 🔥 CASE 1: AAJ ACTIVE HAI (Random time within last 12 hours)
-        // This ensures everyone has a UNIQUE time for today, not exact same
-        const randomHoursAgo = Math.floor(Math.random() * 12 * 60 * 60 * 1000);
-        fakeDate = new Date(Date.now() - randomHoursAgo);
+        // 🔥 CASE 1: ACTIVE TODAY
+        // Abhi ke time se 5 minute se lekar 10 ghante pehle tak ka koi bhi time
+        // 'index' use kiya taaki har user ka time pakka alag ho (collision avoid karne ke liye)
+        const randomMinutes = Math.floor(Math.random() * 600) + (index * 5); 
+        fakeDate = new Date(now.getTime() - (randomMinutes * 60 * 1000));
       } else {
-        // 🔥 CASE 2: INACTIVE (PURANA)
-        // 1 se 10 din purana koi bhi time
-        const randomDaysAgo = Math.floor(Math.random() * 10 * 24 * 60 * 60 * 1000);
-        const oneDayMs = 24 * 60 * 60 * 1000;
-        fakeDate = new Date(Date.now() - (randomDaysAgo + oneDayMs));
+        // 🔥 CASE 2: INACTIVE (Orange Badge)
+        // 1 se 7 din purana koi bhi time
+        const randomDays = Math.floor(Math.random() * 7) + 1;
+        const randomHours = Math.floor(Math.random() * 24);
+        fakeDate = new Date(now.getTime() - (randomDays * 24 * 60 * 60 * 1000) - (randomHours * 60 * 1000));
       }
       
       user.lastLogin = fakeDate;
@@ -236,7 +237,7 @@ export const randomizeUserActivity = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: `Fixed! Randomized times for ${users.length} users with realistic gaps.`,
+      message: `Fixed! Randomized times for ${users.length} users with distinct timestamps.`,
     });
 
   } catch (error) {
