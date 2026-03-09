@@ -221,5 +221,5 @@ const Footer = ({ onNavigateAdmin }) => {
     </footer>
   );
 };
-
+//jj
 export default Footer;
