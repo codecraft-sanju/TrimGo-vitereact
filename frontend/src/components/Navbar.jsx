@@ -147,15 +147,11 @@ const Navbar = ({ onNavigateLogin }) => {
     { name: "Stories", href: "#testimonials", sub: "Success stories" },
   ];
 
+  // <<< CHANGES MADE HERE: Replaced toast with Play Store redirect >>>
   const handleGetApp = () => {
-    toast.info('TrimGo App Coming Soon!', {
-      position: "top-center",
-      autoClose: 3000,
-      theme: "dark",
-      transition: Bounce,
-      icon: "🚀"
-    });
+    window.open("https://play.google.com/store/apps/details?id=com.trimgo.app", "_blank");
   };
+  // <<< END OF CHANGES >>>
 
   return (
     <>
@@ -304,8 +300,8 @@ const Navbar = ({ onNavigateLogin }) => {
               className="fixed bottom-0 left-0 right-0 h-[92vh] bg-[#0A0A0A] z-50 rounded-t-[2.5rem] overflow-hidden shadow-2xl shadow-black border-t border-white/10 flex flex-col"
             >
               {/* OPTIMIZED DECORATIVE ELEMENTS 
-                   Replaced heavy `blur` filters with Radial Gradients.
-                   This creates the same look but runs 60FPS on mobile.
+                  Replaced heavy `blur` filters with Radial Gradients.
+                  This creates the same look but runs 60FPS on mobile.
                 */}
 
               {/* Handle Bar */}
