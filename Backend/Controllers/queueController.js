@@ -1,6 +1,8 @@
 import Ticket from "../Models/Ticket.js";
 import Salon from "../Models/Salon.js";
 import User from "../Models/User.js";
+// --- NEW: Import our util function ---
+import { sendWhatsappMessage } from "../utils/sendWhatsapp.js"; 
 
 /* -------------------------------------------------------------------------- */
 /* USER ACTION: CANCEL TICKET (AGAR USER KHUD CANCEL KARE)                    */
@@ -140,6 +142,17 @@ export const joinQueue = async (req, res) => {
 
     // 🔥 SOCKET EMIT: Salon ke Dashboard par turant request dikhao
     req.io.to(`salon_${salonId}`).emit("new_request", fullTicket);
+
+    // --- NEW: WhatsApp Notification Logic using Util ---
+    const salon = await Salon.findById(salonId);
+    if (salon && salon.phone) {
+      const serviceNames = services.map(s => s.name).join(", ");
+      const messageText = `Hello ${salon.salonName},\nYou have a new queue request from ${fullTicket.userId.name} for ${serviceNames}.\nPlease open your TrimGo dashboard to accept it.`;
+      
+      // Util function call kar rahe hain yahan
+      await sendWhatsappMessage(salon.phone, messageText);
+    }
+    // --- END NEW ---
 
     res.status(201).json({ success: true, ticket });
   } catch (err) {
