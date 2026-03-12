@@ -36,9 +36,7 @@ router.post("/logout", logoutSalon);
 router.get("/all", getAllSalons); 
 
 
-/* =========================================
-   PROTECTED ROUTES (Requires Salon Login)
-   ========================================= */
+
 
 // Get Current Salon Profile
 router.get("/me", protectSalon, (req, res) => {

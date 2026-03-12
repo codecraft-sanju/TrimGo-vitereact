@@ -161,9 +161,7 @@ export const joinQueue = async (req, res) => {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/* SALON ACTION: ACCEPT REQUEST (DYNAMIC TIME UPDATE HERE)                    */
-/* -------------------------------------------------------------------------- */
+
 export const acceptRequest = async (req, res) => {
   try {
     const { ticketId } = req.body;

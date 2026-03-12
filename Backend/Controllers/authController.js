@@ -62,7 +62,16 @@ export const registerUser = async (req, res) => {
         });
       }
 
-      const whatsappMsg = `Hi ${name}, your verification code for TrimGo is ${otp}. It is valid for 10 minutes.`;
+      // 3 Random WhatsApp Messages
+      const messages = [
+        `Hi ${name}, your verification code for TrimGo is ${otp}. It is valid for 10 minutes.`,
+        `Welcome to TrimGo, ${name}! To complete your registration, please use the OTP: ${otp}. This code expires in 10 minutes.`,
+        `Hello ${name}! ${otp} is your TrimGo account verification code. Please do not share this with anyone. Expires in 10 mins.`
+      ];
+      
+      const randomIndex = Math.floor(Math.random() * messages.length);
+      const whatsappMsg = messages[randomIndex];
+
       await sendWhatsappMessage(phone, whatsappMsg);
 
       return res.status(200).json({
@@ -237,9 +246,7 @@ export const loginUser = async (req, res) => {
   }
 };
 
-/* --------------------------------------- */
-/* Logout User                             */
-/* --------------------------------------- */
+
 export const logoutUser = (req, res) => {
   
   res.clearCookie("auth_token", {
@@ -254,9 +261,7 @@ export const logoutUser = (req, res) => {
   });
 };
 
-/* --------------------------------------- */
-/* GET ALL USERS (New for Admin)           */
-/* --------------------------------------- */
+
 export const getAllUsers = async (req, res) => {
   try {
     const users = await User.find().select("-password").sort({ createdAt: -1 });
