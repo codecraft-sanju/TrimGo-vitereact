@@ -303,12 +303,36 @@ const AppContent = () => {
     try {
       const { data } = await api.post("/salon/register", formData);
       if (data.success) {
-        setCurrentSalon(data.salon);
-        toast.success("Registration successful! Welcome Partner.");
-        navigate("/dashboard/salon");
+        if (data.phone) {
+          // Backend ne OTP bheja hai
+          toast.success("OTP sent to your WhatsApp number!");
+          return { success: true, requiresOtp: true, phone: data.phone };
+        } else {
+          // Direct registration (OTP disabled)
+          setCurrentSalon(data.salon);
+          toast.success("Registration successful! Welcome Partner.");
+          navigate("/dashboard/salon");
+          return { success: true, requiresOtp: false };
+        }
       }
     } catch (error) {
       toast.error(error.response?.data?.message || "Registration Failed");
+      return { success: false };
+    }
+  };
+
+  const handleVerifySalonOtp = async (phone, otp) => {
+    try {
+      const { data } = await api.post("/salon/verify-otp", { phone, otp });
+      if (data.success) {
+        setCurrentSalon(data.salon);
+        toast.success("Salon verified successfully! Welcome to TrimGo.");
+        navigate("/dashboard/salon");
+        return { success: true };
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Invalid OTP");
+      return { success: false };
     }
   };
 
@@ -430,6 +454,7 @@ const AppContent = () => {
               <SalonRegistration
                 onBack={() => navigate("/")}
                 onRegister={handleRegisterSalon}
+                onVerifyOtp={handleVerifySalonOtp}
                 onNavigateLogin={() => navigate("/salon/login")}
               />
             </PublicRoute>

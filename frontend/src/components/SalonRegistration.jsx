@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Store, User, Phone, MapPin, ArrowRight, ChevronLeft,
-  Mail, Lock, Hash, Crosshair, Tag, Loader2, ArrowLeft
+  Mail, Lock, Hash, Crosshair, Tag, Loader2, ArrowLeft,
+  ShieldCheck
 } from "lucide-react";
 // Assuming LocationPicker is in the same directory
 import LocationPicker from "./LocationPicker";
@@ -46,6 +47,62 @@ const InputGroup = ({ icon: Icon, type, label, name, value, onChange, required =
     <Icon className="absolute right-2 top-3 text-zinc-300 group-focus-within:text-black dark:group-focus-within:text-white transition-colors" size={18} />
   </motion.div>
 );
+
+// --- OTP BOXES COMPONENT (DIBBE WALA UI) ---
+const OtpInput = ({ length = 6, value, onChange }) => {
+  const inputRefs = useRef([]);
+
+  const handleChange = (e, index) => {
+    const text = e.target.value;
+    if (!/^[0-9]*$/.test(text)) return; // Only allow numbers
+
+    const newValue = value.split("");
+    // Take the last character if multiple are typed (fixes quick typing issues)
+    newValue[index] = text.slice(-1);
+    const combined = newValue.join("");
+    onChange(combined);
+
+    // Auto-focus to next box
+    if (text && index < length - 1) {
+      inputRefs.current[index + 1].focus();
+    }
+  };
+
+  const handleKeyDown = (e, index) => {
+    // Auto-focus to previous box on Backspace
+    if (e.key === "Backspace" && !value[index] && index > 0) {
+      inputRefs.current[index - 1].focus();
+    }
+  };
+
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData("text/plain").slice(0, length).replace(/[^0-9]/g, '');
+    onChange(pastedData);
+    
+    // Auto-focus the last filled box or the end
+    const focusIndex = Math.min(pastedData.length, length - 1);
+    inputRefs.current[focusIndex].focus();
+  };
+
+  return (
+    <div className="flex justify-between items-center gap-2 w-full mb-8" onPaste={handlePaste}>
+      {Array.from({ length }).map((_, index) => (
+        <input
+          key={index}
+          ref={(el) => (inputRefs.current[index] = el)}
+          type="text"
+          inputMode="numeric"
+          maxLength={1}
+          value={value[index] || ""}
+          onChange={(e) => handleChange(e, index)}
+          onKeyDown={(e) => handleKeyDown(e, index)}
+          className="w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-black bg-zinc-100 dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-800 rounded-xl outline-none focus:border-black dark:focus:border-white text-zinc-900 dark:text-white transition-all shadow-sm focus:shadow-md"
+        />
+      ))}
+    </div>
+  );
+};
 
 const CustomDropdown = ({ icon: Icon, label, name, value, options, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -165,8 +222,14 @@ const AuthLayout = ({ children, title, subtitle, onBack, illustration }) => (
 /* ----------------------------------------------------------------------
    COMPONENT 1: SALON REGISTRATION (PREMIUM UI + FULL LOGIC)
 ---------------------------------------------------------------------- */
-export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
+export const SalonRegistration = ({ onBack, onRegister, onVerifyOtp, onNavigateLogin }) => {
   const [isLoading, setIsLoading] = useState(false);
+  
+  // States for OTP flow
+  const [step, setStep] = useState(1); // 1 = Registration Form, 2 = OTP Verification
+  const [registeredPhone, setRegisteredPhone] = useState("");
+  const [otp, setOtp] = useState("");
+
   const [formData, setFormData] = useState({
     salonName: "",
     ownerName: "",
@@ -196,99 +259,171 @@ export const SalonRegistration = ({ onBack, onRegister, onNavigateLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    console.log("Submitting Data with Location:", formData);
 
-    // Simulate API call or perform action
     if (onRegister) {
-      await onRegister(formData);
+      const result = await onRegister(formData);
+      // Agar backend se OTP enable hai aur success hai
+      if (result && result.success && result.requiresOtp) {
+        setRegisteredPhone(result.phone);
+        setStep(2); // OTP screen par le jao
+      }
     }
 
-    // Stop loading (in real app, do this after success/failure)
-    setTimeout(() => setIsLoading(false), 1500);
+    setIsLoading(false);
+  };
+
+  const handleOtpSubmit = async (e) => {
+    e.preventDefault();
+    if (otp.length < 6) {
+      toast.error("Please enter complete 6-digit OTP");
+      return;
+    }
+
+    setIsLoading(true);
+    if (onVerifyOtp) {
+      await onVerifyOtp(registeredPhone, otp);
+    }
+    setIsLoading(false);
   };
 
   return (
     <AuthLayout
-      title="Partner"
-      subtitle="Transform your salon business today."
-      onBack={onBack}
+      title={step === 1 ? "Partner" : "Verify"}
+      subtitle={step === 1 ? "Transform your salon business today." : "We've sent a code to your WhatsApp"}
+      onBack={step === 2 ? () => setStep(1) : onBack}
       illustration={
         <div className="space-y-6">
           <div className="size-16 bg-black dark:bg-white rounded-2xl flex items-center justify-center">
-            <Store className="text-white dark:text-black" size={32} />
+            {step === 1 ? (
+              <Store className="text-white dark:text-black" size={32} />
+            ) : (
+              <ShieldCheck className="text-white dark:text-black" size={32} />
+            )}
           </div>
           <h3 className="text-3xl font-light italic leading-tight text-zinc-900 dark:text-white">
-            "Since using TrimGo, our revenue increased by 30% in the first month."
+            {step === 1 
+              ? `"Since using TrimGo, our revenue increased by 30% in the first month."`
+              : `"Security and verification ensures quality customers and genuine partners."`}
           </h3>
           <div className="flex items-center gap-4 pt-4">
             <div className="size-12 bg-zinc-200 dark:bg-zinc-800 rounded-full" />
             <div>
-              <p className="font-bold text-zinc-900 dark:text-white">Rajesh Kumar</p>
-              <p className="text-xs text-zinc-500">Owner, The Royal Cut</p>
+              <p className="font-bold text-zinc-900 dark:text-white">
+                {step === 1 ? "Rajesh Kumar" : "TrimGo Security"}
+              </p>
+              <p className="text-xs text-zinc-500">
+                {step === 1 ? "Owner, The Royal Cut" : "System Verification"}
+              </p>
             </div>
           </div>
         </div>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-2 pb-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-          <div className="md:col-span-2">
-            <InputGroup icon={Store} name="salonName" value={formData.salonName} onChange={handleChange} type="text" label="Salon Name" />
-          </div>
+      <AnimatePresence mode="wait">
+        {step === 1 ? (
+          <motion.form 
+            key="form"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            onSubmit={handleSubmit} 
+            className="space-y-2 pb-10"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+              <div className="md:col-span-2">
+                <InputGroup icon={Store} name="salonName" value={formData.salonName} onChange={handleChange} type="text" label="Salon Name" />
+              </div>
 
-          <InputGroup icon={User} name="ownerName" value={formData.ownerName} onChange={handleChange} type="text" label="Owner Name" />
-          <InputGroup icon={Phone} name="phone" value={formData.phone} onChange={handleChange} type="tel" label="Mobile" />
+              <InputGroup icon={User} name="ownerName" value={formData.ownerName} onChange={handleChange} type="text" label="Owner Name" />
+              <InputGroup icon={Phone} name="phone" value={formData.phone} onChange={handleChange} type="tel" label="Mobile" />
 
-          <div className="md:col-span-2">
-            <InputGroup icon={Mail} name="email" value={formData.email} onChange={handleChange} type="email" label="Email Address" />
-            <InputGroup icon={Lock} name="password" value={formData.password} onChange={handleChange} type="password" label="Password" />
-            <InputGroup icon={MapPin} name="address" value={formData.address} onChange={handleChange} type="text" label="Full Address" />
-          </div>
-        </div>
+              <div className="md:col-span-2">
+                <InputGroup icon={Mail} name="email" value={formData.email} onChange={handleChange} type="email" label="Email Address" />
+                <InputGroup icon={Lock} name="password" value={formData.password} onChange={handleChange} type="password" label="Password" />
+                <InputGroup icon={MapPin} name="address" value={formData.address} onChange={handleChange} type="text" label="Full Address" />
+              </div>
+            </div>
 
-        {/* --- MAP SECTION --- */}
-        <motion.div variants={fadeInUp} className="mb-10 bg-zinc-50 dark:bg-zinc-900/50 p-4 rounded-3xl border border-zinc-100 dark:border-zinc-800">
-          <div className="flex justify-between items-center mb-4">
-            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">📍 Pin Shop Location</label>
-            {formData.latitude && (
-              <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full font-bold">
-                Location Locked ✅
-              </span>
-            )}
-          </div>
-          <div className="rounded-2xl overflow-hidden h-72 relative border border-zinc-200 dark:border-zinc-800 z-0">
-            {/* Ensure LocationPicker handles z-index correctly internally if needed */}
-            <LocationPicker onLocationSelect={handleLocationSelect} />
-          </div>
-          <p className="text-[10px] text-zinc-400 mt-2 text-center">Drag the marker to your exact shop location.</p>
-        </motion.div>
+            {/* --- MAP SECTION --- */}
+            <motion.div variants={fadeInUp} className="mb-10 bg-zinc-50 dark:bg-zinc-900/50 p-4 rounded-3xl border border-zinc-100 dark:border-zinc-800">
+              <div className="flex justify-between items-center mb-4">
+                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">📍 Pin Shop Location</label>
+                {formData.latitude && (
+                  <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full font-bold">
+                    Location Locked ✅
+                  </span>
+                )}
+              </div>
+              <div className="rounded-2xl overflow-hidden h-72 relative border border-zinc-200 dark:border-zinc-800 z-0">
+                <LocationPicker onLocationSelect={handleLocationSelect} />
+              </div>
+              <p className="text-[10px] text-zinc-400 mt-2 text-center">Drag the marker to your exact shop location.</p>
+            </motion.div>
 
-        <div className="grid grid-cols-2 gap-8">
-          <InputGroup icon={Hash} name="zipCode" value={formData.zipCode} onChange={handleChange} type="text" label="Zip Code" />
+            <div className="grid grid-cols-2 gap-8">
+              <InputGroup icon={Hash} name="zipCode" value={formData.zipCode} onChange={handleChange} type="text" label="Zip Code" />
 
-          <CustomDropdown
-            icon={Crosshair}
-            name="type"
-            label="Salon Type"
-            value={formData.type}
-            options={["Unisex", "Men Only", "Women Only"]}
-            onChange={handleChange}
-          />
-        </div>
+              <CustomDropdown
+                icon={Crosshair}
+                name="type"
+                label="Salon Type"
+                value={formData.type}
+                options={["Unisex", "Men Only", "Women Only"]}
+                onChange={handleChange}
+              />
+            </div>
 
-        {/* REFERRAL CODE SECTION */}
-        <InputGroup icon={Tag} name="referralCode" value={formData.referralCode} onChange={handleChange} type="text" label="Referral Code (Optional)" required={false} />
+            {/* REFERRAL CODE SECTION */}
+            <InputGroup icon={Tag} name="referralCode" value={formData.referralCode} onChange={handleChange} type="text" label="Referral Code (Optional)" required={false} />
 
-        <div className="pt-4">
-          <ShimmerButton isLoading={isLoading} className="w-full text-base">
-            Complete Registration <ArrowRight size={18} />
-          </ShimmerButton>
-        </div>
-      </form>
+            <div className="pt-4">
+              <ShimmerButton isLoading={isLoading} className="w-full text-base">
+                Complete Registration <ArrowRight size={18} />
+              </ShimmerButton>
+            </div>
+            
+            <motion.p variants={fadeInUp} className="mt-4 text-center text-zinc-500 text-sm font-medium pb-10">
+              Already a partner? <button type="button" onClick={onNavigateLogin} className="text-black dark:text-white font-bold hover:underline">Login to Dashboard</button>
+            </motion.p>
+          </motion.form>
+        ) : (
+          <motion.form 
+            key="otp"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            onSubmit={handleOtpSubmit} 
+            className="space-y-6 pt-8 pb-10 max-w-sm"
+          >
+            <div className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-8">
+              Enter the 6-digit verification code sent to <br/>
+              <span className="font-bold text-black dark:text-white">{registeredPhone}</span>
+            </div>
 
-      <motion.p variants={fadeInUp} className="mt-4 text-center text-zinc-500 text-sm font-medium pb-10">
-        Already a partner? <button onClick={onNavigateLogin} className="text-black dark:text-white font-bold hover:underline">Login to Dashboard</button>
-      </motion.p>
+            {/* --- DIBBE WALA OTP INPUT --- */}
+            <div>
+              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block mb-4">
+                Verification Code (OTP)
+              </label>
+              <OtpInput value={otp} onChange={setOtp} length={6} />
+            </div>
+
+            <ShimmerButton isLoading={isLoading} className="w-full text-base mt-4">
+              Verify & Register <ArrowRight size={18} />
+            </ShimmerButton>
+
+            <div className="text-center mt-6">
+              <button 
+                type="button" 
+                onClick={() => setStep(1)} 
+                className="text-sm text-zinc-500 hover:text-black dark:hover:text-white transition-colors"
+              >
+                Change Phone Number
+              </button>
+            </div>
+          </motion.form>
+        )}
+      </AnimatePresence>
     </AuthLayout>
   );
 };
@@ -339,7 +474,7 @@ export const SalonLogin = ({ onBack, onLogin, onNavigateRegister }) => {
       </form>
 
       <motion.p variants={fadeInUp} className="mt-8 text-center text-zinc-500 text-sm font-medium">
-        New to TrimGo? <button onClick={onNavigateRegister} className="text-black dark:text-white font-bold hover:underline">Register Salon</button>
+        New to TrimGo? <button type="button" onClick={onNavigateRegister} className="text-black dark:text-white font-bold hover:underline">Register Salon</button>
       </motion.p>
     </AuthLayout>
   );

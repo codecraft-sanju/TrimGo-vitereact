@@ -75,6 +75,21 @@ const salonSchema = new mongoose.Schema(
       default: false, 
     },
 
+    // CHANGED START: OTP & Phone Verification Fields
+    isPhoneVerified: {
+      type: Boolean,
+      default: false,
+    },
+    otp: {
+      type: String,
+      select: false,
+    },
+    otpExpiry: {
+      type: Date,
+      select: false,
+    },
+    // CHANGED END
+
     // 3. Ratings (For Sorting)
     rating: {
       type: Number,
@@ -152,6 +167,10 @@ salonSchema.methods.comparePassword = async function (plainPassword) {
 salonSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;
+  // CHANGED START
+  delete obj.otp;
+  delete obj.otpExpiry;
+  // CHANGED END
   return obj;
 };
 

@@ -1,6 +1,9 @@
 import express from "express";
 import {
   registerSalon,
+  // CHANGED START
+  verifySalonRegistrationOtp,
+  // CHANGED END
   loginSalon,
   logoutSalon,
   getAllSalons,       // <-- New Import
@@ -16,6 +19,11 @@ const router = express.Router();
 
 // Register New Salon
 router.post("/register", registerSalon);
+
+// CHANGED START
+// Verify Salon OTP
+router.post("/verify-otp", verifySalonRegistrationOtp);
+// CHANGED END
 
 // Login Salon
 router.post("/login", loginSalon);

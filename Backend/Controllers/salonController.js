@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import Salon from "../Models/Salon.js";
 import Ticket from "../Models/Ticket.js"; 
 import User from "../Models/User.js"; 
+import { sendWhatsappMessage } from "../utils/sendWhatsapp.js";
 
 const createToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -32,17 +33,15 @@ export const registerSalon = async (req, res) => {
       return res.status(400).json({ success: false, message: "Please fill all fields and Pin your location." });
     }
 
-    const existingSalon = await Salon.findOne({ $or: [{ email: email.toLowerCase() }, { phone }] });
-    if (existingSalon) return res.status(400).json({ success: false, message: "Salon already registered." });
+    let salon = await Salon.findOne({ $or: [{ email: email.toLowerCase() }, { phone }] });
+    
+    if (salon && salon.isPhoneVerified) {
+        return res.status(400).json({ success: false, message: "Salon already registered and verified." });
+    }
 
-    // -------------------------------------------------------
-    // Referral Logic
-    // -------------------------------------------------------
     let referringUserId = null;
-
     if (referralCode) {
       const referrer = await User.findOne({ referralCode });
-      
       if (!referrer) {
         return res.status(400).json({ 
             success: false, 
@@ -52,43 +51,175 @@ export const registerSalon = async (req, res) => {
       referringUserId = referrer._id;
     }
 
-    const salon = await Salon.create({
-      salonName,
-      ownerName,
-      email: email.toLowerCase(),
-      phone,
-      address,
-      zipCode,
-      password,
-      salonType: type || "Unisex",
-      latitude,
-      longitude,
-      isOnline: true,
-      verified: false,
-      services: [],
-      staff: [],
-      gallery: [], // Initialize empty gallery
-      referredBy: referringUserId 
-    });
+    const isOtpEnabled = process.env.OTP_SERVICE_ENABLED === "true";
 
-    if (referringUserId) {
+    if (isOtpEnabled) {
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); 
+
+      if (salon && !salon.isPhoneVerified) {
+          salon.salonName = salonName;
+          salon.ownerName = ownerName;
+          salon.email = email.toLowerCase();
+          salon.address = address;
+          salon.zipCode = zipCode;
+          salon.password = password;
+          salon.salonType = type || "Unisex";
+          salon.latitude = latitude;
+          salon.longitude = longitude;
+          salon.otp = otp;
+          salon.otpExpiry = otpExpiry;
+          salon.referredBy = referringUserId;
+          await salon.save();
+      } else {
+          salon = await Salon.create({
+            salonName,
+            ownerName,
+            email: email.toLowerCase(),
+            phone,
+            address,
+            zipCode,
+            password,
+            salonType: type || "Unisex",
+            latitude,
+            longitude,
+            isOnline: true,
+            verified: false,
+            isPhoneVerified: false,
+            services: [],
+            staff: [],
+            gallery: [],
+            otp,
+            otpExpiry,
+            referredBy: referringUserId 
+          });
+      }
+
+      const whatsappMsg = `Hi ${ownerName}, your verification code for registering your salon on TrimGo is ${otp}. Valid for 10 minutes.`;
+      await sendWhatsappMessage(phone, whatsappMsg);
+
+      return res.status(200).json({ 
+          success: true, 
+          message: "OTP sent to salon phone number successfully",
+          phone: salon.phone 
+      });
+
+    } else {
+      
+      if (salon && !salon.isPhoneVerified) {
+          salon.salonName = salonName;
+          salon.ownerName = ownerName;
+          salon.email = email.toLowerCase();
+          salon.address = address;
+          salon.zipCode = zipCode;
+          salon.password = password;
+          salon.salonType = type || "Unisex";
+          salon.latitude = latitude;
+          salon.longitude = longitude;
+          salon.isPhoneVerified = true;
+          salon.otp = undefined;
+          salon.otpExpiry = undefined;
+          salon.referredBy = referringUserId;
+          await salon.save();
+      } else {
+          salon = await Salon.create({
+            salonName,
+            ownerName,
+            email: email.toLowerCase(),
+            phone,
+            address,
+            zipCode,
+            password,
+            salonType: type || "Unisex",
+            latitude,
+            longitude,
+            isOnline: true,
+            verified: false,
+            isPhoneVerified: true, 
+            services: [],
+            staff: [],
+            gallery: [],
+            referredBy: referringUserId 
+          });
+      }
+
+      if (referringUserId) {
         await User.findByIdAndUpdate(referringUserId, {
             $push: { referredSalons: salon._id }
         });
+      }
+
+      req.io.emit("salon_registered", salon);
+
+      const token = createToken(salon._id);
+      res.cookie("salon_token", token, cookieOptions);
+
+      return res.status(201).json({
+        success: true,
+        message: "Salon registered successfully",
+        salon: salon.toJSON(),
+      });
     }
-
-    req.io.emit("salon_registered", salon);
-
-    const token = createToken(salon._id);
-    res.cookie("salon_token", token, cookieOptions);
-
-    return res.status(201).json({ success: true, message: "Salon registered successfully", salon });
 
   } catch (err) {
     console.error("Register Error:", err);
     if (err.code === 11000) return res.status(400).json({ success: false, message: "Email or Phone already exists." });
     return res.status(500).json({ success: false, message: "Server Error" });
   }
+};
+
+export const verifySalonRegistrationOtp = async (req, res) => {
+    try {
+      const { phone, otp } = req.body;
+  
+      if (!phone || !otp) {
+        return res.status(400).json({ success: false, message: "Phone number and OTP are required" });
+      }
+  
+      const salon = await Salon.findOne({ phone }).select("+otp +otpExpiry");
+  
+      if (!salon) {
+        return res.status(404).json({ success: false, message: "Salon not found" });
+      }
+  
+      if (salon.isPhoneVerified) {
+        return res.status(400).json({ success: false, message: "Salon is already verified" });
+      }
+  
+      if (salon.otp !== otp) {
+        return res.status(400).json({ success: false, message: "Invalid OTP" });
+      }
+  
+      if (salon.otpExpiry < new Date()) {
+        return res.status(400).json({ success: false, message: "OTP has expired. Please request a new one." });
+      }
+  
+      salon.isPhoneVerified = true;
+      salon.otp = undefined;
+      salon.otpExpiry = undefined;
+      await salon.save();
+
+      if (salon.referredBy) {
+        await User.findByIdAndUpdate(salon.referredBy, {
+            $push: { referredSalons: salon._id }
+        });
+      }
+
+      req.io.emit("salon_registered", salon);
+  
+      const token = createToken(salon._id);
+      res.cookie("salon_token", token, cookieOptions);
+  
+      return res.status(200).json({
+        success: true,
+        message: "Salon verification successful! Welcome to TrimGo.",
+        salon: salon.toJSON(),
+      });
+  
+    } catch (err) {
+      console.error("Salon OTP Verification Error:", err);
+      return res.status(500).json({ success: false, message: "Server Error during verification" });
+    }
 };
 
 export const loginSalon = async (req, res) => {
@@ -102,6 +233,13 @@ export const loginSalon = async (req, res) => {
 
     if (!salon || !(await salon.comparePassword(password))) {
       return res.status(400).json({ success: false, message: "Invalid credentials." });
+    }
+
+    if (!salon.isPhoneVerified) {
+        return res.status(403).json({
+          success: false,
+          message: "Your salon account is not verified. Please verify your phone number first.",
+        });
     }
 
     const token = createToken(salon._id);
@@ -125,7 +263,7 @@ export const getAllSalons = async (req, res) => {
   try {
     const { type, search } = req.query;
     
-    let query = {}; 
+    let query = { isPhoneVerified: true }; 
 
     if (type && type !== "All") {
         query.salonType = type;
@@ -138,14 +276,11 @@ export const getAllSalons = async (req, res) => {
       ];
     }
     
-    // 1. Fetch Salons
-    // .lean() is fast and allows us to modify the object below
     const salons = await Salon.find(query)
       .select("-password") 
       .sort({ isOnline: -1, rating: -1 })
       .lean(); 
 
-    // 2. DYNAMIC CALCULATION LOOP
     const salonsWithData = await Promise.all(salons.map(async (salon) => {
         
         const activeTickets = await Ticket.find({
@@ -182,7 +317,6 @@ export const updateSalonProfile = async (req, res) => {
     const salonId = req.salon._id;
     const updates = req.body; 
 
-    // 🔥 Validation for Gallery Size (Extra Safety)
     if (updates.gallery && updates.gallery.length > 4) {
         return res.status(400).json({ success: false, message: "Maximum 4 photos allowed." });
     }
@@ -192,8 +326,6 @@ export const updateSalonProfile = async (req, res) => {
       runValidators: true,
     });
     
-    // Real-time Update Broadcast
-    // Isse user dashboard par status update turant dikhega
     if (updates.isOnline !== undefined) {
         req.io.emit("salon_updated", { 
             id: salonId, 
@@ -201,7 +333,6 @@ export const updateSalonProfile = async (req, res) => {
         });
     }
     
-    // Agar gallery update hui hai, toh pura object bhej do taaki user dashboard par photo refresh ho jaye
     if (updates.gallery) {
         req.io.emit("salon_updated", {
             id: salonId,

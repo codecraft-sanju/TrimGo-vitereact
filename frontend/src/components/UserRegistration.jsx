@@ -1,17 +1,19 @@
-import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion"; // Animation Library
+import React, { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion"; // Animation Library
 import {
   User,
   Phone,
   Lock,
   CheckCircle,
-  ArrowLeft, // Changed ChevronLeft to ArrowLeft for consistency
+  ArrowLeft,
   Mail,
   MapPin,
   AlertCircle,
   Eye,
   EyeOff,
   Loader2,
+  ShieldCheck,
+  ArrowRight
 } from "lucide-react";
 // 1. Import API Helper
 import api from "../utils/api";
@@ -110,6 +112,62 @@ const InputGroup = ({
   );
 };
 
+// --- OTP BOXES COMPONENT (DIBBE WALA UI) ---
+const OtpInput = ({ length = 6, value, onChange }) => {
+  const inputRefs = useRef([]);
+
+  const handleChange = (e, index) => {
+    const text = e.target.value;
+    if (!/^[0-9]*$/.test(text)) return; // Only allow numbers
+
+    const newValue = value.split("");
+    // Take the last character if multiple are typed (fixes quick typing issues)
+    newValue[index] = text.slice(-1);
+    const combined = newValue.join("");
+    onChange(combined);
+
+    // Auto-focus to next box
+    if (text && index < length - 1) {
+      inputRefs.current[index + 1].focus();
+    }
+  };
+
+  const handleKeyDown = (e, index) => {
+    // Auto-focus to previous box on Backspace
+    if (e.key === "Backspace" && !value[index] && index > 0) {
+      inputRefs.current[index - 1].focus();
+    }
+  };
+
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData("text/plain").slice(0, length).replace(/[^0-9]/g, '');
+    onChange(pastedData);
+    
+    // Auto-focus the last filled box or the end
+    const focusIndex = Math.min(pastedData.length, length - 1);
+    inputRefs.current[focusIndex].focus();
+  };
+
+  return (
+    <div className="flex justify-between items-center gap-2 w-full mb-8" onPaste={handlePaste}>
+      {Array.from({ length }).map((_, index) => (
+        <input
+          key={index}
+          ref={(el) => (inputRefs.current[index] = el)}
+          type="text"
+          inputMode="numeric"
+          maxLength={1}
+          value={value[index] || ""}
+          onChange={(e) => handleChange(e, index)}
+          onKeyDown={(e) => handleKeyDown(e, index)}
+          className="w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-black bg-zinc-100 dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-800 rounded-xl outline-none focus:border-black dark:focus:border-white text-zinc-900 dark:text-white transition-all shadow-sm focus:shadow-md"
+        />
+      ))}
+    </div>
+  );
+};
+
 /* -------------------------------------------------------------------------- */
 /* LAYOUT WRAPPER                                                             */
 /* -------------------------------------------------------------------------- */
@@ -174,7 +232,7 @@ const AuthLayout = ({ children, title, subtitle, onBack, illustration }) => (
 /* -------------------------------------------------------------------------- */
 
 const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }) => {
-  // State from your original code
+  // Original State
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -185,7 +243,12 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }
   const [locationStatus, setLocationStatus] = useState("pending");
   const [locationLoading, setLocationLoading] = useState(false);
 
-  // Geolocation Logic (Preserved exactly as requested)
+  // New OTP Flow State
+  const [step, setStep] = useState(1); // 1 = Form, 2 = OTP
+  const [registeredPhone, setRegisteredPhone] = useState("");
+  const [otp, setOtp] = useState("");
+
+  // Geolocation Logic
   const handleRequestLocation = () => {
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by your browser.");
@@ -216,7 +279,7 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }
     handleRequestLocation();
   }, []);
 
-  // Submit Logic (Preserved exactly as requested)
+  // Submit Form Logic
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -231,17 +294,49 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }
       });
 
       if (data.success) {
-        if (onRegisterUser) {
-          onRegisterUser(data.user);
+        if (data.phone) {
+          // Backend sent OTP
+          setRegisteredPhone(data.phone);
+          setStep(2); // Go to OTP screen
+          toast.success("OTP sent to your WhatsApp number!");
+        } else {
+          // Direct Registration (OTP Disabled)
+          if (onRegisterUser) {
+            onRegisterUser(data.user);
+          }
+          toast.success("Account created successfully!");
+          if (onSuccess) onSuccess();
         }
-        toast.success("Account created successfully!");
-        if (onSuccess) onSuccess();
       }
     } catch (err) {
       console.error("Registration failed:", err);
-      const msg =
-        err.response?.data?.message ||
-        "Registration failed. Please try again.";
+      const msg = err.response?.data?.message || "Registration failed. Please try again.";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Submit OTP Logic
+  const handleOtpSubmit = async (e) => {
+    e.preventDefault();
+    if (otp.length < 6) {
+      toast.error("Please enter complete 6-digit OTP");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data } = await api.post("/auth/verify-otp", { phone: registeredPhone, otp });
+      if (data.success) {
+        toast.success("Registration successful! Welcome to TrimGo.");
+        if (onRegisterUser) {
+          onRegisterUser(data.user);
+        }
+        if (onSuccess) onSuccess();
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || "Invalid OTP";
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -250,147 +345,200 @@ const UserRegistration = ({ onBack, onSuccess, onRegisterUser, onNavigateLogin }
 
   return (
     <AuthLayout
-      title="Create Account"
-      subtitle="Join the queue from anywhere."
-      onBack={onBack}
+      title={step === 1 ? "Create Account" : "Verify Phone"}
+      subtitle={step === 1 ? "Join the queue from anywhere." : "We've sent a code to your WhatsApp"}
+      onBack={step === 2 ? () => setStep(1) : onBack}
       illustration={
-        // Updated Illustration to match Premium Theme
         <div className="h-full flex flex-col justify-center">
           <div className="relative z-10 mb-8">
             <div className="w-16 h-16 bg-white/10 dark:bg-black/50 backdrop-blur-md rounded-2xl flex items-center justify-center mb-8 border border-zinc-200 dark:border-white/10 shadow-lg">
-              <User className="text-zinc-900 dark:text-white" size={32} />
+              {step === 1 ? (
+                <User className="text-zinc-900 dark:text-white" size={32} />
+              ) : (
+                <ShieldCheck className="text-zinc-900 dark:text-white" size={32} />
+              )}
             </div>
             <h3 className="text-4xl font-light text-zinc-900 dark:text-white mb-4 leading-tight tracking-tight">
-              Your time is <br />
-              <span className="font-bold italic">too valuable</span> <br />
-              to wait.
+              {step === 1 ? (
+                <>Your time is <br /><span className="font-bold italic">too valuable</span> <br />to wait.</>
+              ) : (
+                <>Security ensures <br /><span className="font-bold italic">genuine</span> <br />queue bookings.</>
+              )}
             </h3>
           </div>
           <div className="bg-white/50 dark:bg-zinc-800/50 backdrop-blur-md border border-zinc-200 dark:border-white/10 p-6 rounded-3xl relative z-10 shadow-xl">
             <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg ${step === 1 ? 'bg-emerald-500 shadow-emerald-500/30' : 'bg-blue-500 shadow-blue-500/30'}`}>
                 <CheckCircle className="text-white" size={24} />
               </div>
               <div>
-                <p className="text-zinc-900 dark:text-white font-bold">Booking Confirmed</p>
-                <p className="text-zinc-500 text-sm">You are #3 in line</p>
+                <p className="text-zinc-900 dark:text-white font-bold">
+                  {step === 1 ? "Booking Confirmed" : "Verification Secure"}
+                </p>
+                <p className="text-zinc-500 text-sm">
+                  {step === 1 ? "You are #3 in line" : "Spam protection active"}
+                </p>
               </div>
             </div>
             <div className="h-2 w-full bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
-              <div className="h-full w-2/3 bg-emerald-500 rounded-full"></div>
+              <div className={`h-full w-2/3 rounded-full ${step === 1 ? 'bg-emerald-500' : 'bg-blue-500'}`}></div>
             </div>
           </div>
         </div>
       }
     >
-      <form className="w-full" onSubmit={handleSubmit}>
-
-        {/* Location Button - Re-styled for Premium Look but same logic */}
-        <motion.div
-          variants={fadeInUp}
-          onClick={!locationLoading ? handleRequestLocation : undefined}
-          className={`group flex items-center justify-between p-4 rounded-3xl border transition-all cursor-pointer mb-8 ${locationStatus === "granted"
-            ? "bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800"
-            : "bg-zinc-50 dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
-            } ${locationLoading ? "opacity-75 cursor-wait" : ""}`}
-        >
-          <div className="flex items-center gap-4">
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-colors ${locationStatus === "granted" ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "bg-zinc-200 dark:bg-zinc-800 text-zinc-500"
-              }`}>
-              {locationLoading ? (
-                <Loader2 size={20} className="animate-spin" />
-              ) : (
-                <MapPin size={20} />
-              )}
-            </div>
-            <div>
-              <p className={`text-xs font-black uppercase tracking-widest ${locationStatus === "granted" ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-400"
-                }`}>
-                {locationLoading
-                  ? "Locating..."
-                  : locationStatus === "granted"
-                    ? "Location Verified"
-                    : "Enable Location"
-                }
-              </p>
-              <p className="text-[10px] text-zinc-400 leading-tight mt-1">
-                {locationLoading ? "Please wait..." : "Required for live queue tracking"}
-              </p>
-            </div>
-          </div>
-
-          {/* Status Indicator */}
-          {!locationLoading && locationStatus !== "granted" && (
-            <span className="text-[10px] font-bold px-3 py-1.5 rounded-full bg-black dark:bg-white text-white dark:text-black shadow-sm group-hover:scale-105 transition-transform">
-              Allow
-            </span>
-          )}
-          {!locationLoading && locationStatus === "granted" && (
-            <CheckCircle className="text-emerald-500" size={20} />
-          )}
-        </motion.div>
-
-        {/* Error Display Removed - Handled by Toast */}
-
-        {/* Inputs */}
-        <InputGroup
-          icon={User}
-          type="text"
-          label="Full Name"
-          name="name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-
-        <InputGroup
-          icon={Mail}
-          type="email"
-          label="Email"
-          name="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-
-        <InputGroup
-          icon={Phone}
-          type="tel"
-          label="Mobile Number"
-          name="phone"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-        />
-
-        <InputGroup
-          icon={Lock}
-          type="password"
-          label="Password"
-          name="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-
-        {/* Submit Button */}
-        <div className="pt-2">
-          <ShimmerButton className="w-full" disabled={loading}>
-            {loading ? "Creating Account..." : "Create Free Account"}
-          </ShimmerButton>
-        </div>
-
-        {/* Login Link */}
-        <motion.div variants={fadeInUp} className="pt-6 text-center">
-          <p className="text-zinc-500 text-sm font-medium">
-            Already have an account?{" "}
-            <button
-              type="button"
-              onClick={onNavigateLogin}
-              className="font-bold text-zinc-900 dark:text-white hover:underline hover:text-black transition-colors"
+      <AnimatePresence mode="wait">
+        {step === 1 ? (
+          <motion.form 
+            key="form"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="w-full" 
+            onSubmit={handleSubmit}
+          >
+            {/* Location Button */}
+            <motion.div
+              variants={fadeInUp}
+              onClick={!locationLoading ? handleRequestLocation : undefined}
+              className={`group flex items-center justify-between p-4 rounded-3xl border transition-all cursor-pointer mb-8 ${locationStatus === "granted"
+                ? "bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800"
+                : "bg-zinc-50 dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
+                } ${locationLoading ? "opacity-75 cursor-wait" : ""}`}
             >
-              Log in here
-            </button>
-          </p>
-        </motion.div>
+              <div className="flex items-center gap-4">
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-colors ${locationStatus === "granted" ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "bg-zinc-200 dark:bg-zinc-800 text-zinc-500"
+                  }`}>
+                  {locationLoading ? (
+                    <Loader2 size={20} className="animate-spin" />
+                  ) : (
+                    <MapPin size={20} />
+                  )}
+                </div>
+                <div>
+                  <p className={`text-xs font-black uppercase tracking-widest ${locationStatus === "granted" ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-400"
+                    }`}>
+                    {locationLoading
+                      ? "Locating..."
+                      : locationStatus === "granted"
+                        ? "Location Verified"
+                        : "Enable Location"
+                    }
+                  </p>
+                  <p className="text-[10px] text-zinc-400 leading-tight mt-1">
+                    {locationLoading ? "Please wait..." : "Required for live queue tracking"}
+                  </p>
+                </div>
+              </div>
 
-      </form>
+              {/* Status Indicator */}
+              {!locationLoading && locationStatus !== "granted" && (
+                <span className="text-[10px] font-bold px-3 py-1.5 rounded-full bg-black dark:bg-white text-white dark:text-black shadow-sm group-hover:scale-105 transition-transform">
+                  Allow
+                </span>
+              )}
+              {!locationLoading && locationStatus === "granted" && (
+                <CheckCircle className="text-emerald-500" size={20} />
+              )}
+            </motion.div>
+
+            {/* Inputs */}
+            <InputGroup
+              icon={User}
+              type="text"
+              label="Full Name"
+              name="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+
+            <InputGroup
+              icon={Mail}
+              type="email"
+              label="Email"
+              name="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+
+            <InputGroup
+              icon={Phone}
+              type="tel"
+              label="Mobile Number"
+              name="phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+
+            <InputGroup
+              icon={Lock}
+              type="password"
+              label="Password"
+              name="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+
+            {/* Submit Button */}
+            <div className="pt-2">
+              <ShimmerButton className="w-full" disabled={loading}>
+                {loading ? "Proceeding..." : "Create Free Account"}
+              </ShimmerButton>
+            </div>
+
+            {/* Login Link */}
+            <motion.div variants={fadeInUp} className="pt-6 text-center">
+              <p className="text-zinc-500 text-sm font-medium">
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={onNavigateLogin}
+                  className="font-bold text-zinc-900 dark:text-white hover:underline hover:text-black transition-colors"
+                >
+                  Log in here
+                </button>
+              </p>
+            </motion.div>
+
+          </motion.form>
+        ) : (
+          <motion.form 
+            key="otp"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            onSubmit={handleOtpSubmit} 
+            className="w-full max-w-sm mx-auto"
+          >
+            <div className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-8 text-center md:text-left">
+              Enter the 6-digit verification code sent to <br/>
+              <span className="font-bold text-black dark:text-white">{registeredPhone}</span>
+            </div>
+
+            {/* --- DIBBE WALA OTP INPUT --- */}
+            <div>
+              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block mb-4 text-center md:text-left">
+                Verification Code (OTP)
+              </label>
+              <OtpInput value={otp} onChange={setOtp} length={6} />
+            </div>
+
+            <ShimmerButton className="w-full mt-4" disabled={loading}>
+              {loading ? "Verifying..." : "Verify & Complete Setup"}
+            </ShimmerButton>
+
+            <div className="text-center mt-6">
+              <button 
+                type="button" 
+                onClick={() => setStep(1)} 
+                className="text-sm text-zinc-500 hover:text-black dark:hover:text-white transition-colors font-medium"
+              >
+                Incorrect number? Go back
+              </button>
+            </div>
+          </motion.form>
+        )}
+      </AnimatePresence>
     </AuthLayout>
   );
 };

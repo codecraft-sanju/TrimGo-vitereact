@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../Models/User.js";
+import { sendWhatsappMessage } from "../utils/sendWhatsapp.js";
 
 const createToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
@@ -14,8 +15,6 @@ const cookieOptions = {
   maxAge: 7 * 24 * 60 * 60 * 1000, 
 };
 
-
-
 export const registerUser = async (req, res) => {
   try {
     const { name, email, phone, password } = req.body;
@@ -27,33 +26,80 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    const existingUser = await User.findOne({
+    let user = await User.findOne({
       $or: [{ email: email.toLowerCase() }, { phone }],
     });
 
-    if (existingUser) {
+    if (user && user.isVerified) {
       return res.status(400).json({
         success: false,
-        message: "User already exists with this Email or Phone",
+        message: "User already exists and is verified. Please login.",
       });
     }
 
-    const user = await User.create({
-      name,
-      email: email.toLowerCase(),
-      phone,
-      password,
-    });
+    const isOtpEnabled = process.env.OTP_SERVICE_ENABLED === "true";
 
-    const token = createToken(user._id);
+    if (isOtpEnabled) {
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); 
 
-    res.cookie("auth_token", token, cookieOptions);
+      if (user && !user.isVerified) {
+        user.name = name;
+        user.email = email.toLowerCase();
+        user.password = password; 
+        user.otp = otp;
+        user.otpExpiry = otpExpiry;
+        await user.save();
+      } else {
+        user = await User.create({
+          name,
+          email: email.toLowerCase(),
+          phone,
+          password,
+          otp,
+          otpExpiry,
+          isVerified: false
+        });
+      }
 
-    return res.status(201).json({
-      success: true,
-      message: "User registered successfully",
-      user, 
-    });
+      const whatsappMsg = `Hi ${name}, your verification code for TrimGo is ${otp}. It is valid for 10 minutes.`;
+      await sendWhatsappMessage(phone, whatsappMsg);
+
+      return res.status(200).json({
+        success: true,
+        message: "OTP sent to your WhatsApp number successfully",
+        phone: user.phone 
+      });
+
+    } else {
+      
+      if (user && !user.isVerified) {
+        user.name = name;
+        user.email = email.toLowerCase();
+        user.password = password;
+        user.isVerified = true;
+        user.otp = undefined;
+        user.otpExpiry = undefined;
+        await user.save();
+      } else {
+        user = await User.create({
+          name,
+          email: email.toLowerCase(),
+          phone,
+          password,
+          isVerified: true 
+        });
+      }
+
+      const token = createToken(user._id);
+      res.cookie("auth_token", token, cookieOptions);
+
+      return res.status(201).json({
+        success: true,
+        message: "User registered successfully",
+        user: user.toJSON(),
+      });
+    }
 
   } catch (err) {
     console.error("Register Error:", err);
@@ -69,6 +115,58 @@ export const registerUser = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: err.message || "Internal Server Error",
+    });
+  }
+};
+
+export const verifyRegistrationOtp = async (req, res) => {
+  try {
+    const { phone, otp } = req.body;
+
+    if (!phone || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number and OTP are required",
+      });
+    }
+
+    const user = await User.findOne({ phone }).select("+otp +otpExpiry");
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ success: false, message: "User is already verified" });
+    }
+
+    if (user.otp !== otp) {
+      return res.status(400).json({ success: false, message: "Invalid OTP" });
+    }
+
+    if (user.otpExpiry < new Date()) {
+      return res.status(400).json({ success: false, message: "OTP has expired. Please request a new one." });
+    }
+
+    user.isVerified = true;
+    user.otp = undefined;
+    user.otpExpiry = undefined;
+    await user.save();
+
+    const token = createToken(user._id);
+    res.cookie("auth_token", token, cookieOptions);
+
+    return res.status(200).json({
+      success: true,
+      message: "Registration successful! Welcome to TrimGo.",
+      user: user.toJSON(),
+    });
+
+  } catch (err) {
+    console.error("OTP Verification Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error during verification",
     });
   }
 };
@@ -100,6 +198,13 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Invalid credentials (User not found)",
+      });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({
+        success: false,
+        message: "Your account is not verified. Please verify your phone number first.",
       });
     }
 
@@ -154,7 +259,6 @@ export const logoutUser = (req, res) => {
 /* --------------------------------------- */
 export const getAllUsers = async (req, res) => {
   try {
-    // Database se saare users fetch karega, password hatake, naye users pehle
     const users = await User.find().select("-password").sort({ createdAt: -1 });
 
     return res.status(200).json({

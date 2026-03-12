@@ -38,6 +38,21 @@ const userSchema = new mongoose.Schema(
       select: false,
     },
 
+    // CHANGED START
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    otp: {
+      type: String,
+      select: false,
+    },
+    otpExpiry: {
+      type: Date,
+      select: false,
+    },
+    // CHANGED END
+
     // --- NEW: Referral System Fields ---
     referralCode: {
       type: String,
@@ -95,6 +110,10 @@ userSchema.methods.comparePassword = async function (plainPassword) {
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;
+  // CHANGED START
+  delete obj.otp;
+  delete obj.otpExpiry;
+  // CHANGED END
   return obj;
 };
 

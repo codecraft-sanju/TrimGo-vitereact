@@ -2,6 +2,9 @@
 import express from "express";
 import {
   registerUser,
+  // CHANGED START
+  verifyRegistrationOtp,
+  // CHANGED END
   loginUser,
   logoutUser,
   getAllUsers, // <--- 1. Import Added
@@ -12,6 +15,11 @@ const router = express.Router();
 
 // POST /api/auth/register
 router.post("/register", registerUser);
+
+// CHANGED START
+// POST /api/auth/verify-otp
+router.post("/verify-otp", verifyRegistrationOtp);
+// CHANGED END
 
 // POST /api/auth/login
 router.post("/login", loginUser);
