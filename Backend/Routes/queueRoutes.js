@@ -9,7 +9,8 @@ import {
     getUserHistory,
     addWalkInClient,
     rejectRequest ,
-     cancelTicket
+     cancelTicket,
+     cancelServiceBySalon
 } from "../Controllers/queueController.js";
 
 // Middleware Imports (Security ke liye)
@@ -33,6 +34,7 @@ router.get("/salon-dashboard", protectSalon, getSalonData);
 
 // 5. Accept Request (Pending -> Waiting)
 router.post("/accept", protectSalon, acceptRequest);
+router.post("/cancel-service", protectSalon, cancelServiceBySalon);
 
 // --- NEW ROUTE ADDED HERE ---
 // 5.5. Reject Request (Pending -> Cancelled)
@@ -48,5 +50,6 @@ router.post("/complete", protectSalon, completeService);
 
 //  8. Add Walk-in Client (Offline User - New Feature)
 router.post("/add-walkin", protectSalon, addWalkInClient);
+
 
 export default router;

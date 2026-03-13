@@ -59,11 +59,7 @@ const SUGGESTED_SERVICES = [
 const CustomDropdown = ({ icon: Icon, label, name, value, options, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  // Close dropdown when clicking outside could be added here for robustness, 
-  // but for now we keep it simple as requested.
-
   const handleSelect = (option) => {
-    // Mimic event object for compatibility
     onChange({ target: { name, value: option } });
     setIsOpen(false);
   };
@@ -131,7 +127,6 @@ const WalkInModal = ({ isOpen, onClose, services, onConfirm }) => {
 
     onConfirm({ name, mobile, services: selectedServices });
 
-    // Reset
     setName("");
     setMobile("");
     setSelectedServices([]);
@@ -203,7 +198,7 @@ const WalkInModal = ({ isOpen, onClose, services, onConfirm }) => {
   );
 };
 
-// 2. PROFILE MODAL (Redesigned)
+// 3. PROFILE MODAL
 const ProfileModal = ({ isOpen, onClose, salon, profileImage, onImageUpload, onLogout }) => {
   const fileInputRef = useRef(null);
   if (!isOpen) return null;
@@ -226,16 +221,13 @@ const ProfileModal = ({ isOpen, onClose, salon, profileImage, onImageUpload, onL
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
         className="relative w-full max-w-sm bg-zinc-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden"
       >
-        {/* Banner */}
         <div className="h-32 bg-gradient-to-br from-emerald-600 to-teal-800 relative">
           <button onClick={onClose} className="absolute top-4 right-4 text-white/80 hover:text-white bg-black/20 hover:bg-black/40 p-2 rounded-full backdrop-blur-md transition">
             <X size={18} />
           </button>
         </div>
 
-        {/* Profile Content */}
         <div className="px-6 pb-6 relative">
-          {/* Avatar (Overlapping) */}
           <div className="relative -mt-16 mb-4 flex justify-center">
             <div className="relative group cursor-pointer" onClick={() => fileInputRef.current.click()}>
               <div className="w-32 h-32 rounded-full border-[6px] border-zinc-900 overflow-hidden shadow-xl bg-zinc-800">
@@ -254,7 +246,6 @@ const ProfileModal = ({ isOpen, onClose, salon, profileImage, onImageUpload, onL
             </div>
           </div>
 
-          {/* Info */}
           <div className="text-center space-y-1 mb-8">
             <h2 className="text-2xl font-bold text-white tracking-tight">{salon?.salonName || "TrimGo Salon"}</h2>
             <p className="text-emerald-400 font-medium">@{salon?.ownerName?.replace(/\s/g, '').toLowerCase() || "owner"}</p>
@@ -272,11 +263,7 @@ const ProfileModal = ({ isOpen, onClose, salon, profileImage, onImageUpload, onL
             </div>
           </div>
 
-          {/* Actions */}
           <div className="space-y-3">
-            {/* <button className="w-full py-3 rounded-xl bg-zinc-800 border border-white/5 text-zinc-300 font-bold hover:bg-zinc-700 hover:text-white transition-colors flex items-center justify-center gap-2">
-              <Edit3 size={16} /> Edit Profile
-            </button> */}
             <button
               onClick={onLogout}
               className="w-full py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 font-bold hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2"
@@ -290,7 +277,7 @@ const ProfileModal = ({ isOpen, onClose, salon, profileImage, onImageUpload, onL
   );
 };
 
-// 3. ASSIGNMENT MODAL
+// 4. ASSIGNMENT MODAL
 const AssignmentModal = ({ isOpen, onClose, customer, availableChairs, staffList, onConfirm }) => {
   const [selectedChair, setSelectedChair] = useState("");
   const [selectedStaff, setSelectedStaff] = useState("");
@@ -306,7 +293,6 @@ const AssignmentModal = ({ isOpen, onClose, customer, availableChairs, staffList
     }
   };
 
-  // Safe Name Access
   const customerName = customer.userId?.name || customer.guestName || "Walk-in Customer";
 
   return (
@@ -366,7 +352,7 @@ const AssignmentModal = ({ isOpen, onClose, customer, availableChairs, staffList
 // --- MAIN COMPONENT ---
 
 const SalonDashboard = ({ salon, onLogout }) => {
-  const [activeTab, setActiveTab] = useState("dashboard"); // 'dashboard' | 'settings'
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   // Dashboard Data
   const [requests, setRequests] = useState([]);
@@ -381,7 +367,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
   const [newService, setNewService] = useState({ name: "", price: "", time: "", category: "Hair" });
   const [newStaffName, setNewStaffName] = useState("");
 
-  // 🔥 Gallery Data
+  // Gallery Data
   const [gallery, setGallery] = useState([]);
   const [uploading, setUploading] = useState(false);
   const galleryInputRef = useRef(null);
@@ -396,11 +382,10 @@ const SalonDashboard = ({ salon, onLogout }) => {
   const [assignmentModal, setAssignmentModal] = useState({ isOpen: false, customer: null });
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
 
-  // 🔥 NEW: Play Sound Function
   const playNotificationSound = () => {
     try {
       const audio = new Audio(NOTIFICATION_SOUND_URL);
-      audio.volume = 1.0; // Full volume
+      audio.volume = 1.0;
       const playPromise = audio.play();
 
       if (playPromise !== undefined) {
@@ -413,7 +398,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
     }
   };
 
-  // --- 1. INITIAL FETCH & SOCKET ---
   useEffect(() => {
     const socket = io(import.meta.env.VITE_BACKEND_URL);
     if (salon?._id) {
@@ -422,7 +406,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
 
     socket.on("new_request", (ticket) => {
       setRequests(prev => [...prev, ticket]);
-      // 🔥 NEW: Trigger sound when request arrives
       playNotificationSound(); 
     });
 
@@ -440,7 +423,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
     }
   }, [salon]);
 
-  // --- API CALLS ---
   const fetchDashboardData = async () => {
     try {
       const { data } = await api.get("/queue/salon-dashboard");
@@ -449,7 +431,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
         setActiveQueue(data.waiting);
         setStats(data.stats);
 
-        // Sync Chairs with Serving Tickets
         const servingTickets = data.serving || [];
         const mappedChairs = Array.from({ length: 4 }, (_, i) => {
           const chairId = i + 1;
@@ -486,13 +467,12 @@ const SalonDashboard = ({ salon, onLogout }) => {
       if (data.success) {
         setServices(data.salon.services || []);
         setStaff(data.salon.staff || [{ name: data.salon.ownerName, status: 'available' }]);
-        setGallery(data.salon.gallery || []); // Load Gallery
+        setGallery(data.salon.gallery || []); 
         setIsOnline(data.salon.isOnline);
       }
     } catch (error) { console.error("Profile Fetch Error", error); }
   }
 
-  // --- HANDLERS ---
   const handleAcceptRequest = async (req) => {
     try {
       await api.post("/queue/accept", { ticketId: req._id });
@@ -542,6 +522,23 @@ const SalonDashboard = ({ salon, onLogout }) => {
     } catch (error) { alert("Error completing service"); }
   };
 
+  // 🔥 NEW: CANCEL SERVICE FUNCTION
+  const handleCancelService = async (chairId) => {
+    const chair = chairs.find(c => c.id === chairId);
+    if (!chair?.currentCustomer) return;
+    
+    if (!window.confirm("Are you sure you want to cancel this ongoing service?")) return;
+
+    try {
+      await api.post("/queue/cancel-service", { ticketId: chair.currentCustomer._id }); 
+      setChairs(prev => prev.map(c =>
+        c.id === chairId ? { ...c, status: 'empty', currentCustomer: null, assignedStaff: null } : c
+      ));
+    } catch (error) { 
+      alert("Error canceling service"); 
+    }
+  };
+
   const handleAddWalkIn = async (customerData) => {
     try {
       const totalPrice = customerData.services.reduce((sum, s) => sum + Number(s.price), 0);
@@ -565,7 +562,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
     }
   };
 
-  // --- SETTINGS HANDLERS ---
   const fillServiceSuggestion = (s) => {
     setNewService({ name: s.name, price: s.price, time: s.time, category: s.category });
   };
@@ -606,7 +602,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
     } catch (error) { alert("Update failed"); }
   };
 
-  // 🔥 GALLERY LOGIC HANDLERS
   const handleGalleryUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -617,17 +612,14 @@ const SalonDashboard = ({ salon, onLogout }) => {
 
     setUploading(true);
     try {
-      // 1. Upload to Cloudinary (or fallback logic)
       let imageUrl;
       if (UPLOAD_PRESET !== "YOUR_UNSIGNED_PRESET") {
         imageUrl = await uploadToCloudinary(file);
       } else {
-        // Mock upload if no keys provided yet
         alert("Please set your Cloudinary Keys in code. Using Local Preview for now.");
         imageUrl = URL.createObjectURL(file);
       }
 
-      // 2. Save to Backend
       const updatedGallery = [...gallery, imageUrl];
       await api.put("/salon/update", { gallery: updatedGallery });
       setGallery(updatedGallery);
@@ -649,10 +641,10 @@ const SalonDashboard = ({ salon, onLogout }) => {
   };
 
   const handleSetMainPhoto = async (index) => {
-    if (index === 0) return; // Already main
+    if (index === 0) return; 
     const photo = gallery[index];
     const others = gallery.filter((_, i) => i !== index);
-    const updatedGallery = [photo, ...others]; // Move to front
+    const updatedGallery = [photo, ...others]; 
 
     try {
       await api.put("/salon/update", { gallery: updatedGallery });
@@ -660,7 +652,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
     } catch (error) { alert("Update failed"); }
   };
 
-  // --- HELPERS ---
   const getAvatarGradient = (name) => {
     const n = name || "U";
     const gradients = ["from-pink-500 to-rose-500", "from-indigo-500 to-blue-500", "from-emerald-500 to-teal-500", "from-orange-500 to-amber-500"];
@@ -669,16 +660,14 @@ const SalonDashboard = ({ salon, onLogout }) => {
 
   const isServicesEmpty = services.length === 0;
 
-  // --- RENDER ---
   return (
     <div className="flex h-screen w-full bg-zinc-950 font-sans text-white overflow-hidden selection:bg-emerald-500 selection:text-white">
 
-      {/* --- MODALS --- */}
       <WalkInModal isOpen={isWalkInOpen} onClose={() => setIsWalkInOpen(false)} services={services} onConfirm={handleAddWalkIn} />
       <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} salon={salon} profileImage={profileImage} onImageUpload={setProfileImage} onLogout={onLogout} />
       <AssignmentModal isOpen={assignmentModal.isOpen} onClose={() => setAssignmentModal({ ...assignmentModal, isOpen: false })} customer={assignmentModal.customer} availableChairs={assignmentModal.availableChairs} staffList={staff} onConfirm={handleStartService} />
 
-      {/* --- DESKTOP SIDEBAR --- */}
+      {/* DESKTOP SIDEBAR */}
       <aside className="hidden lg:flex w-64 border-r border-white/5 bg-zinc-900/40 backdrop-blur-xl flex-col z-20">
         <div className="h-20 flex items-center px-6 border-b border-white/5 gap-3">
           <div className="w-10 h-10 bg-white text-black rounded-xl flex items-center justify-center font-bold text-sm shadow-[0_0_20px_rgba(255,255,255,0.3)]">TG</div>
@@ -693,13 +682,12 @@ const SalonDashboard = ({ salon, onLogout }) => {
             </button>
           ))}
         </nav>
-
       </aside >
 
-      {/* --- MAIN CONTENT AREA --- */}
+      {/* MAIN CONTENT AREA */}
       < main className="flex-1 flex flex-col relative z-10 h-full overflow-hidden" >
 
-        {/* --- HEADER --- */}
+        {/* HEADER */}
         < header className="h-16 lg:h-20 border-b border-white/5 bg-zinc-900/60 backdrop-blur-md flex items-center justify-between px-4 lg:px-8 shrink-0 z-30" >
           <div className="flex items-center gap-3">
             <div className="lg:hidden w-8 h-8 bg-white text-black rounded-lg flex items-center justify-center font-bold text-xs">TG</div>
@@ -725,7 +713,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
           </div>
         </header >
 
-        {/* --- SCROLLABLE CONTENT --- */}
+        {/* SCROLLABLE CONTENT */}
         < div className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6 pb-24 lg:pb-6 custom-scrollbar" >
 
           {/* === VIEW: DASHBOARD === */}
@@ -733,7 +721,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
             activeTab === 'dashboard' && (
               <div className="max-w-7xl mx-auto space-y-6">
 
-                {/* 1. SETUP WARNING (If Empty) */}
+                {/* SETUP WARNING */}
                 {isServicesEmpty && (
                   <div className="bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 p-4 lg:p-6 rounded-2xl lg:rounded-3xl flex flex-col md:flex-row items-center justify-between gap-4 animate-pulse">
                     <div className="text-center md:text-left">
@@ -748,7 +736,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
                   </div>
                 )}
 
-                {/* 2. STATS GRID */}
+                {/* STATS GRID */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   <div className="bg-zinc-900/50 border border-white/5 rounded-2xl p-4 flex flex-col justify-between h-24 lg:h-32">
                     <div className="flex justify-between items-start">
@@ -780,7 +768,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
                   </div>
                 </div>
 
-                {/* 3. REQUESTS */}
+                {/* REQUESTS */}
                 {requests.length > 0 && (
                   <div className="animate-in fade-in slide-in-from-top-4">
                     <div className="flex items-center justify-between mb-3">
@@ -815,7 +803,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
                   </div>
                 )}
 
-                {/* 4. MAIN OPERATIONAL AREA */}
+                {/* MAIN OPERATIONAL AREA */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-auto lg:h-[600px]">
 
                   {/* LEFT: QUEUE LIST */}
@@ -882,7 +870,23 @@ const SalonDashboard = ({ salon, onLogout }) => {
                                   <p className="text-xs text-emerald-400">{chair.currentCustomer.services[0]?.name}</p>
                                 </div>
                               </div>
-                              <button onClick={() => handleCompleteService(chair.id)} className="w-full py-2.5 bg-white text-black text-xs font-bold rounded-lg hover:bg-emerald-400 transition-colors flex items-center justify-center gap-2 active:scale-95"><CheckSquare size={14} /> Complete</button>
+                              
+                              {/* 🔥 NEW UI WITH BOTH CANCEL AND COMPLETE BUTTONS 🔥 */}
+                              <div className="flex gap-2 w-full">
+                                <button 
+                                  onClick={() => handleCancelService(chair.id)} 
+                                  className="w-1/3 py-2.5 bg-red-500/10 text-red-500 border border-red-500/20 text-xs font-bold rounded-lg hover:bg-red-500 hover:text-white transition-colors flex items-center justify-center gap-1 active:scale-95"
+                                >
+                                  <X size={14} /> <span className="hidden sm:inline">Cancel</span>
+                                </button>
+                                <button 
+                                  onClick={() => handleCompleteService(chair.id)} 
+                                  className="w-2/3 py-2.5 bg-white text-black text-xs font-bold rounded-lg hover:bg-emerald-400 transition-colors flex items-center justify-center gap-2 active:scale-95"
+                                >
+                                  <CheckSquare size={14} /> Complete
+                                </button>
+                              </div>
+
                             </div>
                           ) : (
                             <div className="flex-1 flex flex-col items-center justify-center text-zinc-700 gap-2">

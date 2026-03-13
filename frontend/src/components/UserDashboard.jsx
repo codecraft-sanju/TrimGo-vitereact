@@ -19,7 +19,8 @@ import {
   AlertCircle,
   Image as ImageIcon,
   ChevronLeft, 
-  ChevronRight
+  ChevronRight,
+  Scissors
 } from "lucide-react";
 import { io } from "socket.io-client"; 
 import Lenis from 'lenis'; 
@@ -935,14 +936,22 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                     >
                         <Navigation size={16} /> Directions
                     </button>
-                    <button 
-                        onClick={handleCancelTicket}
-                        disabled={canceling}
-                        className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
-                    >
-                        {canceling ? <Loader2 size={16} className="animate-spin"/> : <X size={16} />}
-                        Cancel
-                    </button>
+                    
+                    {/* 🔥 CONDITION ADDED HERE: SIRF WAITING/PENDING ME CANCEL DIKHEGA 🔥 */}
+                    {activeTicket.status !== 'serving' ? (
+                      <button 
+                          onClick={handleCancelTicket}
+                          disabled={canceling}
+                          className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 py-3 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                      >
+                          {canceling ? <Loader2 size={16} className="animate-spin"/> : <X size={16} />}
+                          Cancel
+                      </button>
+                    ) : (
+                      <div className="flex-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 cursor-default">
+                        <Scissors size={16} className="animate-pulse" /> In Service
+                      </div>
+                    )}
                 </div>
             </div>
         </div>

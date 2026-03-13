@@ -446,3 +446,36 @@ export const rejectRequest = async (req, res) => {
     res.status(500).json({ success: false, message: "Server Error while rejecting" });
   }
 };
+
+export const cancelServiceBySalon = async (req, res) => {
+  try {
+    const { ticketId } = req.body;
+    const salonId = req.salon._id;
+
+    const ticket = await Ticket.findOneAndUpdate(
+      { _id: ticketId, salonId },
+      { status: "cancelled", chairId: null, assignedStaff: null },
+      { new: true }
+    );
+
+    if (!ticket) {
+      return res.status(404).json({ success: false, message: "Ticket not found" });
+    }
+
+    if (ticket.userId) {
+      req.io.to(`user_${ticket.userId}`).emit("status_change", {
+        status: "cancelled",
+        chairId: null
+      });
+    }
+
+    req.io.to(`salon_${salonId}`).emit("queue_updated");
+
+    await broadcastQueueUpdates(salonId, req.io);
+
+    res.status(200).json({ success: true, message: "Service cancelled successfully" });
+  } catch (err) {
+    console.error("Cancel Service Error:", err);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
