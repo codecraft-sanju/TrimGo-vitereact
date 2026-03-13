@@ -221,7 +221,8 @@ const RouteCalculationLoader = () => {
 };
 
 // --- MAIN MAP COMPONENT ---
-const MapSalon = ({ salons, onSelect, userLocation, heading, routeDestination, onRouteClick }) => {
+// 🔥 NEW: activeTicket ko props mein add kiya hai
+const MapSalon = ({ salons, onSelect, userLocation, heading, routeDestination, onRouteClick, activeTicket }) => {
   const defaultCenter = [26.2389, 73.0243];
   
   // 🔥 New State for Route Loader
@@ -265,8 +266,20 @@ const MapSalon = ({ salons, onSelect, userLocation, heading, routeDestination, o
           <MapAutoCenter center={userLocation} isRouting={!!routeDestination} />
 
           {/* Salon Markers */}
-          {salons.map((salon) => (
-            salon.latitude && salon.longitude && (
+          {salons.map((salon) => {
+            // 🔥 NEW: Map loop ko block ( { } ) mein convert kiya taaki calculation kar sakein
+            if (!salon.latitude || !salon.longitude) return null;
+
+            // 🔥 NEW LOGIC: Calculate accurate times for the current user
+            const isActiveSalon = activeTicket && (activeTicket.salonId?._id === salon._id || activeTicket.salonId === salon._id);
+            const displayWaiting = isActiveSalon && activeTicket.myPeopleAhead !== undefined 
+                    ? activeTicket.myPeopleAhead 
+                    : (salon.waiting || 0);
+            const displayEstTime = isActiveSalon && activeTicket.myWaitTime !== undefined 
+                    ? activeTicket.myWaitTime 
+                    : (salon.estTime || 0);
+
+            return (
               <Marker 
                 key={salon._id} 
                 position={[salon.latitude, salon.longitude]}
@@ -293,13 +306,15 @@ const MapSalon = ({ salons, onSelect, userLocation, heading, routeDestination, o
                       <div className="flex flex-col items-center">
                           <span className="text-[10px] text-zinc-400 font-bold uppercase">Waiting</span>
                           <div className="flex items-center gap-1 font-bold text-zinc-900">
-                              <Users size={12} className="text-blue-500"/> {salon.waiting || 0}
+                              {/* 🔥 NEW: Use dynamic displayWaiting */}
+                              <Users size={12} className="text-blue-500"/> {displayWaiting}
                           </div>
                       </div>
                       <div className="flex flex-col items-center border-l border-zinc-200">
                           <span className="text-[10px] text-zinc-400 font-bold uppercase">ETA</span>
                           <div className="flex items-center gap-1 font-bold text-zinc-900">
-                              <Clock size={12} className="text-emerald-500"/> {salon.estTime || 15}m
+                              {/* 🔥 NEW: Use dynamic displayEstTime */}
+                              <Clock size={12} className="text-emerald-500"/> {displayEstTime}m
                           </div>
                       </div>
                     </div>
@@ -318,8 +333,8 @@ const MapSalon = ({ salons, onSelect, userLocation, heading, routeDestination, o
                   </div>
                 </Popup>
               </Marker>
-            )
-          ))}
+            );
+          })}
         </MapContainer>
       )}
 

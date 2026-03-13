@@ -4,6 +4,50 @@ import User from "../Models/User.js";
 // --- NEW: Import our util function ---
 import { sendWhatsappMessage } from "../utils/sendWhatsapp.js"; 
 
+/* CHANGED START */
+const broadcastQueueUpdates = async (salonId, io) => {
+  const activeTickets = await Ticket.find({ salonId, status: { $in: ["waiting", "serving"] } }).sort({ createdAt: 1 });
+
+  const globalWaitingCount = activeTickets.length;
+  const globalEstTime = activeTickets.reduce((sum, t) => sum + (t.totalTime || 0), 0);
+
+  io.emit("queue_update_broadcast", {
+    salonId,
+    waitingCount: globalWaitingCount,
+    estTime: globalEstTime
+  });
+
+  let waitTimeAhead = 0;
+  let peopleAhead = 0;
+
+  for (const ticket of activeTickets) {
+    if (ticket.userId) {
+      io.to(`user_${ticket.userId}`).emit("my_queue_update", {
+        myWaitTime: waitTimeAhead,
+        myPeopleAhead: peopleAhead
+      });
+    }
+    peopleAhead++;
+    waitTimeAhead += (ticket.totalTime || 0);
+  }
+};
+
+const getQueueStats = async (salonId, currentUserId) => {
+  const activeTickets = await Ticket.find({ salonId, status: { $in: ["waiting", "serving"] } }).sort({ createdAt: 1 });
+  let peopleAhead = 0;
+  let waitTimeAhead = 0;
+
+  for (let i = 0; i < activeTickets.length; i++) {
+    if (activeTickets[i].userId && activeTickets[i].userId.toString() === currentUserId.toString()) {
+      break;
+    }
+    peopleAhead++;
+    waitTimeAhead += (activeTickets[i].totalTime || 0);
+  }
+  return { peopleAhead, waitTimeAhead };
+};
+/* CHANGED END */
+
 /* -------------------------------------------------------------------------- */
 /* USER ACTION: CANCEL TICKET (AGAR USER KHUD CANCEL KARE)                    */
 /* -------------------------------------------------------------------------- */
@@ -25,6 +69,10 @@ export const cancelTicket = async (req, res) => {
 
     // 3. SOCKET EMIT: Salon Dashboard ko update bhejo ki user hat gaya
     req.io.to(`salon_${ticket.salonId}`).emit("queue_updated");
+
+    /* CHANGED START */
+    await broadcastQueueUpdates(ticket.salonId, req.io);
+    /* CHANGED END */
 
     res.status(200).json({ success: true, message: "Ticket cancelled successfully" });
 
@@ -77,21 +125,9 @@ export const addWalkInClient = async (req, res) => {
     // Salon owner ko turant dikhna chahiye
     req.io.to(`salon_${salonId}`).emit("queue_updated");
 
-    // 5. Broadcast Dynamic Time Update (Users ke liye)
-    // Kyunki queue lambi ho gayi, toh online users ko naya time dikhna chahiye
-    const activeTickets = await Ticket.find({
-        salonId,
-        status: { $in: ["waiting", "serving"] }
-    }).select("totalTime");
-
-    const currentWaitingCount = activeTickets.length;
-    const currentEstTime = activeTickets.reduce((sum, t) => sum + (t.totalTime || 0), 0);
-
-    req.io.emit("queue_update_broadcast", { 
-        salonId, 
-        waitingCount: currentWaitingCount,
-        estTime: currentEstTime
-    });
+    /* CHANGED START */
+    await broadcastQueueUpdates(salonId, req.io);
+    /* CHANGED END */
 
     res.status(201).json({ 
         success: true, 
@@ -185,31 +221,19 @@ export const acceptRequest = async (req, res) => {
 
     if (!ticket) return res.status(404).json({ message: "Ticket not found" });
 
-    // 🔥 SOCKET EMIT: User ko batao ki request accept ho gayi
-    req.io.to(`user_${ticket.userId._id}`).emit("request_accepted", ticket);
-    
-    // 🔥 SOCKET EMIT: Salon Dashboard refresh karo
+    /* CHANGED START */
+    const stats = await getQueueStats(salonId, ticket.userId);
+    const ticketData = ticket.toObject();
+    ticketData.myWaitTime = stats.waitTimeAhead;
+    ticketData.myPeopleAhead = stats.peopleAhead;
+
+    req.io.to(`user_${ticket.userId}`).emit("request_accepted", ticketData);
     req.io.to(`salon_${salonId}`).emit("queue_updated");
 
-    // 🔥 NEW: Calculate Dynamic Time for Broadcast
-    // Active tickets nikalo (Waiting + Serving)
-    const activeTickets = await Ticket.find({
-        salonId,
-        status: { $in: ["waiting", "serving"] }
-    }).select("totalTime");
+    await broadcastQueueUpdates(salonId, req.io);
 
-    const currentWaitingCount = activeTickets.length;
-    // Saare tickets ka time jod lo (Sum)
-    const currentEstTime = activeTickets.reduce((sum, t) => sum + (t.totalTime || 0), 0);
-
-    // Broadcast both Count AND Time
-    req.io.emit("queue_update_broadcast", { 
-        salonId, 
-        waitingCount: currentWaitingCount,
-        estTime: currentEstTime // 🔥 Real-time calculated time
-    });
-
-    res.status(200).json({ success: true, ticket });
+    res.status(200).json({ success: true, ticket: ticketData });
+    /* CHANGED END */
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -283,20 +307,9 @@ export const completeService = async (req, res) => {
     // 🔥 SOCKET EMIT: Admin Dashboard
     req.io.to("admin_room").emit("admin_stats_update");
 
-    // 🔥 NEW: Calculate Dynamic Time for Broadcast (Kam ho gaya hoga time)
-    const activeTickets = await Ticket.find({
-        salonId,
-        status: { $in: ["waiting", "serving"] }
-    }).select("totalTime");
-
-    const currentWaitingCount = activeTickets.length;
-    const currentEstTime = activeTickets.reduce((sum, t) => sum + (t.totalTime || 0), 0);
-
-    req.io.emit("queue_update_broadcast", { 
-        salonId, 
-        waitingCount: currentWaitingCount,
-        estTime: currentEstTime // 🔥 Updated time broadcast
-    });
+    /* CHANGED START */
+    await broadcastQueueUpdates(salonId, req.io);
+    /* CHANGED END */
 
     res.status(200).json({ success: true, message: "Service Completed" });
   } catch (err) {
@@ -314,7 +327,21 @@ export const getMyTicket = async (req, res) => {
       status: { $in: ["pending", "waiting", "serving"] },
     }).populate("salonId", "salonName address");
 
+    /* CHANGED START */
+    if (!ticket) {
+      return res.status(200).json({ success: true, ticket: null });
+    }
+
+    if (ticket.status === 'waiting' || ticket.status === 'serving') {
+      const stats = await getQueueStats(ticket.salonId._id, req.user._id);
+      const ticketData = ticket.toObject();
+      ticketData.myWaitTime = stats.waitTimeAhead;
+      ticketData.myPeopleAhead = stats.peopleAhead;
+      return res.status(200).json({ success: true, ticket: ticketData });
+    }
+
     res.status(200).json({ success: true, ticket });
+    /* CHANGED END */
   } catch (err) {
     res.status(500).json({ success: false, message: "Error fetching ticket" });
   }

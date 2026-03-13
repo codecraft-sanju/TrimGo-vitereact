@@ -130,14 +130,14 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 };
 
 /* ---------------------------------
-   🔥 UPDATED SERVICE MODAL WITH LOADER BUTTON
+   SERVICE MODAL WITH LOADER BUTTON
 ---------------------------------- */
-const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => { // 🔥 Added isJoining prop
+const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => { 
   const [selectedServices, setSelectedServices] = useState([]);
   const servicesList = salon.services || [];
 
   const toggleService = (serviceId) => {
-    if (isJoining) return; // Prevent toggling while loading
+    if (isJoining) return; 
     setSelectedServices((prev) =>
       prev.includes(serviceId)
         ? prev.filter((id) => id !== serviceId)
@@ -270,7 +270,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
   const [salons, setSalons] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // 🔥 New State for Joining Process
   const [isJoiningQueue, setIsJoiningQueue] = useState(false);
 
   const [activeBookingSalon, setActiveBookingSalon] = useState(null);
@@ -306,7 +305,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
     };
   }, []);
 
-  // --- LOCATION TRACKING (Keeping existing logic) ---
+  // --- LOCATION TRACKING ---
   const startLocationTracking = () => {
     if (!navigator.geolocation) {
         alert("Geolocation is not supported by your browser.");
@@ -409,6 +408,11 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                 return salon;
             })
         );
+    });
+
+    // 🔥 NEW: Listen for individual specific user queue updates
+    socket.on("my_queue_update", (data) => {
+        setActiveTicket(prev => prev ? { ...prev, myWaitTime: data.myWaitTime, myPeopleAhead: data.myPeopleAhead } : null);
     });
 
     socket.on("request_accepted", (ticket) => {
@@ -520,11 +524,11 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
   };
 
   const handleCloseBooking = () => {
-      if(!isJoiningQueue) setActiveBookingSalon(null); // Prevent closing while loading
+      if(!isJoiningQueue) setActiveBookingSalon(null); 
   };
 
   const handleConfirmBooking = async (salon, services, totals) => {
-    setIsJoiningQueue(true); // 🔥 Start Loading
+    setIsJoiningQueue(true); 
     try {
         const payload = {
             salonId: salon._id, 
@@ -547,7 +551,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
     } catch (error) {
         alert(error.response?.data?.message || "Failed to join queue");
     } finally {
-        setIsJoiningQueue(false); // 🔥 Stop Loading
+        setIsJoiningQueue(false); 
     }
   };
 
@@ -559,7 +563,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
       try {
           const { data } = await api.post("/queue/cancel", { ticketId: activeTicket._id });
           if(data.success) {
-              setActiveTicket(null); // Clear UI
+              setActiveTicket(null); 
           }
       } catch (error) {
           console.error(error);
@@ -586,7 +590,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
             salon={activeBookingSalon} 
             onClose={handleCloseBooking} 
             onConfirm={handleConfirmBooking} 
-            isJoining={isJoiningQueue} // 🔥 Pass Loading State
+            isJoining={isJoiningQueue} 
         />
       )}
 
@@ -724,6 +728,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
             onSelect={(s) => handleOpenBooking(s)} 
             routeDestination={routeDestination} 
             onRouteClick={handleRoute}
+            activeTicket={activeTicket}
           />
 
           <div className="flex flex-col md:flex-row gap-4 mt-6">
@@ -744,10 +749,22 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
             <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-zinc-900"></div></div>
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            {sortedSalons.map((salon) => (
+            {sortedSalons.map((salon) => {
+                // 🔥 NEW: Check if this is the active salon and override stats
+                const isActiveSalon = activeTicket && (activeTicket.salonId?._id === salon._id || activeTicket.salonId === salon._id);
+                
+                const displayWaiting = isActiveSalon && activeTicket.myPeopleAhead !== undefined 
+                    ? activeTicket.myPeopleAhead 
+                    : (salon.waiting || 0);
+                    
+                const displayEstTime = isActiveSalon && activeTicket.myWaitTime !== undefined 
+                    ? activeTicket.myWaitTime 
+                    : (salon.estTime || 0);
+
+                return (
                 <div key={salon._id} className="group relative rounded-2xl bg-white border border-zinc-200 shadow-sm overflow-hidden flex flex-col hover:shadow-lg transition-shadow duration-300">
                 
-                {/* 🔥 MODERN COVER IMAGE SECTION WITH NEW LOADER 🔥 */}
+                {/* MODERN COVER IMAGE SECTION WITH NEW LOADER */}
                 <div className="relative h-48 w-full bg-zinc-100 overflow-hidden">
                     {salon.gallery && salon.gallery.length > 0 ? (
                         <PremiumImageLoader 
@@ -817,7 +834,8 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                       <div className="flex flex-col items-center sm:items-start">
                         <span className="text-[9px] uppercase text-zinc-400 font-bold tracking-tight">Waiting</span>
                         <div className="flex items-baseline gap-0.5">
-                          <span className="text-xl sm:text-2xl font-black text-zinc-900">{salon.waiting || 0}</span>
+                          {/* 🔥 NEW: Use dynamically calculated displayWaiting */}
+                          <span className="text-xl sm:text-2xl font-black text-zinc-900">{displayWaiting}</span>
                           <span className="text-[9px] text-zinc-500">pax</span>
                         </div>
                       </div>
@@ -825,8 +843,9 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                         <span className="text-[9px] uppercase text-zinc-400 font-bold tracking-tight">Est. Time</span>
                         <div className="flex items-center gap-1 mt-0.5">
                           <Clock size={12} className="text-zinc-400" />
+                          {/* 🔥 NEW: Use dynamically calculated displayEstTime */}
                           <span className="text-xs sm:text-sm font-bold text-zinc-900">
-                            {salon.estTime || 0} min
+                            {displayEstTime} min
                           </span>
                         </div>
                       </div>
@@ -866,7 +885,8 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                     </div>
                 </div>
                 </div>
-            ))}
+                );
+            })}
             </div>
         )}
 

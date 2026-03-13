@@ -11,10 +11,7 @@ import {
 import api from "../utils/api";
 import { io } from "socket.io-client";
 
-// --- CLOUDINARY UPLOAD HELPER ---
-// 1. Create a Cloudinary account.
-// 2. Go to Settings > Upload > Add Upload Preset (Mode: Unsigned).
-// 3. Replace the values below:
+
 const CLOUDINARY_UPLOAD_URL = "https://api.cloudinary.com/v1_1/dvoenforj/image/upload";
 const UPLOAD_PRESET = "salon_preset";
 
