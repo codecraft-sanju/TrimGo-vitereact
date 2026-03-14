@@ -304,6 +304,8 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
   const [routeDestination, setRouteDestination] = useState(null); 
   const watchId = useRef(null); 
 
+  // --- NEW TIMER STATE ---
+  const [timeLeftSeconds, setTimeLeftSeconds] = useState(0);
   const [timeLeftStr, setTimeLeftStr] = useState("");
   
   const [showAcceptedAnim, setShowAcceptedAnim] = useState(false);
@@ -434,14 +436,18 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         );
     });
 
+    // --- CHANGED START ---
+    // myWaitTimeInSeconds ko bhi capture kar liya
     socket.on("my_queue_update", (data) => {
         setActiveTicket(prev => prev ? { 
             ...prev, 
             myWaitTime: data.myWaitTime, 
+            myWaitTimeInSeconds: data.myWaitTimeInSeconds, 
             myPeopleAhead: data.myPeopleAhead,
             expectedStartTime: data.expectedStartTime 
         } : null);
     });
+    // --- CHANGED END ---
 
     socket.on("request_accepted", (ticket) => {
         setActiveTicket(ticket);
@@ -508,34 +514,39 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
     return () => clearTimeout(timer);
   }, [searchTerm, filterType]);
 
-  // Timer Effect
+  // --- CHANGED START: ROBUST TIMER LOGIC ---
+  
+  // 1. Sync seconds when ticket updates
+  useEffect(() => {
+    if (activeTicket) {
+      const seconds = activeTicket.myWaitTimeInSeconds ?? activeTicket.waitTimeInSeconds ?? (activeTicket.myWaitTime * 60) ?? ((activeTicket.totalTime || 0) * 60);
+      setTimeLeftSeconds(seconds > 0 ? Math.floor(seconds) : 0);
+    }
+  }, [activeTicket?.myWaitTimeInSeconds, activeTicket?.waitTimeInSeconds, activeTicket?.myWaitTime, activeTicket?._id]);
+
+  // 2. Countdown Interval (Ticks down every second)
   useEffect(() => {
     if (!activeTicket || activeTicket.status === 'serving') return;
 
-    const updateTimer = () => {
-      if (!activeTicket.expectedStartTime) {
-        setTimeLeftStr(`${activeTicket.myWaitTime || activeTicket.totalTime || 0}m`);
-        return;
-      }
-
-      const now = new Date().getTime();
-      const expectedStart = new Date(activeTicket.expectedStartTime).getTime();
-      const diffInSeconds = Math.floor((expectedStart - now) / 1000);
-
-      if (diffInSeconds <= 0) {
-        setTimeLeftStr("00:00");
-      } else {
-        const m = Math.floor(diffInSeconds / 60);
-        const s = diffInSeconds % 60;
-        setTimeLeftStr(`${m}:${s < 10 ? '0' : ''}${s}`);
-      }
-    };
-
-    updateTimer(); 
-    const intervalId = setInterval(updateTimer, 1000); 
+    const intervalId = setInterval(() => {
+      setTimeLeftSeconds(prev => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
 
     return () => clearInterval(intervalId); 
   }, [activeTicket]);
+
+  // 3. Format seconds into MM:SS
+  useEffect(() => {
+    if (timeLeftSeconds <= 0) {
+      setTimeLeftStr("00:00");
+    } else {
+      const m = Math.floor(timeLeftSeconds / 60);
+      const s = Math.floor(timeLeftSeconds % 60);
+      setTimeLeftStr(`${m}:${s < 10 ? '0' : ''}${s}`);
+    }
+  }, [timeLeftSeconds]);
+
+  // --- CHANGED END ---
 
   const salonsWithDistance = useMemo(() => {
       return salons.map(salon => {

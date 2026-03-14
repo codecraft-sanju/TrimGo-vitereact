@@ -8,8 +8,21 @@ import { sendWhatsappMessage } from "../utils/sendWhatsapp.js";
 /* -------------------------------------------------------------------------- */
 const getQueueStats = async (salonId, currentUserId) => {
   // --- CHANGED START ---
-  // Pending tickets ko bhi calculation me shamil kar liya gaya hai
-  const activeTickets = await Ticket.find({ salonId, status: { $in: ["pending", "waiting", "serving"] } }).sort({ createdAt: 1 });
+  let activeTickets = await Ticket.find({ salonId, status: { $in: ["pending", "waiting", "serving"] } });
+
+  activeTickets = activeTickets.sort((a, b) => {
+    const statusPriority = { serving: 1, waiting: 2, pending: 3 };
+    
+    if (statusPriority[a.status] !== statusPriority[b.status]) {
+      return statusPriority[a.status] - statusPriority[b.status];
+    }
+    
+    if (a.queueNumber !== null && b.queueNumber !== null) {
+      return a.queueNumber - b.queueNumber;
+    }
+    
+    return new Date(a.createdAt) - new Date(b.createdAt);
+  });
   // --- CHANGED END ---
   
   let peopleAhead = 0;
@@ -51,8 +64,21 @@ const getQueueStats = async (salonId, currentUserId) => {
 
 const broadcastQueueUpdates = async (salonId, io) => {
   // --- CHANGED START ---
-  // Pending tickets ko bhi list me count kar rahe hain
-  const activeTickets = await Ticket.find({ salonId, status: { $in: ["pending", "waiting", "serving"] } }).sort({ createdAt: 1 });
+  let activeTickets = await Ticket.find({ salonId, status: { $in: ["pending", "waiting", "serving"] } });
+
+  activeTickets = activeTickets.sort((a, b) => {
+    const statusPriority = { serving: 1, waiting: 2, pending: 3 };
+    
+    if (statusPriority[a.status] !== statusPriority[b.status]) {
+      return statusPriority[a.status] - statusPriority[b.status];
+    }
+    
+    if (a.queueNumber !== null && b.queueNumber !== null) {
+      return a.queueNumber - b.queueNumber;
+    }
+    
+    return new Date(a.createdAt) - new Date(b.createdAt);
+  });
   // --- CHANGED END ---
 
   const globalWaitingCount = activeTickets.length;
@@ -229,6 +255,8 @@ export const joinQueue = async (req, res) => {
   }
 };
 
+
+/* -------------------------------------------------------------------------- */
 /* -------------------------------------------------------------------------- */
 /* SALON ACTION: ACCEPT REQUEST                                               */
 /* -------------------------------------------------------------------------- */
@@ -237,16 +265,25 @@ export const acceptRequest = async (req, res) => {
     const { ticketId } = req.body;
     const salonId = req.salon._id;
 
-    const waitingCount = await Ticket.countDocuments({
+    // --- CHANGED START ---
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const lastTicket = await Ticket.findOne({
       salonId,
-      status: "waiting",
-    });
+      createdAt: { $gte: startOfDay }
+    }).sort({ createdAt: -1 }); 
+
+    const nextQueueNumber = lastTicket && lastTicket.queueNumber ? lastTicket.queueNumber + 1 : 1;
+    // --- CHANGED END ---
 
     const ticket = await Ticket.findByIdAndUpdate(
       ticketId,
       {
         status: "waiting",
-        queueNumber: waitingCount + 1, 
+        // --- CHANGED START ---
+        queueNumber: nextQueueNumber, 
+        // --- CHANGED END ---
       },
       { new: true }
     ).populate("salonId", "salonName address");

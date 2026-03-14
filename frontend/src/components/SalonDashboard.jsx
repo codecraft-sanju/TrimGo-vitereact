@@ -483,13 +483,11 @@ const SalonDashboard = ({ salon, onLogout }) => {
     } catch (error) { alert("Failed to accept"); }
   };
 
-  // Reject function ab "Queue" mein se hatane ke liye bhi use ho raha hai
   const handleRejectRequest = async (req) => {
     if (!window.confirm("Remove this customer from the queue?")) return;
     try {
       await api.post("/queue/reject", { ticketId: req._id });
       setRequests(requests.filter(r => r._id !== req._id));
-      // Also remove from activeQueue if they were waiting
       setActiveQueue(activeQueue.filter(q => q._id !== req._id));
     } catch (error) {
       console.error(error);
@@ -820,10 +818,23 @@ const SalonDashboard = ({ salon, onLogout }) => {
 
                   {/* LEFT: QUEUE LIST */}
                   <div className="lg:col-span-4 bg-zinc-900/30 border border-white/5 rounded-3xl overflow-hidden flex flex-col h-[400px] lg:h-full">
+                    
+                    {/* CHANGED START: PERMANENT ADD BUTTON IN HEADER */}
                     <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between sticky top-0 backdrop-blur-sm z-10">
                       <h3 className="font-bold text-sm text-zinc-100">Waiting Queue</h3>
-                      <span className="text-xs font-bold bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-md">{activeQueue.length}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-md">{activeQueue.length}</span>
+                        <button 
+                          onClick={() => setIsWalkInOpen(true)}
+                          className="p-2 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white rounded-lg transition-all border border-emerald-500/20 shadow-lg shadow-emerald-500/5 group"
+                          title="Add Walk-in"
+                        >
+                          <UserPlus size={16} className="group-hover:scale-110 transition-transform" />
+                        </button>
+                      </div>
                     </div>
+                    {/* CHANGED END */}
+
                     <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
                       {activeQueue.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-zinc-600 gap-2">
@@ -843,7 +854,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
                               </div>
                             </div>
                             
-                            {/* CHANGED START: Added Cross icon to remove no-shows from the waiting queue */}
                             <div className="flex items-center gap-2">
                                 <button onClick={() => handleRejectRequest(cust)} className="w-10 h-10 rounded-full bg-zinc-800/50 flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all" title="Remove Customer">
                                     <X size={16} />
@@ -852,7 +862,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
                                     <Play size={16} fill="currentColor" />
                                 </button>
                             </div>
-                            {/* CHANGED END */}
 
                           </div>
                         </div>
