@@ -257,7 +257,7 @@ export const logoutSalon = (req, res) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/* PUBLIC API: GET ALL SALONS                                                 */
+/* PUBLIC API: GET ALL SALONS (WITH REAL-TIME ESTIMATE CALCULATION)           */
 /* -------------------------------------------------------------------------- */
 export const getAllSalons = async (req, res) => {
   try {
@@ -283,18 +283,41 @@ export const getAllSalons = async (req, res) => {
 
     const salonsWithData = await Promise.all(salons.map(async (salon) => {
         
+        // --- CHANGED START ---
+        // Select mein serviceStartTime add kiya
         const activeTickets = await Ticket.find({
             salonId: salon._id,
-            status: { $in: ["waiting", "serving"] } 
-        }).select("totalTime");
+            status: { $in: ["pending", "waiting", "serving"] } 
+        }).select("totalTime updatedAt serviceStartTime status");
+        // --- CHANGED END ---
 
         const waitingCount = activeTickets.length;
-        const totalEstTime = activeTickets.reduce((sum, ticket) => sum + (ticket.totalTime || 0), 0);
+        
+        // Exact Estimate Time Calculation
+        let totalEstTimeMins = 0;
+        const now = new Date();
+        for(const t of activeTickets){
+           if(t.status === 'serving'){
+              // --- CHANGED START ---
+              // Timer calculation ab actual service start time se hogi
+              const startTime = t.serviceStartTime ? new Date(t.serviceStartTime) : new Date(t.updatedAt);
+              const elapsedMins = (now - startTime) / (1000 * 60);
+              // --- CHANGED END ---
+              totalEstTimeMins += Math.max(0, (t.totalTime || 0) - elapsedMins);
+           } else {
+              totalEstTimeMins += (t.totalTime || 0);
+           }
+        }
+
+        const waitTimeInSeconds = Math.round(totalEstTimeMins * 60);
+        const expectedStartTime = new Date(now.getTime() + (waitTimeInSeconds * 1000));
 
         return { 
             ...salon, 
             waiting: waitingCount, 
-            estTime: totalEstTime 
+            estTime: Math.round(totalEstTimeMins),
+            waitTimeInSeconds: waitTimeInSeconds,
+            expectedStartTime: expectedStartTime
         };
     }));
 
@@ -310,7 +333,7 @@ export const getAllSalons = async (req, res) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/* UPDATE SALON PROFILE (UPDATED FOR GALLERY)                                 */
+/* UPDATE SALON PROFILE                                                       */
 /* -------------------------------------------------------------------------- */
 export const updateSalonProfile = async (req, res) => {
   try {

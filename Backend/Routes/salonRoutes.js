@@ -36,8 +36,6 @@ router.post("/logout", logoutSalon);
 router.get("/all", getAllSalons); 
 
 
-
-
 // Get Current Salon Profile
 router.get("/me", protectSalon, (req, res) => {
     return res.status(200).json({

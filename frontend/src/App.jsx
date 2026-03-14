@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
-import { Bell, Ticket, X, CheckCircle, Sparkles, Scissors } from "lucide-react";
+import { Bell, Ticket, X, CheckCircle, Sparkles, Scissors, Clock } from "lucide-react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -14,7 +14,7 @@ import { UserProfile } from "./components/UserProfile";
 import { AdminLogin, AdminDashboard } from "./components/AdminDashboard";
 import SalonDashboard from "./components/SalonDashboard";
 import UserDashboard from "./components/UserDashboard";
-import { NoiseOverlay } from "./components/SharedUI"; // Ensure this handles mobile visibility inside itself or parent
+import { NoiseOverlay } from "./components/SharedUI"; 
 
 // Import Pages
 import LandingPage from "./components/LandingPage";
@@ -22,7 +22,7 @@ import ReferralPage from "./components/ReferralPage";
 import UpdateNotification from "./components/UpdateNotification";
 
 // ----------------------------------------------------------------------
-// OPTIMIZED PREMIUM PRELOADER (Glitch-Free & Mobile Smooth)
+// OPTIMIZED PREMIUM PRELOADER
 // ----------------------------------------------------------------------
 const PremiumPreloader = ({ onLoadingComplete, dataLoaded }) => {
   const count = useMotionValue(0);
@@ -30,20 +30,16 @@ const PremiumPreloader = ({ onLoadingComplete, dataLoaded }) => {
   const [isFinished, setIsFinished] = useState(false);
 
   useEffect(() => {
-    // 1. Start slow animation to 85% (Simulate loading)
-    // Duration is long (10s) so it never hits 100% on its own.
     const controls = animate(count, 85, { duration: 10, ease: "circOut" });
 
-    // 2. Watch for real data to be ready
     if (dataLoaded) {
-      controls.stop(); // Stop the slow fake loading
-      // Quick jump to 100% when data is actually ready
+      controls.stop(); 
       animate(count, 100, {
         duration: 0.8,
         ease: "easeInOut",
         onComplete: () => {
           setIsFinished(true);
-          setTimeout(onLoadingComplete, 600); // Small delay to admire the 100%
+          setTimeout(onLoadingComplete, 600); 
         }
       });
     }
@@ -51,7 +47,6 @@ const PremiumPreloader = ({ onLoadingComplete, dataLoaded }) => {
     return () => controls.stop();
   }, [dataLoaded, count, onLoadingComplete]);
 
-  // Letter animation variants
   const letterVariants = {
     hidden: { y: 100, opacity: 0 },
     visible: (i) => ({
@@ -71,18 +66,15 @@ const PremiumPreloader = ({ onLoadingComplete, dataLoaded }) => {
       exit={{ y: "-100%", transition: { duration: 0.8, ease: [0.76, 0, 0.24, 1] } }}
       className="fixed inset-0 z-[9999] bg-neutral-950 text-white flex flex-col justify-between p-6 md:p-12 overflow-hidden"
     >
-      {/* Noise Overlay - Optimized: CSS only, no calculations */}
       <div className="hidden md:block absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay">
         <div className="w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
       </div>
 
-      {/* Top Header */}
       <div className="w-full flex justify-between items-start z-10 opacity-60">
         <span className="text-xs md:text-sm font-light tracking-[0.2em] uppercase">Est. 2026</span>
         <Scissors size={20} className="animate-spin-slow opacity-80" strokeWidth={1} />
       </div>
 
-      {/* Center Content: Massive Typography */}
       <div className="relative z-10 flex flex-col items-center justify-center h-full">
         <div className="overflow-hidden flex items-center justify-center">
           {["T", "R", "I", "M", "G", "O"].map((char, index) => (
@@ -111,7 +103,6 @@ const PremiumPreloader = ({ onLoadingComplete, dataLoaded }) => {
         </motion.div>
       </div>
 
-      {/* Bottom Footer: The Counter & Bar */}
       <div className="w-full z-10">
         <div className="flex justify-between items-end mb-4">
           <div className="flex flex-col">
@@ -121,14 +112,12 @@ const PremiumPreloader = ({ onLoadingComplete, dataLoaded }) => {
             </span>
           </div>
 
-          {/* Huge Number Counter using Framer Motion (No Re-renders) */}
           <div className="flex items-baseline text-6xl md:text-8xl font-thin tracking-tighter leading-none text-white">
             <motion.span>{rounded}</motion.span>
             <span className="text-2xl md:text-4xl text-neutral-600 font-normal">%</span>
           </div>
         </div>
 
-        {/* Smooth Progress Line */}
         <div className="w-full h-[1px] bg-neutral-800 relative overflow-hidden">
           <motion.div
             className="absolute top-0 left-0 h-full bg-white"
@@ -141,20 +130,40 @@ const PremiumPreloader = ({ onLoadingComplete, dataLoaded }) => {
 };
 
 // ----------------------------------------------------------------------
-// 1. Toast Notification - REMOVED (Replaced by react-hot-toast)
-// ----------------------------------------------------------------------
-
-// ----------------------------------------------------------------------
-// 2. Live Ticket Widget
+// 2. Live Ticket Widget (WITH REAL-TIME COUNTDOWN)
 // ----------------------------------------------------------------------
 const LiveTicket = ({ ticket, onCancel }) => {
-  const [timeLeft, setTimeLeft] = useState(ticket ? ticket.eta : 0);
+  const [timeLeftStr, setTimeLeftStr] = useState("");
+
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => Math.max(0, prev - 1));
-    }, 60000);
-    return () => clearInterval(timer);
-  }, []);
+    if (!ticket) return;
+
+    const updateTimer = () => {
+      // Agar backend se exact time nahi aaya toh fallback old ETA (minutes)
+      if (!ticket.expectedStartTime) {
+         setTimeLeftStr(`${ticket.eta}m`);
+         return;
+      }
+
+      const now = new Date().getTime();
+      const expectedStart = new Date(ticket.expectedStartTime).getTime();
+      
+      const diffInSeconds = Math.floor((expectedStart - now) / 1000);
+
+      if (diffInSeconds <= 0) {
+        setTimeLeftStr("00:00");
+      } else {
+        const m = Math.floor(diffInSeconds / 60);
+        const s = diffInSeconds % 60;
+        setTimeLeftStr(`${m}:${s < 10 ? '0' : ''}${s}`);
+      }
+    };
+
+    updateTimer(); // Initial call
+    const intervalId = setInterval(updateTimer, 1000); // Har second update
+
+    return () => clearInterval(intervalId);
+  }, [ticket]);
 
   if (!ticket) return null;
 
@@ -172,18 +181,32 @@ const LiveTicket = ({ ticket, onCancel }) => {
               <h3 className="font-bold text-lg">{ticket.salonName}</h3>
             </div>
           </div>
-          <button onClick={onCancel} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition"><X size={16} /></button>
+          
+          {/* Hide Cancel button if status is serving */}
+          {ticket.status !== 'serving' && (
+             <button onClick={onCancel} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition"><X size={16} /></button>
+          )}
         </div>
+        
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="bg-white/5 rounded-2xl p-3 text-center border border-white/5">
-            <div className="text-2xl font-black">{timeLeft}</div>
-            <div className="text-[10px] text-zinc-400 uppercase">Mins Left</div>
+            <div className={`text-2xl font-black ${ticket.status === 'serving' ? 'text-emerald-400' : 'text-white'}`}>
+                {ticket.status === 'serving' ? 'Now' : timeLeftStr}
+            </div>
+            <div className="text-[10px] text-zinc-400 uppercase">
+                {ticket.status === 'serving' ? 'In Progress' : 'Est. Wait'}
+            </div>
           </div>
           <div className="bg-white/5 rounded-2xl p-3 text-center border border-white/5">
-            <div className="text-2xl font-black text-emerald-400">#{ticket.number || "-"}</div>
-            <div className="text-[10px] text-zinc-400 uppercase">Your Position</div>
+            <div className="text-2xl font-black text-emerald-400">
+                {ticket.status === 'serving' ? 'Chair' : `#${ticket.number || "-"}`}
+            </div>
+            <div className="text-[10px] text-zinc-400 uppercase">
+                {ticket.status === 'serving' ? 'Serving' : 'Your Position'}
+            </div>
           </div>
         </div>
+
         <div className="flex items-center justify-between text-xs text-zinc-500 bg-black/20 p-2 rounded-lg">
           <span className="flex items-center gap-1"><Sparkles size={12} className="text-yellow-400" /> AI calculating speed</span>
           <span>Updated live</span>
@@ -267,6 +290,7 @@ const AppContent = () => {
                 salonName: data.ticket.salonId.salonName,
                 number: data.ticket.queueNumber,
                 eta: data.ticket.totalTime,
+                expectedStartTime: data.ticket.expectedStartTime, // 🔥 Added expected start time
                 status: data.ticket.status
               });
             }
@@ -295,7 +319,6 @@ const AppContent = () => {
 
   const handleUserLoginSuccess = (userData) => {
     setCurrentUser(userData);
-    // Toast handled in UserLogin component now
     navigate("/dashboard/user");
   };
 
@@ -304,11 +327,9 @@ const AppContent = () => {
       const { data } = await api.post("/salon/register", formData);
       if (data.success) {
         if (data.phone) {
-          // Backend ne OTP bheja hai
           toast.success("OTP sent to your WhatsApp number!");
           return { success: true, requiresOtp: true, phone: data.phone };
         } else {
-          // Direct registration (OTP disabled)
           setCurrentSalon(data.salon);
           toast.success("Registration successful! Welcome Partner.");
           navigate("/dashboard/salon");
@@ -386,6 +407,7 @@ const AppContent = () => {
       salonName: ticketData.salonName,
       number: ticketData.number,
       eta: ticketData.eta,
+      expectedStartTime: ticketData.expectedStartTime, // 🔥 Setting expected start time on join
       status: ticketData.status
     });
   };
@@ -416,7 +438,6 @@ const AppContent = () => {
           />
         )}
 
-        {/* Content Rendered but Hidden underneath Preloader until ready */}
         <Routes>
           <Route path="/" element={
             <PublicRoute user={currentUser} salon={currentSalon} authLoading={authLoading}>
@@ -469,6 +490,7 @@ const AppContent = () => {
               />
             </PublicRoute>
           } />
+          
           <Route path="/legal/privacy" element={<LegalLayout type="privacy" />} />
           <Route path="/legal/terms" element={<LegalLayout type="terms" />} />
           <Route path="/legal/refund" element={<LegalLayout type="refund" />} />

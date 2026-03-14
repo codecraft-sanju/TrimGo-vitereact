@@ -46,6 +46,18 @@ const ticketSchema = new mongoose.Schema(
       type: Number,
       required: true, 
     },
+
+    // CHANGED START: Added reaching time and service start time
+    reachingTime: {
+      type: Number,
+      default: 0, 
+    },
+    serviceStartTime: {
+      type: Date,
+      default: null, 
+    },
+    // CHANGED END
+
     queueNumber: {
       type: Number,
       default: null, 

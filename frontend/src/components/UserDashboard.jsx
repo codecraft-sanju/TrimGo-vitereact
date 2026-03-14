@@ -20,17 +20,18 @@ import {
   Image as ImageIcon,
   ChevronLeft, 
   ChevronRight,
-  Scissors
+  Scissors,
+  CheckCircle
 } from "lucide-react";
 import { io } from "socket.io-client"; 
 import Lenis from 'lenis'; 
 import api from "../utils/api"; 
+import { motion, AnimatePresence } from "framer-motion"; 
 
 // Imports
 import MapSalon from "./MapSalon";
 import { BackgroundAurora, NoiseOverlay, Logo } from "./SharedUI";
 import AIConcierge from "./AIConcierge"; 
-
 
 const PremiumImageLoader = ({ src, alt, className }) => {
     const [isLoaded, setIsLoaded] = useState(false);
@@ -135,6 +136,8 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 ---------------------------------- */
 const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => { 
   const [selectedServices, setSelectedServices] = useState([]);
+  const [reachingTime, setReachingTime] = useState(15);
+  
   const servicesList = salon.services || [];
 
   const toggleService = (serviceId) => {
@@ -165,7 +168,7 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => {
     const finalServices = servicesList.filter((s) =>
       selectedServices.includes(s._id)
     );
-    onConfirm(salon, finalServices, totalDetails);
+    onConfirm(salon, finalServices, totalDetails, reachingTime);
   };
 
   return (
@@ -213,6 +216,22 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => {
                 );
             })
           )}
+        </div>
+
+        {/* Reaching Time UI */}
+        <div className="px-4 py-3 bg-white border-t border-zinc-100">
+          <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Reaching in (Travel Time)</label>
+          <div className="flex gap-2">
+            {[5, 15, 30, 45].map(time => (
+              <button
+                key={time}
+                onClick={() => setReachingTime(time)}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-colors ${reachingTime === time ? 'bg-zinc-900 text-white border-zinc-900 shadow-md' : 'bg-zinc-50 text-zinc-600 border-zinc-200 hover:bg-zinc-100'}`}
+              >
+                {time} min
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Footer with Loading Button */}
@@ -284,6 +303,10 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
   const [heading, setHeading] = useState(0); 
   const [routeDestination, setRouteDestination] = useState(null); 
   const watchId = useRef(null); 
+
+  const [timeLeftStr, setTimeLeftStr] = useState("");
+  
+  const [showAcceptedAnim, setShowAcceptedAnim] = useState(false);
 
   // --- LENIS SMOOTH SCROLL ---
   useEffect(() => {
@@ -411,13 +434,19 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         );
     });
 
-    // 🔥 NEW: Listen for individual specific user queue updates
     socket.on("my_queue_update", (data) => {
-        setActiveTicket(prev => prev ? { ...prev, myWaitTime: data.myWaitTime, myPeopleAhead: data.myPeopleAhead } : null);
+        setActiveTicket(prev => prev ? { 
+            ...prev, 
+            myWaitTime: data.myWaitTime, 
+            myPeopleAhead: data.myPeopleAhead,
+            expectedStartTime: data.expectedStartTime 
+        } : null);
     });
 
     socket.on("request_accepted", (ticket) => {
         setActiveTicket(ticket);
+        setShowAcceptedAnim(true);
+        setTimeout(() => setShowAcceptedAnim(false), 3500); 
     });
 
     socket.on("request_rejected", () => {
@@ -479,6 +508,35 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
     return () => clearTimeout(timer);
   }, [searchTerm, filterType]);
 
+  // Timer Effect
+  useEffect(() => {
+    if (!activeTicket || activeTicket.status === 'serving') return;
+
+    const updateTimer = () => {
+      if (!activeTicket.expectedStartTime) {
+        setTimeLeftStr(`${activeTicket.myWaitTime || activeTicket.totalTime || 0}m`);
+        return;
+      }
+
+      const now = new Date().getTime();
+      const expectedStart = new Date(activeTicket.expectedStartTime).getTime();
+      const diffInSeconds = Math.floor((expectedStart - now) / 1000);
+
+      if (diffInSeconds <= 0) {
+        setTimeLeftStr("00:00");
+      } else {
+        const m = Math.floor(diffInSeconds / 60);
+        const s = diffInSeconds % 60;
+        setTimeLeftStr(`${m}:${s < 10 ? '0' : ''}${s}`);
+      }
+    };
+
+    updateTimer(); 
+    const intervalId = setInterval(updateTimer, 1000); 
+
+    return () => clearInterval(intervalId); 
+  }, [activeTicket]);
+
   const salonsWithDistance = useMemo(() => {
       return salons.map(salon => {
           let distStr = null;
@@ -528,7 +586,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
       if(!isJoiningQueue) setActiveBookingSalon(null); 
   };
 
-  const handleConfirmBooking = async (salon, services, totals) => {
+  const handleConfirmBooking = async (salon, services, totals, reachingTime) => {
     setIsJoiningQueue(true); 
     try {
         const payload = {
@@ -540,7 +598,8 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                 category: s.category 
              })),
             totalPrice: totals.price,
-            totalTime: totals.time
+            totalTime: totals.time,
+            reachingTime: reachingTime 
         };
 
         const { data } = await api.post("/queue/join", payload);
@@ -584,6 +643,23 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
     <div className="min-h-screen w-full bg-zinc-50 font-sans overflow-x-hidden pb-32">
       <BackgroundAurora />
       <NoiseOverlay />
+
+      <AnimatePresence>
+        {showAcceptedAnim && (
+            <motion.div
+                initial={{ opacity: 0, scale: 0.8, y: 50 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: -50 }}
+                className="fixed inset-0 z-[150] flex items-center justify-center pointer-events-none px-4"
+            >
+                <div className="bg-emerald-500 text-white px-8 py-6 rounded-3xl shadow-2xl flex flex-col items-center gap-3 text-center border border-emerald-400">
+                    <CheckCircle size={56} className="animate-bounce" />
+                    <h2 className="text-2xl font-black">Request Accepted!</h2>
+                    <p className="text-sm font-medium text-emerald-50">Salon has confirmed your spot.</p>
+                </div>
+            </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* --- MODALS --- */}
       {activeBookingSalon && (
@@ -751,7 +827,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {sortedSalons.map((salon) => {
-                // 🔥 NEW: Check if this is the active salon and override stats
                 const isActiveSalon = activeTicket && (activeTicket.salonId?._id === salon._id || activeTicket.salonId === salon._id);
                 
                 const displayWaiting = isActiveSalon && activeTicket.myPeopleAhead !== undefined 
@@ -835,7 +910,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                       <div className="flex flex-col items-center sm:items-start">
                         <span className="text-[9px] uppercase text-zinc-400 font-bold tracking-tight">Waiting</span>
                         <div className="flex items-baseline gap-0.5">
-                          {/* 🔥 NEW: Use dynamically calculated displayWaiting */}
                           <span className="text-xl sm:text-2xl font-black text-zinc-900">{displayWaiting}</span>
                           <span className="text-[9px] text-zinc-500">pax</span>
                         </div>
@@ -844,7 +918,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                         <span className="text-[9px] uppercase text-zinc-400 font-bold tracking-tight">Est. Time</span>
                         <div className="flex items-center gap-1 mt-0.5">
                           <Clock size={12} className="text-zinc-400" />
-                          {/* 🔥 NEW: Use dynamically calculated displayEstTime */}
                           <span className="text-xs sm:text-sm font-bold text-zinc-900">
                             {displayEstTime} min
                           </span>
@@ -910,14 +983,30 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
       {activeTicket && (
         <div className="fixed bottom-4 left-4 right-4 z-50 animate-in slide-in-from-bottom-20 duration-500">
             <div className="bg-zinc-900/95 backdrop-blur-lg rounded-2xl shadow-2xl p-4 border border-white/10 text-white flex flex-col gap-3 max-w-lg mx-auto">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-start">
                     <div>
                         <div className="flex items-center gap-2 mb-1">
-                            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                            <span className={`w-2 h-2 rounded-full animate-pulse ${activeTicket.status === 'pending' ? 'bg-yellow-500' : 'bg-emerald-500'}`}></span>
                             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Current Status</span>
                         </div>
-                        <h3 className="font-bold text-lg">{activeTicket.salonId?.salonName || "Salon"}</h3>
-                        <p className="text-xs text-zinc-400">Queue #{activeTicket.queueNumber} • {activeTicket.status.toUpperCase()}</p>
+                        
+                        <div className="flex items-center justify-between">
+                            <h3 className="font-bold text-lg">{activeTicket.salonId?.salonName || "Salon"}</h3>
+                            
+                            {activeTicket.status === 'pending' ? (
+                              <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/20 text-yellow-400 rounded-lg ml-4 border border-yellow-500/30">
+                                <Loader2 size={14} className="animate-spin" />
+                                <span className="text-[10px] font-bold uppercase tracking-wider">Waiting for Accept...</span>
+                              </div>
+                            ) : activeTicket.status !== 'serving' ? (
+                              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/10 rounded-lg ml-4">
+                                <Clock size={12} className="text-zinc-400" />
+                                <span className="text-sm font-bold text-white tracking-wider">{timeLeftStr}</span>
+                              </div>
+                            ) : null}
+                        </div>
+                        
+                     <p className="text-xs text-zinc-400">Queue #{activeTicket.queueNumber || "-"} • {activeTicket.status.toUpperCase()}</p>
                     </div>
                     <div className="text-right">
                         <div className="text-2xl font-black">₹{activeTicket.totalPrice}</div>
@@ -925,7 +1014,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                     </div>
                 </div>
                 
-                <div className="flex gap-3">
+                <div className="flex gap-3 mt-2">
                     <button 
                         onClick={() => {
                             const sId = activeTicket.salonId?._id || activeTicket.salonId;
@@ -937,7 +1026,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                         <Navigation size={16} /> Directions
                     </button>
                     
-                    {/* 🔥 CONDITION ADDED HERE: SIRF WAITING/PENDING ME CANCEL DIKHEGA 🔥 */}
+                    {/* CONDITION FOR CANCEL BUTTON */}
                     {activeTicket.status !== 'serving' ? (
                       <button 
                           onClick={handleCancelTicket}

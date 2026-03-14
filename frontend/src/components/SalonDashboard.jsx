@@ -475,20 +475,25 @@ const SalonDashboard = ({ salon, onLogout }) => {
 
   const handleAcceptRequest = async (req) => {
     try {
-      await api.post("/queue/accept", { ticketId: req._id });
+      const { data } = await api.post("/queue/accept", { ticketId: req._id });
       setRequests(requests.filter(r => r._id !== req._id));
-      setActiveQueue([...activeQueue, req]);
+      if (data.success) {
+        setActiveQueue([...activeQueue, data.ticket]);
+      }
     } catch (error) { alert("Failed to accept"); }
   };
 
+  // Reject function ab "Queue" mein se hatane ke liye bhi use ho raha hai
   const handleRejectRequest = async (req) => {
-    if (!window.confirm("Reject this customer request?")) return;
+    if (!window.confirm("Remove this customer from the queue?")) return;
     try {
       await api.post("/queue/reject", { ticketId: req._id });
       setRequests(requests.filter(r => r._id !== req._id));
+      // Also remove from activeQueue if they were waiting
+      setActiveQueue(activeQueue.filter(q => q._id !== req._id));
     } catch (error) {
       console.error(error);
-      alert("Failed to reject request");
+      alert("Failed to remove request");
     }
   };
 
@@ -522,7 +527,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
     } catch (error) { alert("Error completing service"); }
   };
 
-  // 🔥 NEW: CANCEL SERVICE FUNCTION
   const handleCancelService = async (chairId) => {
     const chair = chairs.find(c => c.id === chairId);
     if (!chair?.currentCustomer) return;
@@ -785,10 +789,18 @@ const SalonDashboard = ({ salon, onLogout }) => {
                               <p className="text-xs text-zinc-400">{req.services[0]?.name} {req.services.length > 1 && `+${req.services.length - 1}`}</p>
                             </div>
                           </div>
+                          
                           <div className="flex items-center justify-between mt-2 mb-3">
-                            <span className="text-sm font-bold text-zinc-300">Total</span>
-                            <span className="text-lg font-black text-white">₹{req.totalPrice}</span>
+                            <div className="flex flex-col">
+                                <span className="text-[10px] uppercase text-zinc-500 font-bold tracking-wider">Arrival</span>
+                                <span className="text-sm font-bold text-emerald-400">In {req.reachingTime || 0} mins</span>
+                            </div>
+                            <div className="flex flex-col items-end">
+                                <span className="text-[10px] uppercase text-zinc-500 font-bold tracking-wider">Total</span>
+                                <span className="text-lg font-black text-white">₹{req.totalPrice}</span>
+                            </div>
                           </div>
+
                           <div className="grid grid-cols-2 gap-2">
                             <button onClick={() => handleRejectRequest(req)} className="py-2.5 bg-zinc-800 text-red-400 border border-white/5 hover:bg-red-500/10 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1">
                               <X size={14} /> Cancel
@@ -830,9 +842,18 @@ const SalonDashboard = ({ salon, onLogout }) => {
                                 <p className="text-xs text-zinc-400">{cust.services[0]?.name}</p>
                               </div>
                             </div>
-                            <button onClick={() => openAssignmentModal(cust)} className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 border border-white/5 transition-all">
-                              <Play size={16} fill="currentColor" />
-                            </button>
+                            
+                            {/* CHANGED START: Added Cross icon to remove no-shows from the waiting queue */}
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => handleRejectRequest(cust)} className="w-10 h-10 rounded-full bg-zinc-800/50 flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all" title="Remove Customer">
+                                    <X size={16} />
+                                </button>
+                                <button onClick={() => openAssignmentModal(cust)} className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 hover:text-white hover:bg-emerald-500 border border-emerald-500/20 hover:border-emerald-500 transition-all shadow-lg shadow-emerald-500/10" title="Start Service">
+                                    <Play size={16} fill="currentColor" />
+                                </button>
+                            </div>
+                            {/* CHANGED END */}
+
                           </div>
                         </div>
                       ))}
@@ -871,7 +892,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
                                 </div>
                               </div>
                               
-                              {/* 🔥 NEW UI WITH BOTH CANCEL AND COMPLETE BUTTONS 🔥 */}
                               <div className="flex gap-2 w-full">
                                 <button 
                                   onClick={() => handleCancelService(chair.id)} 

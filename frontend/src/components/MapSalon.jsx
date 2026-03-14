@@ -319,17 +319,22 @@ const MapSalon = ({ salons, onSelect, userLocation, heading, routeDestination, o
                       </div>
                     </div>
 
+                    {/* --- CHANGED START --- */}
+                    {/* Synchronized Button Logic with UserDashboard */}
                     <button
                       onClick={() => onSelect(salon)}
-                      disabled={!salon.isOnline}
+                      disabled={!salon.isOnline || (activeTicket && activeTicket.salonId?._id !== salon._id)}
                       className={`w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-colors ${
-                          salon.isOnline 
-                          ? 'bg-zinc-900 text-white hover:bg-black' 
-                          : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                          !salon.isOnline 
+                          ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                          : activeTicket 
+                              ? 'bg-zinc-400 text-white cursor-not-allowed' 
+                              : 'bg-zinc-900 text-white hover:bg-black'
                       }`}
                     >
-                      {salon.isOnline ? "Book Now" : "Closed"}
+                      {salon.isOnline ? (activeTicket ? "Busy" : "Book Now") : "Closed"}
                     </button>
+                    {/* --- CHANGED END --- */}
                   </div>
                 </Popup>
               </Marker>
