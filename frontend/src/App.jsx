@@ -141,8 +141,8 @@ const LiveTicket = ({ ticket, onCancel }) => {
     const updateTimer = () => {
       // Agar backend se exact time nahi aaya toh fallback old ETA (minutes)
       if (!ticket.expectedStartTime) {
-         setTimeLeftStr(`${ticket.eta}m`);
-         return;
+          setTimeLeftStr(`${ticket.eta}m`);
+          return;
       }
 
       const now = new Date().getTime();
@@ -190,18 +190,20 @@ const LiveTicket = ({ ticket, onCancel }) => {
         
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="bg-white/5 rounded-2xl p-3 text-center border border-white/5">
-            <div className={`text-2xl font-black ${ticket.status === 'serving' ? 'text-emerald-400' : 'text-white'}`}>
-                {ticket.status === 'serving' ? 'Now' : timeLeftStr}
+            {/* --- UX FIX START --- */}
+            <div className={`text-2xl font-black ${ticket.status === 'serving' ? 'text-emerald-400' : (timeLeftStr === "00:00" ? 'text-amber-400' : 'text-white')}`}>
+                {ticket.status === 'serving' ? 'Now' : (timeLeftStr === "00:00" ? 'Soon' : timeLeftStr)}
             </div>
-            <div className="text-[10px] text-zinc-400 uppercase">
-                {ticket.status === 'serving' ? 'In Progress' : 'Est. Wait'}
+            <div className="text-[10px] text-zinc-400 uppercase font-bold tracking-wider">
+                {ticket.status === 'serving' ? 'In Progress' : (timeLeftStr === "00:00" ? 'Next in Line' : 'Est. Wait')}
             </div>
+            {/* --- UX FIX END --- */}
           </div>
           <div className="bg-white/5 rounded-2xl p-3 text-center border border-white/5">
             <div className="text-2xl font-black text-emerald-400">
                 {ticket.status === 'serving' ? 'Chair' : `#${ticket.number || "-"}`}
             </div>
-            <div className="text-[10px] text-zinc-400 uppercase">
+            <div className="text-[10px] text-zinc-400 uppercase font-bold tracking-wider">
                 {ticket.status === 'serving' ? 'Serving' : 'Your Position'}
             </div>
           </div>

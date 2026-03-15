@@ -3,6 +3,17 @@ import Salon from "../Models/Salon.js";
 import User from "../Models/User.js";
 import { sendWhatsappMessage } from "../utils/sendWhatsapp.js"; 
 
+// --- FIXED TIMEZONE BUG START ---
+// Helper to get the start of the current day in IST (Asia/Kolkata)
+const getISTStartOfDay = () => {
+  const now = new Date();
+  const IST_OFFSET = 5.5 * 60 * 60 * 1000; // 5 hours 30 mins
+  const istDate = new Date(now.getTime() + IST_OFFSET);
+  istDate.setUTCHours(0, 0, 0, 0);
+  return new Date(istDate.getTime() - IST_OFFSET);
+};
+// --- FIXED TIMEZONE BUG END ---
+
 /* -------------------------------------------------------------------------- */
 /* CORE QUEUE CALCULATION LOGIC (WITH REAL-TIME SECONDS & TIMESTAMP)          */
 /* -------------------------------------------------------------------------- */
@@ -157,8 +168,9 @@ export const addWalkInClient = async (req, res) => {
       return res.status(400).json({ success: false, message: "Customer Name and Services are required" });
     }
 
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
+    // --- FIXED TIMEZONE BUG START ---
+    const startOfDay = getISTStartOfDay();
+    // --- FIXED TIMEZONE BUG END ---
 
     const lastTicket = await Ticket.findOne({
       salonId,
@@ -265,9 +277,9 @@ export const acceptRequest = async (req, res) => {
     const { ticketId } = req.body;
     const salonId = req.salon._id;
 
-    // --- CHANGED START ---
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
+    // --- FIXED TIMEZONE BUG START ---
+    const startOfDay = getISTStartOfDay();
+    // --- FIXED TIMEZONE BUG END ---
 
     const lastTicket = await Ticket.findOne({
       salonId,
@@ -532,11 +544,14 @@ export const getSalonData = async (req, res) => {
         const waiting = await Ticket.find({ salonId, status: "waiting" }).populate("userId", "name");
         const serving = await Ticket.find({ salonId, status: "serving" }).populate("userId", "name");
         
+        // --- FIXED TIMEZONE BUG START ---
+        const startOfDay = getISTStartOfDay();
         const completedToday = await Ticket.find({ 
             salonId, 
             status: "completed",
-            updatedAt: { $gte: new Date().setHours(0,0,0,0) } 
+            updatedAt: { $gte: startOfDay } 
         });
+        // --- FIXED TIMEZONE BUG END ---
 
         const todayRevenue = completedToday.reduce((acc, curr) => acc + curr.totalPrice, 0);
 

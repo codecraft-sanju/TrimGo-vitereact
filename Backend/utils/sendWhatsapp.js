@@ -12,7 +12,7 @@ export const sendWhatsappMessage = async (phone, msg) => {
       'http://13.233.83.235:3000/send-message',
       {
         apiKey:
-          process.env.AIRTEXT_API_KEY || '9510ad40-9c45-4ac2-a03e-6ac71bd906e5', // Best to keep this in .env
+          process.env.AIRTEXT_API_KEY || '9510ad40-9c45-4ac2-a03e-6ac71bd906e5', 
         phone: targetPhone,
         msg: msg,
         type: 'whatsapp',
