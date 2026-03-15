@@ -39,8 +39,13 @@ const getSortedActiveTickets = async (salonId) => {
 /* CORE QUEUE CALCULATION LOGIC (WITH REAL-TIME SECONDS & TIMESTAMP)          */
 /* -------------------------------------------------------------------------- */
 const getQueueStats = async (salonId, currentUserId) => {
-  // --- CHANGED START (DRY Fix) ---
   const activeTickets = await getSortedActiveTickets(salonId);
+  const salon = await Salon.findById(salonId).select("activeChairsCount");
+  
+  // --- CHANGED START ---
+  // Ab time calculate activeChairsCount par depend karega
+  const numChairs = Math.max(1, salon?.activeChairsCount || 1);
+  let chairEndMins = Array(numChairs).fill(0);
   // --- CHANGED END ---
   
   let peopleAhead = 0;
@@ -51,21 +56,22 @@ const getQueueStats = async (salonId, currentUserId) => {
     const t = activeTickets[i];
     
     if (t.userId && t.userId.toString() === currentUserId.toString()) {
+      chairEndMins.sort((a, b) => a - b);
+      waitTimeAheadMins = chairEndMins[0];
       break;
     }
     
     peopleAhead++;
 
+    chairEndMins.sort((a, b) => a - b);
+
     if (t.status === 'serving') {
-      // --- CHANGED START ---
-      // Timer calculation ab actual service start time se hogi
       const startTime = t.serviceStartTime ? new Date(t.serviceStartTime) : new Date(t.updatedAt);
       const elapsedMins = (now - startTime) / (1000 * 60);
-      // --- CHANGED END ---
       const remaining = Math.max(0, (t.totalTime || 0) - elapsedMins);
-      waitTimeAheadMins += remaining;
+      chairEndMins[0] = Math.max(chairEndMins[0], remaining);
     } else {
-      waitTimeAheadMins += (t.totalTime || 0);
+      chairEndMins[0] += (t.totalTime || 0);
     }
   }
 
@@ -80,40 +86,32 @@ const getQueueStats = async (salonId, currentUserId) => {
   };
 };
 
-const broadcastQueueUpdates = async (salonId, io) => {
-  // --- CHANGED START (Performance Fix) ---
+// --- CHANGED START ---
+// Export kar diya taaki salon controller ise use kar sake
+export const broadcastQueueUpdates = async (salonId, io) => {
+// --- CHANGED END ---
   const activeTickets = await getSortedActiveTickets(salonId);
-
-  const globalWaitingCount = activeTickets.length;
-  let globalEstTimeMins = 0;
-  const now = new Date();
+  const salon = await Salon.findById(salonId).select("activeChairsCount");
   
-  for(const t of activeTickets) {
-     if (t.status === 'serving') {
-        const startTime = t.serviceStartTime ? new Date(t.serviceStartTime) : new Date(t.updatedAt);
-        const elapsedMins = (now - startTime) / (1000 * 60);
-        globalEstTimeMins += Math.max(0, (t.totalTime || 0) - elapsedMins);
-     } else {
-        globalEstTimeMins += (t.totalTime || 0);
-     }
-  }
-
-  io.emit("queue_update_broadcast", {
-    salonId,
-    waitingCount: globalWaitingCount,
-    estTime: Math.round(globalEstTimeMins)
-  });
-
-  let runningWaitTimeMins = 0;
+  // --- CHANGED START ---
+  // Broadcast update bhi ab activeChairsCount se chalega
+  const numChairs = Math.max(1, salon?.activeChairsCount || 1);
+  let chairEndMins = Array(numChairs).fill(0);
+  // --- CHANGED END ---
+  
+  const now = new Date();
   let runningPeopleAhead = 0;
 
   for (const ticket of activeTickets) {
+    chairEndMins.sort((a, b) => a - b);
+    const currentWaitTimeMins = chairEndMins[0];
+
     if (ticket.userId) {
-      const waitTimeInSeconds = Math.round(runningWaitTimeMins * 60);
+      const waitTimeInSeconds = Math.round(currentWaitTimeMins * 60);
       const expectedStartTime = new Date(now.getTime() + (waitTimeInSeconds * 1000));
 
       io.to(`user_${ticket.userId}`).emit("my_queue_update", {
-        myWaitTime: Math.round(runningWaitTimeMins),
+        myWaitTime: Math.round(currentWaitTimeMins),
         myWaitTimeInSeconds: waitTimeInSeconds,
         expectedStartTime: expectedStartTime,
         myPeopleAhead: runningPeopleAhead
@@ -125,12 +123,20 @@ const broadcastQueueUpdates = async (salonId, io) => {
     if (ticket.status === 'serving') {
       const startTime = ticket.serviceStartTime ? new Date(ticket.serviceStartTime) : new Date(ticket.updatedAt);
       const elapsedMins = (now - startTime) / (1000 * 60);
-      runningWaitTimeMins += Math.max(0, (ticket.totalTime || 0) - elapsedMins);
+      const remaining = Math.max(0, (ticket.totalTime || 0) - elapsedMins);
+      chairEndMins[0] = Math.max(chairEndMins[0], remaining);
     } else {
-      runningWaitTimeMins += (ticket.totalTime || 0);
+      chairEndMins[0] += (ticket.totalTime || 0);
     }
   }
-  // --- CHANGED END ---
+
+  const globalEstTimeMins = activeTickets.length > 0 ? Math.max(...chairEndMins) : 0;
+
+  io.emit("queue_update_broadcast", {
+    salonId,
+    waitingCount: activeTickets.length,
+    estTime: Math.round(globalEstTimeMins)
+  });
 };
 
 /* -------------------------------------------------------------------------- */
@@ -262,10 +268,16 @@ export const joinQueue = async (req, res) => {
 
     const salon = await Salon.findById(salonId);
     if (salon && salon.phone) {
-      const serviceNames = services.map(s => s.name).join(", ");
-      const messageText = `Hello ${salon.salonName},\nYou have a new queue request from ${fullTicket.userId.name} for ${serviceNames}.\nPlease open your TrimGo dashboard to accept it.`;
-      
-      await sendWhatsappMessage(salon.phone, messageText);
+      // --- CHANGED START ---
+      try {
+        const serviceNames = services.map(s => s.name).join(", ");
+        const messageText = `Hello ${salon.salonName},\nYou have a new queue request from ${fullTicket.userId.name} for ${serviceNames}.\nPlease open your TrimGo dashboard to accept it.`;
+        
+        await sendWhatsappMessage(salon.phone, messageText);
+      } catch (waErr) {
+        console.error(waErr);
+      }
+      // --- CHANGED END ---
     }
     
     // --- CHANGED START ---
@@ -275,6 +287,14 @@ export const joinQueue = async (req, res) => {
 
     res.status(201).json({ success: true, ticket });
   } catch (err) {
+    // --- CHANGED START: RACE CONDITION ERROR CATCH ---
+    if (err.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "You already have an active ticket! Please cancel it or wait.",
+      });
+    }
+    // --- CHANGED END ---
     console.error(err);
     res.status(500).json({ success: false, message: "Server Error" });
   }
@@ -306,7 +326,9 @@ export const acceptRequest = async (req, res) => {
     const nextQueueNumber = counter.seq;
 
     const ticket = await Ticket.findOneAndUpdate(
-      { _id: ticketId, salonId },
+      // --- CHANGED START: Added status check to prevent reviving dead tickets ---
+      { _id: ticketId, salonId, status: "pending" },
+      // --- CHANGED END ---
       {
         status: "waiting",
         // --- CHANGED START ---
@@ -316,7 +338,7 @@ export const acceptRequest = async (req, res) => {
       { new: true }
     ).populate("salonId", "salonName address");
 
-    if (!ticket) return res.status(404).json({ message: "Ticket not found or unauthorized" });
+    if (!ticket) return res.status(404).json({ message: "Ticket not found or in invalid state" });
 
     const stats = await getQueueStats(salonId, ticket.userId);
     const ticketData = ticket.toObject();
@@ -345,7 +367,9 @@ export const startService = async (req, res) => {
     const salonId = req.salon._id;
 
     const ticket = await Ticket.findOneAndUpdate(
-      { _id: ticketId, salonId },
+      // --- CHANGED START: Added status check to prevent state transition bugs ---
+      { _id: ticketId, salonId, status: { $in: ["pending", "waiting"] } },
+      // --- CHANGED END ---
       {
         status: "serving",
         chairId,
@@ -358,7 +382,7 @@ export const startService = async (req, res) => {
       { new: true }
     );
 
-    if (!ticket) return res.status(404).json({ success: false, message: "Ticket not found or unauthorized" });
+    if (!ticket) return res.status(404).json({ success: false, message: "Ticket not found or in invalid state" });
 
     if(ticket.userId) {
         req.io.to(`user_${ticket.userId}`).emit("status_change", { 
@@ -386,12 +410,14 @@ export const completeService = async (req, res) => {
     const salonId = req.salon._id;
 
     const ticket = await Ticket.findOneAndUpdate(
-      { _id: ticketId, salonId },
+      // --- CHANGED START: Added status check ---
+      { _id: ticketId, salonId, status: "serving" },
+      // --- CHANGED END ---
       { status: "completed" },
       { new: true }
     );
 
-    if (!ticket) return res.status(404).json({ success: false, message: "Ticket not found or unauthorized" });
+    if (!ticket) return res.status(404).json({ success: false, message: "Ticket not found or in invalid state" });
 
     await Salon.findByIdAndUpdate(salonId, {
         $inc: { revenue: ticket.totalPrice, reviewsCount: 1 } 
@@ -480,13 +506,15 @@ export const rejectRequest = async (req, res) => {
     const salonId = req.salon._id;
 
     const ticket = await Ticket.findOneAndUpdate(
-      { _id: ticketId, salonId },
+      // --- CHANGED START: Added status check ---
+      { _id: ticketId, salonId, status: { $in: ["pending", "waiting"] } },
+      // --- CHANGED END ---
       { status: "cancelled" }, 
       { new: true }
     );
 
     if (!ticket) {
-      return res.status(404).json({ success: false, message: "Ticket not found or unauthorized" });
+      return res.status(404).json({ success: false, message: "Ticket not found or in invalid state" });
     }
 
     if (ticket.userId) {
@@ -520,13 +548,15 @@ export const cancelServiceBySalon = async (req, res) => {
     const salonId = req.salon._id;
 
     const ticket = await Ticket.findOneAndUpdate(
-      { _id: ticketId, salonId },
+      // --- CHANGED START: Added status check ---
+      { _id: ticketId, salonId, status: { $in: ["pending", "waiting", "serving"] } },
+      // --- CHANGED END ---
       { status: "cancelled", chairId: null, assignedStaff: null },
       { new: true }
     );
 
     if (!ticket) {
-      return res.status(404).json({ success: false, message: "Ticket not found" });
+      return res.status(404).json({ success: false, message: "Ticket not found or in invalid state" });
     }
 
     if (ticket.userId) {

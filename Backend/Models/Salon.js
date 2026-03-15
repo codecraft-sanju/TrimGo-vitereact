@@ -118,6 +118,14 @@ const salonSchema = new mongoose.Schema(
       }
     ],
 
+    // --- CHANGED START: Dynamic Active Chairs ---
+    // Owner can manually change this from dashboard (+ / -)
+    activeChairsCount: {
+      type: Number,
+      default: 1,
+    },
+    // --- CHANGED END ---
+
     // 🔥 NEW: GALLERY FIELD ADDED HERE 🔥
     gallery: {
         type: [String], // Array of image URLs strings

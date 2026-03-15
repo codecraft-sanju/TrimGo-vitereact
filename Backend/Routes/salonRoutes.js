@@ -7,7 +7,8 @@ import {
   loginSalon,
   logoutSalon,
   getAllSalons,       // <-- New Import
-  updateSalonProfile  // <-- New Import
+  updateSalonProfile  ,
+  updateActiveChairs// <-- New Import
 } from "../Controllers/salonController.js";
 import { protectSalon } from "../Middleware/salonMiddleware.js";
 
@@ -46,5 +47,7 @@ router.get("/me", protectSalon, (req, res) => {
 
 // Update Profile (Add Services, Toggle Online/Offline, etc.)
 router.put("/update", protectSalon, updateSalonProfile);
+// Route to update active chairs count from dashboard
+router.put("/update-chairs", protectSalon, updateActiveChairs);
 
 export default router;

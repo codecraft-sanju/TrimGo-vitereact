@@ -4,6 +4,11 @@ import Ticket from "../Models/Ticket.js";
 import User from "../Models/User.js"; 
 import { sendWhatsappMessage } from "../utils/sendWhatsapp.js";
 
+// --- CHANGED START ---
+// Imported this to broadcast updates when chairs change
+import { broadcastQueueUpdates } from "./queueController.js";
+// --- CHANGED END ---
+
 const createToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: "7d",
@@ -281,7 +286,6 @@ export const getAllSalons = async (req, res) => {
       .sort({ isOnline: -1, rating: -1 })
       .lean(); 
 
-    // MODIFIED: Fetching all active tickets for all fetched salons in one query
     const salonIds = salons.map(salon => salon._id);
 
     const allActiveTickets = await Ticket.find({
@@ -289,7 +293,6 @@ export const getAllSalons = async (req, res) => {
         status: { $in: ["pending", "waiting", "serving"] } 
     }).select("salonId totalTime updatedAt serviceStartTime status");
 
-    // MODIFIED: Mapping tickets to their respective salon ID
     const ticketsBySalon = {};
     allActiveTickets.forEach(ticket => {
         const sId = ticket.salonId.toString();
@@ -300,26 +303,34 @@ export const getAllSalons = async (req, res) => {
     });
 
     const salonsWithData = salons.map((salon) => {
-        // MODIFIED: Retrieving mapped tickets instead of querying the database again
         const activeTickets = ticketsBySalon[salon._id.toString()] || [];
 
         const waitingCount = activeTickets.length;
         
-        // Exact Estimate Time Calculation
-        let totalEstTimeMins = 0;
+        // --- CHANGED START ---
+        // Yahan par list view me bhi activeChairsCount ka use kiya estimate ke liye
+        const numChairs = Math.max(1, salon.activeChairsCount || 1);
+        let chairEndMins = Array(numChairs).fill(0);
+        // --- CHANGED END ---
+        
         const now = new Date();
         for(const t of activeTickets){
+           // --- CHANGED START ---
+           chairEndMins.sort((a, b) => a - b);
            if(t.status === 'serving'){
-              // --- CHANGED START ---
-              // Timer calculation ab actual service start time se hogi
               const startTime = t.serviceStartTime ? new Date(t.serviceStartTime) : new Date(t.updatedAt);
               const elapsedMins = (now - startTime) / (1000 * 60);
-              // --- CHANGED END ---
-              totalEstTimeMins += Math.max(0, (t.totalTime || 0) - elapsedMins);
+              const remaining = Math.max(0, (t.totalTime || 0) - elapsedMins);
+              chairEndMins[0] = Math.max(chairEndMins[0], remaining);
            } else {
-              totalEstTimeMins += (t.totalTime || 0);
+              chairEndMins[0] += (t.totalTime || 0);
            }
+           // --- CHANGED END ---
         }
+
+        // --- CHANGED START ---
+        const totalEstTimeMins = activeTickets.length > 0 ? Math.max(...chairEndMins) : 0;
+        // --- CHANGED END ---
 
         const waitTimeInSeconds = Math.round(totalEstTimeMins * 60);
         const expectedStartTime = new Date(now.getTime() + (waitTimeInSeconds * 1000));
@@ -381,3 +392,38 @@ export const updateSalonProfile = async (req, res) => {
     res.status(500).json({ success: false, message: "Update Failed" });
   }
 };
+
+// --- CHANGED START ---
+/* -------------------------------------------------------------------------- */
+/* DYNAMIC ACTIVE CHAIRS CONTROL                                              */
+/* -------------------------------------------------------------------------- */
+export const updateActiveChairs = async (req, res) => {
+  try {
+    const salonId = req.salon._id;
+    const { activeChairsCount } = req.body;
+
+    if (activeChairsCount === undefined || activeChairsCount < 1) {
+      return res.status(400).json({ success: false, message: "Minimum 1 active chair is required." });
+    }
+
+    const updatedSalon = await Salon.findByIdAndUpdate(
+      salonId,
+      { activeChairsCount },
+      { new: true }
+    );
+
+    // Jab chairs change hon toh naya time sabhi users ko broadcast kardo
+    await broadcastQueueUpdates(salonId, req.io);
+
+    res.status(200).json({ 
+      success: true, 
+      message: "Active chairs updated successfully", 
+      activeChairsCount: updatedSalon.activeChairsCount 
+    });
+
+  } catch (err) {
+    console.error("Update Chairs Error:", err);
+    res.status(500).json({ success: false, message: "Server Error updating chairs" });
+  }
+};
+// --- CHANGED END ---

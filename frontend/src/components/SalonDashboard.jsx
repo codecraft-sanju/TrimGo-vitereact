@@ -6,7 +6,7 @@ import {
   Play, CheckSquare, X, Camera, Mail, Phone, MapPin, User,
   Armchair, UserCheck, Plus, Trash2, Menu, Save, Edit3, Power,
   AlertTriangle, Sparkles, Zap, ArrowRight, UserPlus, Home, LayoutDashboard, XCircle,
-  Image as ImageIcon, Star, Loader2, UploadCloud
+  Image as ImageIcon, Star, Loader2, UploadCloud, Minus
 } from "lucide-react";
 import api from "../utils/api";
 import { io } from "socket.io-client";
@@ -357,7 +357,18 @@ const SalonDashboard = ({ salon, onLogout }) => {
   // Dashboard Data
   const [requests, setRequests] = useState([]);
   const [activeQueue, setActiveQueue] = useState([]);
-  const [chairs, setChairs] = useState(Array.from({ length: 4 }, (_, i) => ({
+
+  // --- CHANGED START: Dynamic Active Chairs State ---
+  const activeChairsRef = useRef(salon?.activeChairsCount || 1);
+  const [activeChairsCount, setActiveChairsCount] = useState(salon?.activeChairsCount || 1);
+  
+  const updateLocalChairsCount = (count) => {
+    setActiveChairsCount(count);
+    activeChairsRef.current = count;
+  };
+  // --- CHANGED END ---
+
+  const [chairs, setChairs] = useState(Array.from({ length: activeChairsCount }, (_, i) => ({
     id: i + 1, name: `Chair ${i + 1}`, status: 'empty', currentCustomer: null, assignedStaff: null
   })));
 
@@ -432,7 +443,9 @@ const SalonDashboard = ({ salon, onLogout }) => {
         setStats(data.stats);
 
         const servingTickets = data.serving || [];
-        const mappedChairs = Array.from({ length: 4 }, (_, i) => {
+        // --- CHANGED START ---
+        const mappedChairs = Array.from({ length: activeChairsRef.current }, (_, i) => {
+        // --- CHANGED END ---
           const chairId = i + 1;
           const activeTicket = servingTickets.find(t => t.chairId === chairId);
 
@@ -469,9 +482,33 @@ const SalonDashboard = ({ salon, onLogout }) => {
         setStaff(data.salon.staff || [{ name: data.salon.ownerName, status: 'available' }]);
         setGallery(data.salon.gallery || []); 
         setIsOnline(data.salon.isOnline);
+        // --- CHANGED START ---
+        if(data.salon.activeChairsCount) {
+           updateLocalChairsCount(data.salon.activeChairsCount);
+        }
+        // --- CHANGED END ---
       }
     } catch (error) { console.error("Profile Fetch Error", error); }
   }
+
+  // --- CHANGED START: Dynamic Active Chairs API Call ---
+  const handleUpdateChairs = async (newCount) => {
+    if (newCount < 1) {
+      alert("Minimum 1 active chair is required.");
+      return;
+    }
+    try {
+      const { data } = await api.put("/salon/update-chairs", { activeChairsCount: newCount });
+      if (data.success) {
+        updateLocalChairsCount(data.activeChairsCount);
+        fetchDashboardData();
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Failed to update chairs");
+    }
+  };
+  // --- CHANGED END ---
 
   const handleAcceptRequest = async (req) => {
     try {
@@ -819,7 +856,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
                   {/* LEFT: QUEUE LIST */}
                   <div className="lg:col-span-4 bg-zinc-900/30 border border-white/5 rounded-3xl overflow-hidden flex flex-col h-[400px] lg:h-full">
                     
-                    {/* CHANGED START: PERMANENT ADD BUTTON IN HEADER */}
                     <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between sticky top-0 backdrop-blur-sm z-10">
                       <h3 className="font-bold text-sm text-zinc-100">Waiting Queue</h3>
                       <div className="flex items-center gap-2">
@@ -833,7 +869,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
                         </button>
                       </div>
                     </div>
-                    {/* CHANGED END */}
 
                     <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
                       {activeQueue.length === 0 ? (
@@ -871,10 +906,31 @@ const SalonDashboard = ({ salon, onLogout }) => {
 
                   {/* RIGHT: CHAIRS GRID */}
                   <div className="lg:col-span-8 bg-zinc-900/30 border border-white/5 rounded-3xl overflow-hidden flex flex-col h-auto lg:h-full">
+                    
+                    {/* --- CHANGED START: DYNAMIC CHAIRS CONTROLLER IN HEADER --- */}
                     <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between sticky top-0 backdrop-blur-sm z-10">
                       <h3 className="font-bold text-sm text-zinc-100 flex items-center gap-2"><Scissors size={14} className="text-emerald-400" /> Service Floor</h3>
-                      <span className="text-[10px] text-zinc-500 font-bold uppercase">{chairs.length} Chairs</span>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center bg-zinc-950 border border-white/10 rounded-lg p-0.5">
+                          <button 
+                            onClick={() => handleUpdateChairs(activeChairsCount - 1)} 
+                            className="w-6 h-6 flex items-center justify-center rounded bg-zinc-800 hover:bg-zinc-700 text-white transition-all active:scale-95"
+                          >
+                            <Minus size={12} />
+                          </button>
+                          <span className="text-xs font-bold w-6 text-center">{activeChairsCount}</span>
+                          <button 
+                            onClick={() => handleUpdateChairs(activeChairsCount + 1)} 
+                            className="w-6 h-6 flex items-center justify-center rounded bg-zinc-800 hover:bg-zinc-700 text-white transition-all active:scale-95"
+                          >
+                            <Plus size={12} />
+                          </button>
+                        </div>
+                        <span className="text-[10px] text-zinc-500 font-bold uppercase hidden sm:block">Active Chairs</span>
+                      </div>
                     </div>
+                    {/* --- CHANGED END --- */}
+
                     <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto custom-scrollbar flex-1">
                       {chairs.map((chair) => (
                         <div key={chair.id} className={`relative rounded-2xl p-4 border transition-all flex flex-col justify-between min-h-[160px] ${chair.status === 'occupied' ? 'bg-zinc-900 border-emerald-500/30 shadow-lg shadow-emerald-900/10' : 'bg-zinc-900/50 border-white/5 border-dashed'}`}>

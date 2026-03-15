@@ -79,6 +79,20 @@ const ticketSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// --- NEW FIX: RACE CONDITION / TOCTOU FIX ---
+// Ye MongoDB level par block karega ki ek user ek time par multiple tickets na bana paye
+ticketSchema.index(
+  { userId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      status: { $in: ["pending", "waiting", "serving"] },
+      userId: { $type: "objectId" } // Ensure userId is present and is an actual ID (ignores Walk-ins)
+    }
+  }
+);
+// --- NEW FIX END ---
+
 const Ticket = mongoose.model("Ticket", ticketSchema);
 
 export default Ticket;
