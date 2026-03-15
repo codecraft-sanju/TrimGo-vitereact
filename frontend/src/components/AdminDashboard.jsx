@@ -48,7 +48,9 @@ export const AdminLogin = ({ onBack, onLogin }) => {
         const { data } = await api.post("/admin/login", creds);
 
         if(data.success) {
-           onLogin(); // Dashboard Access Granted
+           // --- CHANGED START ---
+           onLogin(data.token); // Pass token to App.jsx handler
+           // --- CHANGED END ---
         } else {
            alert("Invalid Access Credentials");
         }
@@ -191,10 +193,21 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
     }
   }, [activeTab]);
 
+  // --- CHANGED START ---
+  // Helper to attach Admin Token to API requests
+  const getAdminConfig = () => {
+    return {
+      headers: { Authorization: `Bearer ${localStorage.getItem("adminToken")}` }
+    };
+  };
+  // --- CHANGED END ---
+
   // --- API CALLS ---
   const fetchDashboardData = async () => {
     try {
-        const { data } = await api.get("/admin/dashboard");
+        // --- CHANGED START ---
+        const { data } = await api.get("/admin/dashboard", getAdminConfig());
+        // --- CHANGED END ---
         if(data.success) {
             setStats(data.stats);
             setActivityLog(data.activity);
@@ -241,7 +254,9 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
   // --- ACTIONS ---
   const toggleVerify = async (id, currentStatus) => {
     try {
-        const { data } = await api.put(`/admin/verify/${id}`, { verified: !currentStatus });
+        // --- CHANGED START ---
+        const { data } = await api.put(`/admin/verify/${id}`, { verified: !currentStatus }, getAdminConfig());
+        // --- CHANGED END ---
         if(data.success) {
             setLocalSalons(prev => prev.map(s => s._id === id ? { ...s, verified: !currentStatus } : s));
         }
@@ -253,7 +268,9 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
   const deleteSalon = async (id) => {
     if(window.confirm("CONFIRM DELETION: This action cannot be undone.")) {
       try {
-        const { data } = await api.delete(`/admin/delete/${id}`);
+        // --- CHANGED START ---
+        const { data } = await api.delete(`/admin/delete/${id}`, getAdminConfig());
+        // --- CHANGED END ---
         if(data.success) {
             setLocalSalons(prev => prev.filter(s => s._id !== id));
             alert(data.message);
@@ -268,7 +285,9 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
   const deleteUser = async (id) => {
     if(window.confirm("⚠️ DANGER: Are you sure you want to PERMANENTLY delete this user? This cannot be undone.")) {
         try {
-            const { data } = await api.delete(`/admin/delete-user/${id}`); 
+            // --- CHANGED START ---
+            const { data } = await api.delete(`/admin/delete-user/${id}`, getAdminConfig()); 
+            // --- CHANGED END ---
             
             if(data.success) {
                 // Remove from UI instantly
@@ -457,7 +476,9 @@ export const AdminDashboard = ({ salons = [], setSalons, onLogout }) => {
                             <div className={`absolute -left-[5px] top-1 w-2.5 h-2.5 rounded-full bg-indigo-500`}></div>
                             <div>
                             <p className="text-sm text-zinc-300 leading-snug">
-                                <span className="font-bold text-white">{log.userId?.name || "User"}</span> joined queue at <span className="text-zinc-100 font-medium">{log.salonId?.salonName || "Salon"}</span>
+                                {/* --- CHANGED START --- */}
+                                <span className="font-bold text-white">{log.userId?.name || "Deleted User"}</span> joined queue at <span className="text-zinc-100 font-medium">{log.salonId?.salonName || "Deleted Salon"}</span>
+                                {/* --- CHANGED END --- */}
                             </p>
                             <p className="text-[10px] text-zinc-600 font-mono mt-1">{new Date(log.updatedAt).toLocaleTimeString()}</p>
                             </div>

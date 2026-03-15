@@ -237,21 +237,23 @@ const PublicRoute = ({ user, salon, authLoading, children }) => {
   return children;
 };
 
+// --- CHANGED START ---
 const ProtectedAdminRoute = ({ children }) => {
-  const isAdminLoggedIn = localStorage.getItem("adminAuth") === "true";
-  if (!isAdminLoggedIn) {
+  const hasToken = !!localStorage.getItem("adminToken");
+  if (!hasToken) {
     return <Navigate to="/admin/login" replace />;
   }
   return children;
 };
 
 const AdminPublicRoute = ({ children }) => {
-  const isAdminLoggedIn = localStorage.getItem("adminAuth") === "true";
-  if (isAdminLoggedIn) {
+  const hasToken = !!localStorage.getItem("adminToken");
+  if (hasToken) {
     return <Navigate to="/admin/dashboard" replace />;
   }
   return children;
 };
+// --- CHANGED END ---
 
 /* ---------------------------------
    MAIN APP CONTENT
@@ -387,17 +389,19 @@ const AppContent = () => {
     }
   };
 
-  const handleAdminLogin = () => {
-    localStorage.setItem("adminAuth", "true");
+  // --- CHANGED START ---
+  const handleAdminLogin = (token) => {
+    localStorage.setItem("adminToken", token);
     toast.success("Welcome Founder!");
     navigate("/admin/dashboard", { replace: true });
   };
 
   const handleAdminLogout = () => {
-    localStorage.removeItem("adminAuth");
+    localStorage.removeItem("adminToken");
     toast.success("Admin Logged Out");
     navigate("/admin/login", { replace: true });
   };
+  // --- CHANGED END ---
 
   const handleJoinQueue = (ticketData) => {
     if (activeTicket) {

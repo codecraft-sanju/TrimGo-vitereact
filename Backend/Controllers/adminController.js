@@ -1,6 +1,9 @@
 import User from "../Models/User.js";
 import Salon from "../Models/Salon.js";
 import Ticket from "../Models/Ticket.js";
+// --- CHANGED START ---
+import jwt from "jsonwebtoken";
+// --- CHANGED END ---
 
 
 export const adminLogin = async (req, res) => {
@@ -12,10 +15,19 @@ export const adminLogin = async (req, res) => {
     const adminPass = process.env.ADMIN_PASSWORD;
 
     if (username === adminUser && password === adminPass) {
+      // --- CHANGED START ---
+      const token = jwt.sign(
+        { role: "admin" }, 
+        process.env.JWT_SECRET || "fallback_secret", 
+        { expiresIn: "1d" }
+      );
+
       return res.status(200).json({
         success: true,
         message: "Welcome Boss! Access Granted.",
+        token,
       });
+      // --- CHANGED END ---
     } else {
       return res.status(401).json({
         success: false,
@@ -48,7 +60,10 @@ export const getDashboardStats = async (req, res) => {
       .sort({ updatedAt: -1 })
       .limit(5)
       .populate("userId", "name")
-      .populate("salonId", "salonName");
+      .populate("salonId", "salonName")
+      // --- CHANGED START ---
+      .lean();
+      // --- CHANGED END ---
 
     res.status(200).json({
       success: true,
