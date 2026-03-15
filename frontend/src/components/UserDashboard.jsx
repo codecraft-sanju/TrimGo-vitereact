@@ -132,7 +132,7 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 };
 
 /* ---------------------------------
-   SERVICE MODAL WITH LOADER BUTTON
+   RE-DESIGNED: PREMIUM SERVICE DRAWER
 ---------------------------------- */
 const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => { 
   const [selectedServices, setSelectedServices] = useState([]);
@@ -172,25 +172,48 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={!isJoining ? onClose : undefined}></div>
-      <div className="relative bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
-        
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
+      {/* Backdrop */}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={!isJoining ? onClose : undefined}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+      />
+
+      {/* Drawer Panel */}
+      <motion.div 
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+        className="relative bg-white w-full max-w-lg sm:rounded-3xl rounded-t-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10"
+      >
+        {/* Mobile Drag Handle */}
+        <div className="w-full flex justify-center pt-4 pb-1 sm:hidden">
+          <div className="w-12 h-1.5 bg-zinc-200 rounded-full"></div>
+        </div>
+
         {/* Header */}
-        <div className="px-6 py-4 bg-zinc-50 border-b border-zinc-100 flex justify-between items-start">
+        <div className="px-8 py-5 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/50">
           <div>
-            <h2 className="text-lg font-bold text-zinc-900">{salon.salonName}</h2>
-            <p className="text-xs text-zinc-500">Select services to join queue</p>
+            <h2 className="text-xl font-black text-zinc-900 tracking-tight">{salon.salonName}</h2>
+            <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest mt-0.5">Customize your service</p>
           </div>
-          <button onClick={onClose} disabled={isJoining} className="p-1 rounded-full hover:bg-zinc-200 transition disabled:opacity-50">
+          <button 
+            onClick={onClose} 
+            disabled={isJoining} 
+            className="p-2 bg-white rounded-full shadow-sm border border-zinc-200 hover:bg-zinc-100 transition disabled:opacity-50"
+          >
             <X size={20} className="text-zinc-500" />
           </button>
         </div>
 
-        {/* List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {/* Services List */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
           {servicesList.length === 0 ? (
-             <div className="text-center text-zinc-400 py-10 text-sm">No services listed by this salon yet.</div>
+             <div className="text-center text-zinc-400 py-12 text-sm font-medium">No services listed yet.</div>
           ) : (
             servicesList.map((service) => {
                 const isSelected = selectedServices.includes(service._id);
@@ -198,54 +221,62 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => {
                 <div
                     key={service._id}
                     onClick={() => toggleService(service._id)}
-                    className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
-                    isSelected ? "border-zinc-900 bg-zinc-50 ring-1 ring-zinc-900" : "border-zinc-200 hover:border-zinc-300 bg-white"
-                    } ${isJoining ? "opacity-50 cursor-not-allowed" : ""}`}
+                    className={`flex items-center justify-between p-5 rounded-[1.5rem] border-2 transition-all duration-300 ${
+                      isSelected 
+                        ? "border-zinc-900 bg-zinc-900 text-white shadow-xl shadow-zinc-900/10 scale-[1.02]" 
+                        : "border-zinc-100 hover:border-zinc-200 bg-white text-zinc-900"
+                    } ${isJoining ? "opacity-50 cursor-not-allowed" : "cursor-pointer active:scale-95"}`}
                 >
-                    <div className="flex items-start gap-3">
-                    <div className={`mt-1 w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${isSelected ? "bg-zinc-900 border-zinc-900" : "border-zinc-300 bg-white"}`}>
-                        {isSelected && <Check size={12} className="text-white" />}
+                    <div className="flex items-start gap-4">
+                      <div className={`mt-1 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? "bg-emerald-500 border-emerald-500" : "border-zinc-200 bg-white"}`}>
+                          {isSelected && <Check size={14} className="text-white font-bold" strokeWidth={3} />}
+                      </div>
+                      <div>
+                          <h4 className="text-base font-bold leading-tight">{service.name}</h4>
+                          <p className={`text-xs font-medium mt-1 ${isSelected ? "text-zinc-400" : "text-zinc-500"}`}>{service.time} mins • {service.category}</p>
+                      </div>
                     </div>
-                    <div>
-                        <h4 className="text-sm font-semibold text-zinc-900">{service.name}</h4>
-                        <p className="text-xs text-zinc-500">{service.time} mins • {service.category}</p>
+                    <div className="text-right">
+                      <span className={`text-lg font-black ${isSelected ? "text-white" : "text-zinc-900"}`}>₹{service.price}</span>
                     </div>
-                    </div>
-                    <div className="text-right"><span className="text-sm font-bold text-zinc-900">₹{service.price}</span></div>
                 </div>
                 );
             })
           )}
         </div>
 
-        {/* Reaching Time UI */}
-        <div className="px-4 py-3 bg-white border-t border-zinc-100">
-          <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Reaching in (Travel Time)</label>
-          <div className="flex gap-2">
-            {[5, 15, 30, 45].map(time => (
-              <button
-                key={time}
-                onClick={() => setReachingTime(time)}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-colors ${reachingTime === time ? 'bg-zinc-900 text-white border-zinc-900 shadow-md' : 'bg-zinc-50 text-zinc-600 border-zinc-200 hover:bg-zinc-100'}`}
-              >
-                {time} min
-              </button>
-            ))}
+        {/* Sticky Action Footer */}
+        <div className="p-6 bg-white border-t border-zinc-100 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)]">
+          {/* Reaching Time Selection */}
+          <div className="mb-6">
+            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] block mb-3 ml-1">Arrival Estimate</label>
+            <div className="flex gap-2">
+              {[5, 15, 30, 45].map(time => (
+                <button
+                  key={time}
+                  onClick={() => setReachingTime(time)}
+                  className={`flex-1 py-2.5 rounded-2xl text-xs font-bold border-2 transition-all ${
+                    reachingTime === time 
+                      ? 'bg-zinc-100 border-zinc-900 text-zinc-900 shadow-inner' 
+                      : 'bg-white border-zinc-100 text-zinc-500 hover:border-zinc-200'
+                  }`}
+                >
+                  {time}m
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Footer with Loading Button */}
-        <div className="p-4 bg-white border-t border-zinc-100">
-          <div className="flex justify-between items-end mb-4 px-2">
+          <div className="flex justify-between items-end mb-5 px-1">
             <div>
-              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Total Estimate</p>
+              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-1">Grand Total</p>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-black text-zinc-900">₹{totalDetails.price}</span>
-                <span className="text-sm text-zinc-500 font-medium">for {totalDetails.time} mins</span>
+                <span className="text-3xl font-black text-zinc-900 tracking-tighter">₹{totalDetails.price}</span>
+                <span className="text-sm text-zinc-500 font-bold">/ {totalDetails.time} mins</span>
               </div>
             </div>
-            <div className="text-right">
-                <span className="text-xs font-bold bg-zinc-100 px-2 py-1 rounded text-zinc-600">{selectedServices.length} items</span>
+            <div className="bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
+                <span className="text-xs font-black text-emerald-700">{selectedServices.length} Selected</span>
             </div>
           </div>
           
@@ -253,26 +284,26 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => {
             onClick={handleConfirm} 
             disabled={selectedServices.length === 0 || isJoining} 
             className={`
-                w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all 
+                w-full py-4.5 rounded-[1.4rem] font-black text-base flex items-center justify-center gap-3 transition-all duration-300 active:scale-[0.98] py-4
                 ${selectedServices.length > 0 && !isJoining 
-                    ? "bg-zinc-900 text-white shadow-lg shadow-zinc-900/20 hover:scale-[1.02]" 
+                    ? "bg-zinc-900 text-white shadow-2xl shadow-zinc-900/30 hover:bg-black" 
                     : "bg-zinc-100 text-zinc-400 cursor-not-allowed"}
             `}
           >
             {isJoining ? (
                 <>
-                    <Loader2 size={16} className="animate-spin" />
-                    <span>Securing Spot...</span>
+                    <Loader2 size={20} className="animate-spin" />
+                    <span className="uppercase tracking-widest">Joining Queue...</span>
                 </>
             ) : (
                 <>
-                    <span>Confirm & Join Queue</span>
-                    <Ticket size={16} />
+                    <span className="uppercase tracking-widest">Confirm & Join Now</span>
+                    <Ticket size={20} fill="currentColor" />
                 </>
             )}
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };
@@ -436,8 +467,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         );
     });
 
-    // --- CHANGED START ---
-    // myWaitTimeInSeconds ko bhi capture kar liya
     socket.on("my_queue_update", (data) => {
         setActiveTicket(prev => prev ? { 
             ...prev, 
@@ -447,7 +476,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
             expectedStartTime: data.expectedStartTime 
         } : null);
     });
-    // --- CHANGED END ---
 
     socket.on("request_accepted", (ticket) => {
         setActiveTicket(ticket);
@@ -514,9 +542,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
     return () => clearTimeout(timer);
   }, [searchTerm, filterType]);
 
-  // --- CHANGED START: ROBUST TIMER LOGIC ---
-  
-  // 1. Sync seconds when ticket updates
+  // --- ROBUST TIMER LOGIC ---
   useEffect(() => {
     if (activeTicket) {
       const seconds = activeTicket.myWaitTimeInSeconds ?? activeTicket.waitTimeInSeconds ?? (activeTicket.myWaitTime * 60) ?? ((activeTicket.totalTime || 0) * 60);
@@ -524,18 +550,14 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
     }
   }, [activeTicket?.myWaitTimeInSeconds, activeTicket?.waitTimeInSeconds, activeTicket?.myWaitTime, activeTicket?._id]);
 
-  // 2. Countdown Interval (Ticks down every second)
   useEffect(() => {
     if (!activeTicket || activeTicket.status === 'serving') return;
-
     const intervalId = setInterval(() => {
       setTimeLeftSeconds(prev => (prev > 0 ? prev - 1 : 0));
     }, 1000);
-
     return () => clearInterval(intervalId); 
   }, [activeTicket]);
 
-  // 3. Format seconds into MM:SS
   useEffect(() => {
     if (timeLeftSeconds <= 0) {
       setTimeLeftStr("00:00");
@@ -545,8 +567,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
       setTimeLeftStr(`${m}:${s < 10 ? '0' : ''}${s}`);
     }
   }, [timeLeftSeconds]);
-
-  // --- CHANGED END ---
 
   const salonsWithDistance = useMemo(() => {
       return salons.map(salon => {
@@ -672,15 +692,17 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         )}
       </AnimatePresence>
 
-      {/* --- MODALS --- */}
-      {activeBookingSalon && (
-        <ServiceSelectionModal 
-            salon={activeBookingSalon} 
-            onClose={handleCloseBooking} 
-            onConfirm={handleConfirmBooking} 
-            isJoining={isJoiningQueue} 
-        />
-      )}
+      {/* --- RE-DESIGNED MODALS --- */}
+      <AnimatePresence>
+        {activeBookingSalon && (
+          <ServiceSelectionModal 
+              salon={activeBookingSalon} 
+              onClose={handleCloseBooking} 
+              onConfirm={handleConfirmBooking} 
+              isJoining={isJoiningQueue} 
+          />
+        )}
+      </AnimatePresence>
 
       {/* Gallery Modal */}
       <SalonGalleryModal 
@@ -851,7 +873,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                 return (
                 <div key={salon._id} className="group relative rounded-2xl bg-white border border-zinc-200 shadow-sm overflow-hidden flex flex-col hover:shadow-lg transition-shadow duration-300">
                 
-                {/* MODERN COVER IMAGE SECTION WITH NEW LOADER */}
                 <div className="relative h-48 w-full bg-zinc-100 overflow-hidden">
                     {salon.gallery && salon.gallery.length > 0 ? (
                         <PremiumImageLoader 
@@ -864,7 +885,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                         </div>
                     )}
                     
-                    {/* Status Badge */}
                     <div className="absolute top-3 right-3 flex flex-col items-end gap-1 z-20">
                           {salon.isOnline ? 
                             <span className="px-2 py-1 rounded-md bg-emerald-500 text-[10px] font-bold text-white shadow-sm">OPEN</span> : 
@@ -872,7 +892,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                           }
                     </div>
 
-                    {/* Gallery Trigger Button (if more than 1 image) */}
                     {salon.gallery && salon.gallery.length > 1 && (
                         <button 
                             onClick={(e) => { e.stopPropagation(); handleOpenGallery(salon); }}
@@ -885,7 +904,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                 </div>
 
                 <div className="p-4 sm:p-5 flex flex-col gap-4 flex-1">
-                    {/* Header */}
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
@@ -906,7 +924,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                         </div>
                       </div>
                       
-                      {/* Rating Box */}
                       <div className="flex flex-col items-end">
                         <div className="flex items-center justify-end gap-1 text-sm font-bold text-zinc-900 bg-zinc-50 px-2 py-1 rounded-lg">
                           <Star className="text-yellow-400 fill-yellow-400" size={14} />
@@ -916,7 +933,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                       </div>
                     </div>
 
-                    {/* Metrics Grid */}
                     <div className="grid grid-cols-3 gap-2 py-3 border-y border-zinc-50">
                       <div className="flex flex-col items-center sm:items-start">
                         <span className="text-[9px] uppercase text-zinc-400 font-bold tracking-tight">Waiting</span>
@@ -943,7 +959,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                       </div>
                     </div>
 
-                    {/* Actions */}
                     <div className="flex items-center justify-between gap-3 pt-1 mt-auto">
                       <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 font-bold bg-emerald-50/50 px-2 py-1 rounded-lg">
                         <Sparkles size={12} />
@@ -990,7 +1005,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         />
       </main>
 
-      {/* 🔥 ACTIVE TICKET FLOATING CARD (BOTTOM) 🔥 */}
+      {/* ACTIVE TICKET FLOATING CARD */}
       {activeTicket && (
         <div className="fixed bottom-4 left-4 right-4 z-50 animate-in slide-in-from-bottom-20 duration-500">
             <div className="bg-zinc-900/95 backdrop-blur-lg rounded-2xl shadow-2xl p-4 border border-white/10 text-white flex flex-col gap-3 max-w-lg mx-auto">
@@ -1037,7 +1052,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                         <Navigation size={16} /> Directions
                     </button>
                     
-                    {/* CONDITION FOR CANCEL BUTTON */}
                     {activeTicket.status !== 'serving' ? (
                       <button 
                           onClick={handleCancelTicket}
@@ -1056,7 +1070,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
             </div>
         </div>
       )}
-
     </div>
   );
 };
