@@ -281,15 +281,27 @@ export const getAllSalons = async (req, res) => {
       .sort({ isOnline: -1, rating: -1 })
       .lean(); 
 
-    const salonsWithData = await Promise.all(salons.map(async (salon) => {
-        
-        // --- CHANGED START ---
-        // Select mein serviceStartTime add kiya
-        const activeTickets = await Ticket.find({
-            salonId: salon._id,
-            status: { $in: ["pending", "waiting", "serving"] } 
-        }).select("totalTime updatedAt serviceStartTime status");
-        // --- CHANGED END ---
+    // MODIFIED: Fetching all active tickets for all fetched salons in one query
+    const salonIds = salons.map(salon => salon._id);
+
+    const allActiveTickets = await Ticket.find({
+        salonId: { $in: salonIds },
+        status: { $in: ["pending", "waiting", "serving"] } 
+    }).select("salonId totalTime updatedAt serviceStartTime status");
+
+    // MODIFIED: Mapping tickets to their respective salon ID
+    const ticketsBySalon = {};
+    allActiveTickets.forEach(ticket => {
+        const sId = ticket.salonId.toString();
+        if (!ticketsBySalon[sId]) {
+            ticketsBySalon[sId] = [];
+        }
+        ticketsBySalon[sId].push(ticket);
+    });
+
+    const salonsWithData = salons.map((salon) => {
+        // MODIFIED: Retrieving mapped tickets instead of querying the database again
+        const activeTickets = ticketsBySalon[salon._id.toString()] || [];
 
         const waitingCount = activeTickets.length;
         
@@ -319,7 +331,7 @@ export const getAllSalons = async (req, res) => {
             waitTimeInSeconds: waitTimeInSeconds,
             expectedStartTime: expectedStartTime
         };
-    }));
+    });
 
     res.status(200).json({ 
         success: true, 
