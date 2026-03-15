@@ -142,6 +142,10 @@ export const cancelTicket = async (req, res) => {
       return res.status(404).json({ success: false, message: "Ticket not found or unauthorized" });
     }
 
+    if (ticket.status === 'serving' || ticket.status === 'completed') {
+      return res.status(400).json({ success: false, message: "Cannot cancel a ticket that is already serving or completed" });
+    }
+
     ticket.status = 'cancelled';
     await ticket.save();
 
@@ -174,8 +178,9 @@ export const addWalkInClient = async (req, res) => {
 
     const lastTicket = await Ticket.findOne({
       salonId,
-      createdAt: { $gte: startOfDay }
-    }).sort({ createdAt: -1 }); 
+      createdAt: { $gte: startOfDay },
+      queueNumber: { $ne: null }
+    }).sort({ queueNumber: -1 }); 
 
     const queueNumber = lastTicket && lastTicket.queueNumber ? lastTicket.queueNumber + 1 : 1;
 
@@ -283,8 +288,9 @@ export const acceptRequest = async (req, res) => {
 
     const lastTicket = await Ticket.findOne({
       salonId,
-      createdAt: { $gte: startOfDay }
-    }).sort({ createdAt: -1 }); 
+      createdAt: { $gte: startOfDay },
+      queueNumber: { $ne: null }
+    }).sort({ queueNumber: -1 }); 
 
     const nextQueueNumber = lastTicket && lastTicket.queueNumber ? lastTicket.queueNumber + 1 : 1;
     // --- CHANGED END ---
