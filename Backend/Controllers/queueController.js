@@ -14,14 +14,11 @@ const getISTStartOfDay = () => {
 };
 // --- FIXED TIMEZONE BUG END ---
 
-/* -------------------------------------------------------------------------- */
-/* CORE QUEUE CALCULATION LOGIC (WITH REAL-TIME SECONDS & TIMESTAMP)          */
-/* -------------------------------------------------------------------------- */
-const getQueueStats = async (salonId, currentUserId) => {
-  // --- CHANGED START ---
+// --- NEW HELPER: Fetch and Sort Active Tickets (DRY Fix) ---
+const getSortedActiveTickets = async (salonId) => {
   let activeTickets = await Ticket.find({ salonId, status: { $in: ["pending", "waiting", "serving"] } });
 
-  activeTickets = activeTickets.sort((a, b) => {
+  return activeTickets.sort((a, b) => {
     const statusPriority = { serving: 1, waiting: 2, pending: 3 };
     
     if (statusPriority[a.status] !== statusPriority[b.status]) {
@@ -34,6 +31,15 @@ const getQueueStats = async (salonId, currentUserId) => {
     
     return new Date(a.createdAt) - new Date(b.createdAt);
   });
+};
+// --- NEW HELPER END ---
+
+/* -------------------------------------------------------------------------- */
+/* CORE QUEUE CALCULATION LOGIC (WITH REAL-TIME SECONDS & TIMESTAMP)          */
+/* -------------------------------------------------------------------------- */
+const getQueueStats = async (salonId, currentUserId) => {
+  // --- CHANGED START (DRY Fix) ---
+  const activeTickets = await getSortedActiveTickets(salonId);
   // --- CHANGED END ---
   
   let peopleAhead = 0;
@@ -74,23 +80,8 @@ const getQueueStats = async (salonId, currentUserId) => {
 };
 
 const broadcastQueueUpdates = async (salonId, io) => {
-  // --- CHANGED START ---
-  let activeTickets = await Ticket.find({ salonId, status: { $in: ["pending", "waiting", "serving"] } });
-
-  activeTickets = activeTickets.sort((a, b) => {
-    const statusPriority = { serving: 1, waiting: 2, pending: 3 };
-    
-    if (statusPriority[a.status] !== statusPriority[b.status]) {
-      return statusPriority[a.status] - statusPriority[b.status];
-    }
-    
-    if (a.queueNumber !== null && b.queueNumber !== null) {
-      return a.queueNumber - b.queueNumber;
-    }
-    
-    return new Date(a.createdAt) - new Date(b.createdAt);
-  });
-  // --- CHANGED END ---
+  // --- CHANGED START (Performance Fix) ---
+  const activeTickets = await getSortedActiveTickets(salonId);
 
   const globalWaitingCount = activeTickets.length;
   let globalEstTimeMins = 0;
@@ -98,11 +89,8 @@ const broadcastQueueUpdates = async (salonId, io) => {
   
   for(const t of activeTickets) {
      if (t.status === 'serving') {
-        // --- CHANGED START ---
-        // Timer calculation ab actual service start time se hogi
         const startTime = t.serviceStartTime ? new Date(t.serviceStartTime) : new Date(t.updatedAt);
         const elapsedMins = (now - startTime) / (1000 * 60);
-        // --- CHANGED END ---
         globalEstTimeMins += Math.max(0, (t.totalTime || 0) - elapsedMins);
      } else {
         globalEstTimeMins += (t.totalTime || 0);
@@ -115,17 +103,33 @@ const broadcastQueueUpdates = async (salonId, io) => {
     estTime: Math.round(globalEstTimeMins)
   });
 
+  let runningWaitTimeMins = 0;
+  let runningPeopleAhead = 0;
+
   for (const ticket of activeTickets) {
     if (ticket.userId) {
-      const stats = await getQueueStats(salonId, ticket.userId);
+      const waitTimeInSeconds = Math.round(runningWaitTimeMins * 60);
+      const expectedStartTime = new Date(now.getTime() + (waitTimeInSeconds * 1000));
+
       io.to(`user_${ticket.userId}`).emit("my_queue_update", {
-        myWaitTime: stats.waitTimeAhead,
-        myWaitTimeInSeconds: stats.waitTimeInSeconds,
-        expectedStartTime: stats.expectedStartTime,
-        myPeopleAhead: stats.peopleAhead
+        myWaitTime: Math.round(runningWaitTimeMins),
+        myWaitTimeInSeconds: waitTimeInSeconds,
+        expectedStartTime: expectedStartTime,
+        myPeopleAhead: runningPeopleAhead
       });
     }
+
+    runningPeopleAhead++;
+    
+    if (ticket.status === 'serving') {
+      const startTime = ticket.serviceStartTime ? new Date(ticket.serviceStartTime) : new Date(ticket.updatedAt);
+      const elapsedMins = (now - startTime) / (1000 * 60);
+      runningWaitTimeMins += Math.max(0, (ticket.totalTime || 0) - elapsedMins);
+    } else {
+      runningWaitTimeMins += (ticket.totalTime || 0);
+    }
   }
+  // --- CHANGED END ---
 };
 
 /* -------------------------------------------------------------------------- */
