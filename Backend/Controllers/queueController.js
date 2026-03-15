@@ -305,8 +305,8 @@ export const acceptRequest = async (req, res) => {
 
     const nextQueueNumber = counter.seq;
 
-    const ticket = await Ticket.findByIdAndUpdate(
-      ticketId,
+    const ticket = await Ticket.findOneAndUpdate(
+      { _id: ticketId, salonId },
       {
         status: "waiting",
         // --- CHANGED START ---
@@ -316,7 +316,7 @@ export const acceptRequest = async (req, res) => {
       { new: true }
     ).populate("salonId", "salonName address");
 
-    if (!ticket) return res.status(404).json({ message: "Ticket not found" });
+    if (!ticket) return res.status(404).json({ message: "Ticket not found or unauthorized" });
 
     const stats = await getQueueStats(salonId, ticket.userId);
     const ticketData = ticket.toObject();
@@ -344,8 +344,8 @@ export const startService = async (req, res) => {
     const { ticketId, chairId, staffName } = req.body;
     const salonId = req.salon._id;
 
-    const ticket = await Ticket.findByIdAndUpdate(
-      ticketId,
+    const ticket = await Ticket.findOneAndUpdate(
+      { _id: ticketId, salonId },
       {
         status: "serving",
         chairId,
@@ -357,6 +357,8 @@ export const startService = async (req, res) => {
       },
       { new: true }
     );
+
+    if (!ticket) return res.status(404).json({ success: false, message: "Ticket not found or unauthorized" });
 
     if(ticket.userId) {
         req.io.to(`user_${ticket.userId}`).emit("status_change", { 
@@ -383,11 +385,13 @@ export const completeService = async (req, res) => {
     const { ticketId } = req.body;
     const salonId = req.salon._id;
 
-    const ticket = await Ticket.findByIdAndUpdate(
-      ticketId,
+    const ticket = await Ticket.findOneAndUpdate(
+      { _id: ticketId, salonId },
       { status: "completed" },
       { new: true }
     );
+
+    if (!ticket) return res.status(404).json({ success: false, message: "Ticket not found or unauthorized" });
 
     await Salon.findByIdAndUpdate(salonId, {
         $inc: { revenue: ticket.totalPrice, reviewsCount: 1 } 
@@ -475,14 +479,14 @@ export const rejectRequest = async (req, res) => {
     const { ticketId } = req.body;
     const salonId = req.salon._id;
 
-    const ticket = await Ticket.findByIdAndUpdate(
-      ticketId,
+    const ticket = await Ticket.findOneAndUpdate(
+      { _id: ticketId, salonId },
       { status: "cancelled" }, 
       { new: true }
     );
 
     if (!ticket) {
-      return res.status(404).json({ success: false, message: "Ticket not found" });
+      return res.status(404).json({ success: false, message: "Ticket not found or unauthorized" });
     }
 
     if (ticket.userId) {
