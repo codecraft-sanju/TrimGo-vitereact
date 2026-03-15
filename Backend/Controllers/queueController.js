@@ -1,6 +1,7 @@
 import Ticket from "../Models/Ticket.js";
 import Salon from "../Models/Salon.js";
 import User from "../Models/User.js";
+import Counter from "../Models/Counter.js";
 import { sendWhatsappMessage } from "../utils/sendWhatsapp.js"; 
 
 // --- FIXED TIMEZONE BUG START ---
@@ -180,13 +181,16 @@ export const addWalkInClient = async (req, res) => {
     const startOfDay = getISTStartOfDay();
     // --- FIXED TIMEZONE BUG END ---
 
-    const lastTicket = await Ticket.findOne({
-      salonId,
-      createdAt: { $gte: startOfDay },
-      queueNumber: { $ne: null }
-    }).sort({ queueNumber: -1 }); 
+    const dateString = startOfDay.toISOString().split('T')[0];
+    const counterId = `${salonId}_${dateString}`;
 
-    const queueNumber = lastTicket && lastTicket.queueNumber ? lastTicket.queueNumber + 1 : 1;
+    const counter = await Counter.findByIdAndUpdate(
+      counterId,
+      { $inc: { seq: 1 } },
+      { new: true, upsert: true }
+    );
+
+    const queueNumber = counter.seq;
 
     const newTicket = await Ticket.create({
       salonId,
@@ -290,14 +294,16 @@ export const acceptRequest = async (req, res) => {
     const startOfDay = getISTStartOfDay();
     // --- FIXED TIMEZONE BUG END ---
 
-    const lastTicket = await Ticket.findOne({
-      salonId,
-      createdAt: { $gte: startOfDay },
-      queueNumber: { $ne: null }
-    }).sort({ queueNumber: -1 }); 
+    const dateString = startOfDay.toISOString().split('T')[0];
+    const counterId = `${salonId}_${dateString}`;
 
-    const nextQueueNumber = lastTicket && lastTicket.queueNumber ? lastTicket.queueNumber + 1 : 1;
-    // --- CHANGED END ---
+    const counter = await Counter.findByIdAndUpdate(
+      counterId,
+      { $inc: { seq: 1 } },
+      { new: true, upsert: true }
+    );
+
+    const nextQueueNumber = counter.seq;
 
     const ticket = await Ticket.findByIdAndUpdate(
       ticketId,
