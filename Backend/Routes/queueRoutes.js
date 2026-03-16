@@ -8,9 +8,13 @@ import {
     getSalonData,
     getUserHistory,
     addWalkInClient,
-    rejectRequest ,
-     cancelTicket,
-     cancelServiceBySalon
+    rejectRequest,
+    cancelTicket,
+    cancelServiceBySalon,
+    // --- CHANGED START ---
+    addServicesToTicket,
+    extendServiceTime
+    // --- CHANGED END ---
 } from "../Controllers/queueController.js";
 
 // Middleware Imports (Security ke liye)
@@ -27,7 +31,6 @@ router.get("/my-ticket", protect, getMyTicket);
 
 // 3. Get Booking History (Profile Page ke liye)
 router.get("/history", protect, getUserHistory);
-
 
 // 4. Get Dashboard Data (Salon login hone par initial data load karega)
 router.get("/salon-dashboard", protectSalon, getSalonData);
@@ -51,5 +54,12 @@ router.post("/complete", protectSalon, completeService);
 //  8. Add Walk-in Client (Offline User - New Feature)
 router.post("/add-walkin", protectSalon, addWalkInClient);
 
+// --- CHANGED START: New Routes for Dynamic Service Times ---
+// 9. Add Extra Services to an existing ticket (Salon Dashboard se)
+router.post("/add-services", protectSalon, addServicesToTicket);
+
+// 10. Extend Service Time for delays (Salon Dashboard se)
+router.post("/extend-time", protectSalon, extendServiceTime);
+// --- CHANGED END ---
 
 export default router;

@@ -6,11 +6,10 @@ import {
   Play, CheckSquare, X, Camera, Mail, Phone, MapPin, User,
   Armchair, UserCheck, Plus, Trash2, Menu, Save, Edit3, Power,
   AlertTriangle, Sparkles, Zap, ArrowRight, UserPlus, Home, LayoutDashboard, XCircle,
-  Image as ImageIcon, Star, Loader2, UploadCloud, Minus
+  Image as ImageIcon, Star, Loader2, UploadCloud, Minus, Clock8
 } from "lucide-react";
 import api from "../utils/api";
 import { io } from "socket.io-client";
-
 
 const CLOUDINARY_UPLOAD_URL = "https://api.cloudinary.com/v1_1/dvoenforj/image/upload";
 const UPLOAD_PRESET = "salon_preset";
@@ -349,6 +348,142 @@ const AssignmentModal = ({ isOpen, onClose, customer, availableChairs, staffList
   );
 };
 
+// --- CHANGED START: New Modals for Extra Time & Extra Services ---
+
+// 5. EXTEND TIME MODAL
+const ExtendTimeModal = ({ isOpen, onClose, customer, onConfirm }) => {
+  const [minutes, setMinutes] = useState(15);
+  
+  if (!isOpen || !customer) return null;
+  const customerName = customer.userId?.name || customer.guestName || "Customer";
+
+  const handleSubmit = () => {
+    if (minutes > 0) {
+      onConfirm(minutes);
+      setMinutes(15); 
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="relative w-full max-w-sm bg-zinc-900 border-t sm:border border-white/10 rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl animate-in slide-in-from-bottom-10 fade-in">
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h3 className="text-lg font-bold text-white mb-1">Extend Time</h3>
+            <p className="text-zinc-400 text-sm">For <span className="text-white font-medium">{customerName}</span></p>
+          </div>
+          <button onClick={onClose}><X size={20} className="text-zinc-500 hover:text-white" /></button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Extra Minutes Needed</label>
+            <div className="flex gap-2 mb-4">
+              {[5, 10, 15, 30].map(m => (
+                <button
+                  key={m}
+                  onClick={() => setMinutes(m)}
+                  className={`flex-1 py-2 rounded-lg font-bold text-sm border transition-all ${minutes === m ? 'bg-blue-500/20 text-blue-400 border-blue-500/50' : 'bg-zinc-950 text-zinc-400 border-white/10 hover:border-white/20'}`}
+                >
+                  +{m}m
+                </button>
+              ))}
+            </div>
+            <input
+              type="number"
+              value={minutes}
+              onChange={(e) => setMinutes(Number(e.target.value))}
+              className="w-full bg-zinc-950 border border-white/10 rounded-xl p-3 text-white text-center font-bold focus:border-blue-500 outline-none"
+              placeholder="Or enter custom minutes"
+            />
+          </div>
+
+          <button
+            onClick={handleSubmit}
+            className="w-full py-3.5 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-400 transition-colors active:scale-95"
+          >
+            Confirm Extension
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 6. ADD EXTRA SERVICE MODAL
+const AddExtraServiceModal = ({ isOpen, onClose, services, customer, onConfirm }) => {
+  const [selectedServices, setSelectedServices] = useState([]);
+
+  if (!isOpen || !customer) return null;
+  const customerName = customer.userId?.name || customer.guestName || "Customer";
+
+  const toggleService = (service) => {
+    const exists = selectedServices.find(s => s.name === service.name);
+    if (exists) {
+      setSelectedServices(prev => prev.filter(s => s.name !== service.name));
+    } else {
+      setSelectedServices(prev => [...prev, service]);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (selectedServices.length === 0) {
+      alert("Please select at least one extra service.");
+      return;
+    }
+    onConfirm(selectedServices);
+    setSelectedServices([]); 
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="relative w-full max-w-md bg-zinc-900 border-t sm:border border-white/10 rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl animate-in slide-in-from-bottom-10 fade-in">
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h3 className="text-lg font-bold text-white mb-1">Add Extra Service</h3>
+            <p className="text-zinc-400 text-sm">For <span className="text-white font-medium">{customerName}</span></p>
+          </div>
+          <button onClick={onClose}><X size={20} className="text-zinc-500 hover:text-white" /></button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Select Additional Services</label>
+            <div className="max-h-56 overflow-y-auto custom-scrollbar border border-white/5 rounded-xl bg-zinc-950 p-2 space-y-2">
+              {services.length > 0 ? services.map((s, i) => {
+                const isSelected = selectedServices.some(sel => sel.name === s.name);
+                return (
+                  <div
+                    key={i}
+                    onClick={() => toggleService(s)}
+                    className={`p-3 rounded-lg border cursor-pointer flex justify-between items-center transition-all ${isSelected ? 'bg-purple-500/20 border-purple-500 text-white' : 'border-white/5 text-zinc-400 hover:bg-white/5'}`}
+                  >
+                    <div>
+                      <span className="text-sm font-medium block">{s.name}</span>
+                      <span className="text-[10px] text-zinc-500">{s.time} mins</span>
+                    </div>
+                    <span className="text-xs font-bold">₹{s.price}</span>
+                  </div>
+                );
+              }) : <p className="text-zinc-600 text-xs p-2 text-center">No services available.</p>}
+            </div>
+          </div>
+
+          <button
+            onClick={handleSubmit}
+            className="w-full py-3.5 bg-purple-500 text-white font-bold rounded-xl hover:bg-purple-400 transition-colors mt-2 active:scale-95"
+          >
+            Add to Current Ticket
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+// --- CHANGED END ---
+
 // --- MAIN COMPONENT ---
 
 const SalonDashboard = ({ salon, onLogout }) => {
@@ -358,7 +493,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
   const [requests, setRequests] = useState([]);
   const [activeQueue, setActiveQueue] = useState([]);
 
-  // --- CHANGED START: Dynamic Active Chairs State ---
+  // Dynamic Active Chairs State
   const activeChairsRef = useRef(salon?.activeChairsCount || 1);
   const [activeChairsCount, setActiveChairsCount] = useState(salon?.activeChairsCount || 1);
   
@@ -366,7 +501,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
     setActiveChairsCount(count);
     activeChairsRef.current = count;
   };
-  // --- CHANGED END ---
 
   const [chairs, setChairs] = useState(Array.from({ length: activeChairsCount }, (_, i) => ({
     id: i + 1, name: `Chair ${i + 1}`, status: 'empty', currentCustomer: null, assignedStaff: null
@@ -392,6 +526,11 @@ const SalonDashboard = ({ salon, onLogout }) => {
   const [profileImage, setProfileImage] = useState(null);
   const [assignmentModal, setAssignmentModal] = useState({ isOpen: false, customer: null });
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
+
+  // --- CHANGED START: Modals for Extending time and services ---
+  const [extendTimeModal, setExtendTimeModal] = useState({ isOpen: false, customer: null });
+  const [extraServiceModal, setExtraServiceModal] = useState({ isOpen: false, customer: null });
+  // --- CHANGED END ---
 
   const playNotificationSound = () => {
     try {
@@ -443,9 +582,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
         setStats(data.stats);
 
         const servingTickets = data.serving || [];
-        // --- CHANGED START ---
         const mappedChairs = Array.from({ length: activeChairsRef.current }, (_, i) => {
-        // --- CHANGED END ---
           const chairId = i + 1;
           const activeTicket = servingTickets.find(t => t.chairId === chairId);
 
@@ -482,16 +619,13 @@ const SalonDashboard = ({ salon, onLogout }) => {
         setStaff(data.salon.staff || [{ name: data.salon.ownerName, status: 'available' }]);
         setGallery(data.salon.gallery || []); 
         setIsOnline(data.salon.isOnline);
-        // --- CHANGED START ---
         if(data.salon.activeChairsCount) {
            updateLocalChairsCount(data.salon.activeChairsCount);
         }
-        // --- CHANGED END ---
       }
     } catch (error) { console.error("Profile Fetch Error", error); }
   }
 
-  // --- CHANGED START: Dynamic Active Chairs API Call ---
   const handleUpdateChairs = async (newCount) => {
     if (newCount < 1) {
       alert("Minimum 1 active chair is required.");
@@ -508,7 +642,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
       alert("Failed to update chairs");
     }
   };
-  // --- CHANGED END ---
 
   const handleAcceptRequest = async (req) => {
     try {
@@ -577,6 +710,35 @@ const SalonDashboard = ({ salon, onLogout }) => {
       alert("Error canceling service"); 
     }
   };
+
+  // --- CHANGED START: API Calls for extending time and services ---
+  const handleExtendTimeSubmit = async (minutes) => {
+    const ticketId = extendTimeModal.customer._id;
+    try {
+      await api.post("/queue/extend-time", { ticketId, extraMinutes: minutes });
+      setExtendTimeModal({ isOpen: false, customer: null });
+      fetchDashboardData(); 
+    } catch (error) {
+      console.error("Extend Time Error", error);
+      alert("Failed to extend time.");
+    }
+  };
+
+  const handleAddExtraServiceSubmit = async (newServices) => {
+    const ticketId = extraServiceModal.customer._id;
+    const additionalPrice = newServices.reduce((sum, s) => sum + Number(s.price), 0);
+    const additionalTime = newServices.reduce((sum, s) => sum + Number(s.time), 0);
+    
+    try {
+      await api.post("/queue/add-services", { ticketId, newServices, additionalPrice, additionalTime });
+      setExtraServiceModal({ isOpen: false, customer: null });
+      fetchDashboardData();
+    } catch (error) {
+      console.error("Add Service Error", error);
+      alert("Failed to add extra services.");
+    }
+  };
+  // --- CHANGED END ---
 
   const handleAddWalkIn = async (customerData) => {
     try {
@@ -702,9 +864,15 @@ const SalonDashboard = ({ salon, onLogout }) => {
   return (
     <div className="flex h-screen w-full bg-zinc-950 font-sans text-white overflow-hidden selection:bg-emerald-500 selection:text-white">
 
+      {/* --- MODALS --- */}
       <WalkInModal isOpen={isWalkInOpen} onClose={() => setIsWalkInOpen(false)} services={services} onConfirm={handleAddWalkIn} />
       <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} salon={salon} profileImage={profileImage} onImageUpload={setProfileImage} onLogout={onLogout} />
       <AssignmentModal isOpen={assignmentModal.isOpen} onClose={() => setAssignmentModal({ ...assignmentModal, isOpen: false })} customer={assignmentModal.customer} availableChairs={assignmentModal.availableChairs} staffList={staff} onConfirm={handleStartService} />
+      
+      {/* --- CHANGED START: Mount New Modals --- */}
+      <ExtendTimeModal isOpen={extendTimeModal.isOpen} onClose={() => setExtendTimeModal({ isOpen: false, customer: null })} customer={extendTimeModal.customer} onConfirm={handleExtendTimeSubmit} />
+      <AddExtraServiceModal isOpen={extraServiceModal.isOpen} onClose={() => setExtraServiceModal({ isOpen: false, customer: null })} services={services} customer={extraServiceModal.customer} onConfirm={handleAddExtraServiceSubmit} />
+      {/* --- CHANGED END --- */}
 
       {/* DESKTOP SIDEBAR */}
       <aside className="hidden lg:flex w-64 border-r border-white/5 bg-zinc-900/40 backdrop-blur-xl flex-col z-20">
@@ -907,7 +1075,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
                   {/* RIGHT: CHAIRS GRID */}
                   <div className="lg:col-span-8 bg-zinc-900/30 border border-white/5 rounded-3xl overflow-hidden flex flex-col h-auto lg:h-full">
                     
-                    {/* --- CHANGED START: DYNAMIC CHAIRS CONTROLLER IN HEADER --- */}
                     <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between sticky top-0 backdrop-blur-sm z-10">
                       <h3 className="font-bold text-sm text-zinc-100 flex items-center gap-2"><Scissors size={14} className="text-emerald-400" /> Service Floor</h3>
                       <div className="flex items-center gap-3">
@@ -929,7 +1096,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
                         <span className="text-[10px] text-zinc-500 font-bold uppercase hidden sm:block">Active Chairs</span>
                       </div>
                     </div>
-                    {/* --- CHANGED END --- */}
 
                     <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto custom-scrollbar flex-1">
                       {chairs.map((chair) => (
@@ -957,6 +1123,23 @@ const SalonDashboard = ({ salon, onLogout }) => {
                                 </div>
                               </div>
                               
+                              {/* --- CHANGED START: Add Service & Extend Time Buttons --- */}
+                              <div className="flex gap-2 w-full mb-2">
+                                <button 
+                                  onClick={() => setExtraServiceModal({ isOpen: true, customer: chair.currentCustomer })} 
+                                  className="w-1/2 py-2 bg-purple-500/10 text-purple-400 border border-purple-500/20 text-xs font-bold rounded-lg hover:bg-purple-500 hover:text-white transition-colors flex items-center justify-center gap-1 active:scale-95"
+                                >
+                                  <Plus size={14} /> <span className="hidden sm:inline">Service</span>
+                                </button>
+                                <button 
+                                  onClick={() => setExtendTimeModal({ isOpen: true, customer: chair.currentCustomer })} 
+                                  className="w-1/2 py-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs font-bold rounded-lg hover:bg-blue-500 hover:text-white transition-colors flex items-center justify-center gap-1 active:scale-95"
+                                >
+                                  <Clock8 size={14} /> <span className="hidden sm:inline">+ Time</span>
+                                </button>
+                              </div>
+                              {/* --- CHANGED END --- */}
+
                               <div className="flex gap-2 w-full">
                                 <button 
                                   onClick={() => handleCancelService(chair.id)} 

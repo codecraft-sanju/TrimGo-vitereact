@@ -492,6 +492,12 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         setActiveTicket(prev => prev ? {...prev, status: data.status, chairId: data.chairId} : null);
     });
 
+    // --- CHANGED START: Listen for ticket updates (extra time/services) ---
+    socket.on("ticket_updated", (updatedTicket) => {
+        setActiveTicket(updatedTicket); 
+    });
+    // --- CHANGED END ---
+
     socket.on("service_completed", () => {
         setActiveTicket(null);
         alert("Service completed! Please rate your experience.");
