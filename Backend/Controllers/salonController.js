@@ -355,9 +355,6 @@ export const getAllSalons = async (req, res) => {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/* UPDATE SALON PROFILE                                                       */
-/* -------------------------------------------------------------------------- */
 export const updateSalonProfile = async (req, res) => {
   try {
     const salonId = req.salon._id;
@@ -393,10 +390,7 @@ export const updateSalonProfile = async (req, res) => {
   }
 };
 
-// --- CHANGED START ---
-/* -------------------------------------------------------------------------- */
-/* DYNAMIC ACTIVE CHAIRS CONTROL                                              */
-/* -------------------------------------------------------------------------- */
+
 export const updateActiveChairs = async (req, res) => {
   try {
     const salonId = req.salon._id;
@@ -412,7 +406,6 @@ export const updateActiveChairs = async (req, res) => {
       { new: true }
     );
 
-    // Jab chairs change hon toh naya time sabhi users ko broadcast kardo
     await broadcastQueueUpdates(salonId, req.io);
 
     res.status(200).json({ 
@@ -426,4 +419,3 @@ export const updateActiveChairs = async (req, res) => {
     res.status(500).json({ success: false, message: "Server Error updating chairs" });
   }
 };
-// --- CHANGED END ---

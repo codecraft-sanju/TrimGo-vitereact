@@ -198,9 +198,11 @@ const AIConcierge = ({ salons = [], onSalonSelect }) => {
                           : "bg-white text-zinc-700 border border-white/60 rounded-bl-sm"
                       }`}
                     >
-                      {m.text.split("**").map((part, idx) => 
+                      {/* --- CHANGED START: Optional Chaining for safe split --- */}
+                      {m.text?.split("**")?.map((part, idx) => 
                         idx % 2 === 1 ? <span key={idx} className={`font-bold ${m.role === 'user' ? 'text-white' : 'text-zinc-900'}`}>{part}</span> : part
-                      )}
+                      ) || m.text}
+                      {/* --- CHANGED END --- */}
                     </div>
 
                     {/* Salon Card */}

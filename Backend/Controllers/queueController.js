@@ -1,8 +1,37 @@
+import mongoose from "mongoose";
+// --- CHANGED START: Zod Import for Validation ---
+import { z } from "zod";
+// --- CHANGED END ---
 import Ticket from "../Models/Ticket.js";
 import Salon from "../Models/Salon.js";
 import User from "../Models/User.js";
 import Counter from "../Models/Counter.js";
 import { sendWhatsappMessage } from "../utils/sendWhatsapp.js"; 
+
+// --- CHANGED START: Zod Validation Schemas ---
+const serviceSchema = z.object({
+  name: z.string().min(1, "Service name is required"),
+  price: z.number().min(0, "Price cannot be negative"),
+  time: z.number().min(1, "Time must be at least 1 minute"),
+  category: z.string().optional(),
+});
+
+const walkInSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters").max(50),
+  mobile: z.string().optional().or(z.literal("")),
+  services: z.array(serviceSchema).min(1, "At least one service is required"),
+  totalPrice: z.number().min(0, "Total price cannot be negative"),
+  totalTime: z.number().min(1, "Total time must be at least 1 minute"),
+});
+
+const joinQueueSchema = z.object({
+  salonId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid Salon ID"),
+  services: z.array(serviceSchema).min(1, "At least one service is required"),
+  totalPrice: z.number().min(0, "Total price cannot be negative"),
+  totalTime: z.number().min(1, "Total time must be at least 1 minute"),
+  reachingTime: z.number().min(0, "Reaching time cannot be negative").optional(),
+});
+// --- CHANGED END ---
 
 // --- FIXED TIMEZONE BUG START ---
 // Helper to get the start of the current day in IST (Asia/Kolkata)
@@ -42,11 +71,8 @@ const getQueueStats = async (salonId, currentUserId) => {
   const activeTickets = await getSortedActiveTickets(salonId);
   const salon = await Salon.findById(salonId).select("activeChairsCount");
   
-  // --- CHANGED START ---
-  // Ab time calculate activeChairsCount par depend karega
   const numChairs = Math.max(1, salon?.activeChairsCount || 1);
   let chairEndMins = Array(numChairs).fill(0);
-  // --- CHANGED END ---
   
   let peopleAhead = 0;
   let waitTimeAheadMins = 0;
@@ -68,15 +94,11 @@ const getQueueStats = async (salonId, currentUserId) => {
     if (t.status === 'serving') {
       const startTime = t.serviceStartTime ? new Date(t.serviceStartTime) : new Date(t.updatedAt);
       const elapsedMins = (now - startTime) / (1000 * 60);
-      // --- CHANGED START: extraTime ko calculation mein add kiya ---
       const totalAllocatedTime = (t.totalTime || 0) + (t.extraTime || 0);
       const remaining = Math.max(0, totalAllocatedTime - elapsedMins);
-      // --- CHANGED END ---
       chairEndMins[0] = Math.max(chairEndMins[0], remaining);
     } else {
-      // --- CHANGED START: waiting/pending me bhi extraTime consider kiya ---
       chairEndMins[0] += ((t.totalTime || 0) + (t.extraTime || 0));
-      // --- CHANGED END ---
     }
   }
 
@@ -91,18 +113,12 @@ const getQueueStats = async (salonId, currentUserId) => {
   };
 };
 
-// --- CHANGED START ---
-// Export kar diya taaki salon controller ise use kar sake
 export const broadcastQueueUpdates = async (salonId, io) => {
-// --- CHANGED END ---
   const activeTickets = await getSortedActiveTickets(salonId);
   const salon = await Salon.findById(salonId).select("activeChairsCount");
   
-  // --- CHANGED START ---
-  // Broadcast update bhi ab activeChairsCount se chalega
   const numChairs = Math.max(1, salon?.activeChairsCount || 1);
   let chairEndMins = Array(numChairs).fill(0);
-  // --- CHANGED END ---
   
   const now = new Date();
   let runningPeopleAhead = 0;
@@ -128,15 +144,11 @@ export const broadcastQueueUpdates = async (salonId, io) => {
     if (ticket.status === 'serving') {
       const startTime = ticket.serviceStartTime ? new Date(ticket.serviceStartTime) : new Date(ticket.updatedAt);
       const elapsedMins = (now - startTime) / (1000 * 60);
-      // --- CHANGED START: extraTime ko calculation mein add kiya ---
       const totalAllocatedTime = (ticket.totalTime || 0) + (ticket.extraTime || 0);
       const remaining = Math.max(0, totalAllocatedTime - elapsedMins);
-      // --- CHANGED END ---
       chairEndMins[0] = Math.max(chairEndMins[0], remaining);
     } else {
-      // --- CHANGED START: waiting/pending me bhi extraTime consider kiya ---
       chairEndMins[0] += ((ticket.totalTime || 0) + (ticket.extraTime || 0));
-      // --- CHANGED END ---
     }
   }
 
@@ -185,30 +197,39 @@ export const cancelTicket = async (req, res) => {
 /* SALON ACTION - ADD WALK-IN CLIENT (OFFLINE USER)                           */
 /* -------------------------------------------------------------------------- */
 export const addWalkInClient = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
-    const { name, mobile, services, totalPrice, totalTime } = req.body;
-    const salonId = req.salon._id;
-
-    if (!name || !services || services.length === 0) {
-      return res.status(400).json({ success: false, message: "Customer Name and Services are required" });
+    // --- CHANGED START: Validate Input using Zod ---
+    const validationResult = walkInSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid input data", 
+        errors: validationResult.error.errors 
+      });
     }
 
-    // --- FIXED TIMEZONE BUG START ---
-    const startOfDay = getISTStartOfDay();
-    // --- FIXED TIMEZONE BUG END ---
+    const { name, mobile, services, totalPrice, totalTime } = validationResult.data;
+    // --- CHANGED END ---
+    
+    const salonId = req.salon._id;
 
+    const startOfDay = getISTStartOfDay();
     const dateString = startOfDay.toISOString().split('T')[0];
     const counterId = `${salonId}_${dateString}`;
 
     const counter = await Counter.findByIdAndUpdate(
       counterId,
       { $inc: { seq: 1 } },
-      { new: true, upsert: true }
+      { new: true, upsert: true, session }
     );
 
     const queueNumber = counter.seq;
 
-    const newTicket = await Ticket.create({
+    const newTicketArray = await Ticket.create([{
       salonId,
       userId: null,
       isGuest: true,
@@ -219,7 +240,11 @@ export const addWalkInClient = async (req, res) => {
       totalTime,
       queueNumber,
       status: "waiting"
-    });
+    }], { session });
+
+    const newTicket = newTicketArray[0];
+
+    await session.commitTransaction();
 
     req.io.to(`salon_${salonId}`).emit("queue_updated");
     await broadcastQueueUpdates(salonId, req.io);
@@ -231,8 +256,11 @@ export const addWalkInClient = async (req, res) => {
     });
 
   } catch (err) {
+    await session.abortTransaction();
     console.error("Walk-in Error:", err);
     res.status(500).json({ success: false, message: "Server Error adding walk-in" });
+  } finally {
+    session.endSession();
   }
 };
 
@@ -241,10 +269,19 @@ export const addWalkInClient = async (req, res) => {
 /* -------------------------------------------------------------------------- */
 export const joinQueue = async (req, res) => {
   try {
-    // --- CHANGED START ---
-    // reachingTime ko add kiya body se
-    const { salonId, services, totalPrice, totalTime, reachingTime } = req.body;
+    // --- CHANGED START: Validate Input using Zod ---
+    const validationResult = joinQueueSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid input data", 
+        errors: validationResult.error.errors 
+      });
+    }
+
+    const { salonId, services, totalPrice, totalTime, reachingTime } = validationResult.data;
     // --- CHANGED END ---
+    
     const userId = req.user._id; 
 
     const existingTicket = await Ticket.findOne({
@@ -265,9 +302,7 @@ export const joinQueue = async (req, res) => {
       services,
       totalPrice,
       totalTime,
-      // --- CHANGED START ---
       reachingTime: reachingTime || 0,
-      // --- CHANGED END ---
       status: "pending", 
     });
 
@@ -278,7 +313,6 @@ export const joinQueue = async (req, res) => {
 
     const salon = await Salon.findById(salonId);
     if (salon && salon.phone) {
-      // --- CHANGED START ---
       try {
         const serviceNames = services.map(s => s.name).join(", ");
         const messageText = `Hello ${salon.salonName},\nYou have a new queue request from ${fullTicket.userId.name} for ${serviceNames}.\nPlease open your TrimGo dashboard to accept it.`;
@@ -287,24 +321,18 @@ export const joinQueue = async (req, res) => {
       } catch (waErr) {
         console.error(waErr);
       }
-      // --- CHANGED END ---
     }
     
-    // --- CHANGED START ---
-    // Jab naya user queue me add ho, toh sabhi ko updated time broadcast karo taki baakiyon ko real-time wait dikhe
     await broadcastQueueUpdates(salonId, req.io);
-    // --- CHANGED END ---
 
     res.status(201).json({ success: true, ticket });
   } catch (err) {
-    // --- CHANGED START: RACE CONDITION ERROR CATCH ---
     if (err.code === 11000) {
       return res.status(400).json({
         success: false,
         message: "You already have an active ticket! Please cancel it or wait.",
       });
     }
-    // --- CHANGED END ---
     console.error(err);
     res.status(500).json({ success: false, message: "Server Error" });
   }
@@ -316,39 +344,39 @@ export const joinQueue = async (req, res) => {
 /* SALON ACTION: ACCEPT REQUEST                                               */
 /* -------------------------------------------------------------------------- */
 export const acceptRequest = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const { ticketId } = req.body;
     const salonId = req.salon._id;
 
-    // --- FIXED TIMEZONE BUG START ---
     const startOfDay = getISTStartOfDay();
-    // --- FIXED TIMEZONE BUG END ---
-
     const dateString = startOfDay.toISOString().split('T')[0];
     const counterId = `${salonId}_${dateString}`;
 
     const counter = await Counter.findByIdAndUpdate(
       counterId,
       { $inc: { seq: 1 } },
-      { new: true, upsert: true }
+      { new: true, upsert: true, session }
     );
 
     const nextQueueNumber = counter.seq;
 
     const ticket = await Ticket.findOneAndUpdate(
-      // --- CHANGED START: Added status check to prevent reviving dead tickets ---
       { _id: ticketId, salonId, status: "pending" },
-      // --- CHANGED END ---
       {
         status: "waiting",
-        // --- CHANGED START ---
         queueNumber: nextQueueNumber, 
-        // --- CHANGED END ---
       },
-      { new: true }
+      { new: true, session }
     ).populate("salonId", "salonName address");
 
-    if (!ticket) return res.status(404).json({ message: "Ticket not found or in invalid state" });
+    if (!ticket) {
+      await session.abortTransaction();
+      return res.status(404).json({ message: "Ticket not found or in invalid state" });
+    }
+
+    await session.commitTransaction();
 
     const stats = await getQueueStats(salonId, ticket.userId);
     const ticketData = ticket.toObject();
@@ -364,7 +392,10 @@ export const acceptRequest = async (req, res) => {
 
     res.status(200).json({ success: true, ticket: ticketData });
   } catch (err) {
+    await session.abortTransaction();
     res.status(500).json({ success: false, message: err.message });
+  } finally {
+    session.endSession();
   }
 };
 
@@ -377,17 +408,12 @@ export const startService = async (req, res) => {
     const salonId = req.salon._id;
 
     const ticket = await Ticket.findOneAndUpdate(
-      // --- CHANGED START: Added status check to prevent state transition bugs ---
       { _id: ticketId, salonId, status: { $in: ["pending", "waiting"] } },
-      // --- CHANGED END ---
       {
         status: "serving",
         chairId,
         assignedStaff: staffName,
-        // --- CHANGED START ---
-        // Service ka actual start time save karo
         serviceStartTime: new Date(),
-        // --- CHANGED END ---
       },
       { new: true }
     );
@@ -415,23 +441,28 @@ export const startService = async (req, res) => {
 /* SALON ACTION: COMPLETE SERVICE                                             */
 /* -------------------------------------------------------------------------- */
 export const completeService = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const { ticketId } = req.body;
     const salonId = req.salon._id;
 
     const ticket = await Ticket.findOneAndUpdate(
-      // --- CHANGED START: Added status check ---
       { _id: ticketId, salonId, status: "serving" },
-      // --- CHANGED END ---
       { status: "completed" },
-      { new: true }
+      { new: true, session }
     );
 
-    if (!ticket) return res.status(404).json({ success: false, message: "Ticket not found or in invalid state" });
+    if (!ticket) {
+      await session.abortTransaction();
+      return res.status(404).json({ success: false, message: "Ticket not found or in invalid state" });
+    }
 
     await Salon.findByIdAndUpdate(salonId, {
         $inc: { revenue: ticket.totalPrice, reviewsCount: 1 } 
-    });
+    }, { session });
+
+    await session.commitTransaction();
 
     if(ticket.userId) {
         req.io.to(`user_${ticket.userId}`).emit("service_completed", ticket);
@@ -444,7 +475,10 @@ export const completeService = async (req, res) => {
 
     res.status(200).json({ success: true, message: "Service Completed" });
   } catch (err) {
+    await session.abortTransaction();
     res.status(500).json({ success: false, message: err.message });
+  } finally {
+    session.endSession();
   }
 };
 
@@ -462,8 +496,6 @@ export const getMyTicket = async (req, res) => {
       return res.status(200).json({ success: true, ticket: null });
     }
 
-    // --- CHANGED START ---
-    // Ab user ko "pending" state me bhi apna estimated time dikhega
     if (ticket.status === 'pending' || ticket.status === 'waiting' || ticket.status === 'serving') {
       const stats = await getQueueStats(ticket.salonId._id, req.user._id);
       const ticketData = ticket.toObject();
@@ -473,7 +505,6 @@ export const getMyTicket = async (req, res) => {
       ticketData.myPeopleAhead = stats.peopleAhead;
       return res.status(200).json({ success: true, ticket: ticketData });
     }
-    // --- CHANGED END ---
 
     res.status(200).json({ success: true, ticket });
   } catch (err) {
@@ -488,13 +519,29 @@ export const getUserHistory = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    const history = await Ticket.find({ userId })
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const query = { userId };
+    
+    const totalTickets = await Ticket.countDocuments(query);
+
+    const history = await Ticket.find(query)
       .populate("salonId", "salonName address") 
-      .sort({ createdAt: -1 }); 
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     res.status(200).json({
       success: true,
       count: history.length,
+      pagination: {
+        total: totalTickets,
+        totalPages: Math.ceil(totalTickets / limit),
+        currentPage: page,
+        limit
+      },
       history, 
     });
 
@@ -516,9 +563,7 @@ export const rejectRequest = async (req, res) => {
     const salonId = req.salon._id;
 
     const ticket = await Ticket.findOneAndUpdate(
-      // --- CHANGED START: Added status check ---
       { _id: ticketId, salonId, status: { $in: ["pending", "waiting"] } },
-      // --- CHANGED END ---
       { status: "cancelled" }, 
       { new: true }
     );
@@ -536,10 +581,7 @@ export const rejectRequest = async (req, res) => {
 
     req.io.to(`salon_${salonId}`).emit("queue_updated");
     
-    // --- CHANGED START ---
-    // Reject hone par bhi time update karke sabko bhejo
     await broadcastQueueUpdates(salonId, req.io);
-    // --- CHANGED END ---
 
     res.status(200).json({ success: true, message: "Request rejected successfully" });
 
@@ -558,9 +600,7 @@ export const cancelServiceBySalon = async (req, res) => {
     const salonId = req.salon._id;
 
     const ticket = await Ticket.findOneAndUpdate(
-      // --- CHANGED START: Added status check ---
       { _id: ticketId, salonId, status: { $in: ["pending", "waiting", "serving"] } },
-      // --- CHANGED END ---
       { status: "cancelled", chairId: null, assignedStaff: null },
       { new: true }
     );
@@ -593,25 +633,20 @@ export const cancelServiceBySalon = async (req, res) => {
 export const getSalonData = async (req, res) => {
     try {
         const salonId = req.salon._id;
-        
-        // --- CHANGED START ---
-        // Requests ki list ko createdAt ke hisab se sort kar diya taki purani request upar aaye
+      
         const requests = await Ticket.find({ salonId, status: "pending" })
                                      .populate("userId", "name")
                                      .sort({ createdAt: 1 });
-        // --- CHANGED END ---
-
+      
         const waiting = await Ticket.find({ salonId, status: "waiting" }).populate("userId", "name");
         const serving = await Ticket.find({ salonId, status: "serving" }).populate("userId", "name");
         
-        // --- FIXED TIMEZONE BUG START ---
         const startOfDay = getISTStartOfDay();
         const completedToday = await Ticket.find({ 
             salonId, 
             status: "completed",
             updatedAt: { $gte: startOfDay } 
         });
-        // --- FIXED TIMEZONE BUG END ---
 
         const todayRevenue = completedToday.reduce((acc, curr) => acc + curr.totalPrice, 0);
 
@@ -660,9 +695,6 @@ export const addServicesToTicket = async (req, res) => {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/* SALON ACTION: EXTEND SERVICE TIME FOR DELAYS                               */
-/* -------------------------------------------------------------------------- */
 export const extendServiceTime = async (req, res) => {
   try {
     const { ticketId, extraMinutes } = req.body;
@@ -688,19 +720,13 @@ export const extendServiceTime = async (req, res) => {
   }
 };
 
-// --- NEW CONTROLLER: GET SALON HISTORY & ANALYTICS ---
-/* -------------------------------------------------------------------------- */
-/* SALON ACTION: GET COMPLETE HISTORY WITH FILTERS                            */
-/* -------------------------------------------------------------------------- */
 export const getSalonHistory = async (req, res) => {
   try {
     const salonId = req.salon._id;
-    const { period, startDate, endDate } = req.query; 
-
+    const { period, startDate, endDate, page: queryPage, limit: queryLimit } = req.query; 
     let dateFilter = {};
     const now = new Date();
 
-    // Filter Logic
     if (period === 'today') {
       const startOfDay = getISTStartOfDay();
       dateFilter = { $gte: startOfDay };
@@ -711,31 +737,47 @@ export const getSalonHistory = async (req, res) => {
       const startOfMonth = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
       dateFilter = { $gte: startOfMonth };
     } else if (period === 'custom' && startDate && endDate) {
+      const startIST = new Date(`${startDate}T00:00:00.000+05:30`);
+      const endIST = new Date(`${endDate}T23:59:59.999+05:30`);
+
       dateFilter = { 
-        $gte: new Date(startDate), 
-        // End date ke raat 11:59:59 tak ka data lene ke liye
-        $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)) 
+        $gte: startIST, 
+        $lte: endIST 
       };
     }
 
     const query = { salonId, status: "completed" };
     if (Object.keys(dateFilter).length > 0) {
-      query.updatedAt = dateFilter; // Jab service complete hui tab ka time
+      query.updatedAt = dateFilter; 
     }
 
-    // Database se data lana
+    const page = parseInt(queryPage) || 1;
+    const limit = parseInt(queryLimit) || 20;
+    const skip = (page - 1) * limit;
+
+    const statsAggregation = await Ticket.aggregate([
+      { $match: query },
+      { $group: { _id: null, totalRevenue: { $sum: "$totalPrice" }, customers: { $sum: 1 } } }
+    ]);
+
+    const stats = statsAggregation.length > 0 
+      ? { revenue: statsAggregation[0].totalRevenue, customers: statsAggregation[0].customers } 
+      : { revenue: 0, customers: 0 };
+
     const history = await Ticket.find(query)
       .populate("userId", "name phone email")
-      .sort({ updatedAt: -1 }); // Naya data sabse upar
-
-    // Total Revenue calculate karna
-    const totalRevenue = history.reduce((sum, t) => sum + (t.totalPrice || 0), 0);
+      .sort({ updatedAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     res.status(200).json({
       success: true,
-      stats: {
-        revenue: totalRevenue,
-        customers: history.length
+      stats,
+      pagination: {
+        total: stats.customers,
+        totalPages: Math.ceil(stats.customers / limit),
+        currentPage: page,
+        limit
       },
       history
     });
@@ -745,4 +787,3 @@ export const getSalonHistory = async (req, res) => {
     res.status(500).json({ success: false, message: "Error fetching salon history" });
   }
 };
-// --- END OF NEW CONTROLLER ---

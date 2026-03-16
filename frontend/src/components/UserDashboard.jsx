@@ -492,11 +492,9 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         setActiveTicket(prev => prev ? {...prev, status: data.status, chairId: data.chairId} : null);
     });
 
-    // --- CHANGED START: Listen for ticket updates (extra time/services) ---
     socket.on("ticket_updated", (updatedTicket) => {
         setActiveTicket(updatedTicket); 
     });
-    // --- CHANGED END ---
 
     socket.on("service_completed", () => {
         setActiveTicket(null);
@@ -698,7 +696,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         )}
       </AnimatePresence>
 
-      {/* --- RE-DESIGNED MODALS --- */}
       <AnimatePresence>
         {activeBookingSalon && (
           <ServiceSelectionModal 
@@ -710,7 +707,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         )}
       </AnimatePresence>
 
-      {/* Gallery Modal */}
       <SalonGalleryModal 
         isOpen={galleryModal.isOpen} 
         onClose={() => setGalleryModal({isOpen: false, images: [], name: ""})} 
@@ -939,6 +935,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                       </div>
                     </div>
 
+                    {/* --- CHANGED START --- */}
                     <div className="grid grid-cols-3 gap-2 py-3 border-y border-zinc-50">
                       <div className="flex flex-col items-center sm:items-start">
                         <span className="text-[9px] uppercase text-zinc-400 font-bold tracking-tight">Waiting</span>
@@ -948,7 +945,8 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                         </div>
                       </div>
                       <div className="flex flex-col items-center sm:items-start border-x border-zinc-100 px-2">
-                        <span className="text-[9px] uppercase text-zinc-400 font-bold tracking-tight">Est. Time</span>
+                        {/* Asterisk added to Est. Time */}
+                        <span className="text-[9px] uppercase text-zinc-400 font-bold tracking-tight">Est. Time*</span>
                         <div className="flex items-center gap-1 mt-0.5">
                           <Clock size={12} className="text-zinc-400" />
                           <span className="text-xs sm:text-sm font-bold text-zinc-900">
@@ -964,6 +962,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                         </div>
                       </div>
                     </div>
+                    {/* --- CHANGED END --- */}
 
                     <div className="flex items-center justify-between gap-3 pt-1 mt-auto">
                       <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 font-bold bg-emerald-50/50 px-2 py-1 rounded-lg">
@@ -1014,7 +1013,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
       {/* ACTIVE TICKET FLOATING CARD */}
       {activeTicket && (
         <div className="fixed bottom-4 left-4 right-4 z-50 animate-in slide-in-from-bottom-20 duration-500">
-            <div className="bg-zinc-900/95 backdrop-blur-lg rounded-2xl shadow-2xl p-4 border border-white/10 text-white flex flex-col gap-3 max-w-lg mx-auto">
+            <div className="bg-zinc-900/95 backdrop-blur-lg rounded-2xl shadow-2xl p-4 border border-white/10 text-white flex flex-col max-w-lg mx-auto">
                 <div className="flex justify-between items-start">
                     <div>
                         <div className="flex items-center gap-2 mb-1">
@@ -1038,7 +1037,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                             ) : null}
                         </div>
                         
-                     <p className="text-xs text-zinc-400">Queue #{activeTicket.queueNumber || "-"} • {activeTicket.status.toUpperCase()}</p>
+                     <p className="text-xs text-zinc-400 mt-2">Queue #{activeTicket.queueNumber || "-"} • {activeTicket.status.toUpperCase()}</p>
                     </div>
                     <div className="text-right">
                         <div className="text-2xl font-black">₹{activeTicket.totalPrice}</div>
@@ -1046,7 +1045,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                     </div>
                 </div>
                 
-                <div className="flex gap-3 mt-2">
+                <div className="flex gap-3 mt-4">
                     <button 
                         onClick={() => {
                             const sId = activeTicket.salonId?._id || activeTicket.salonId;
@@ -1073,6 +1072,14 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                       </div>
                     )}
                 </div>
+
+                {/* --- CHANGED START: Floating Card Disclaimer --- */}
+                <div className="mt-3 text-center bg-white/5 border border-white/10 p-1.5 rounded-lg">
+                   <span className="text-[9px] text-zinc-400 leading-tight block">
+                      *Wait time is estimated. Actual time may vary based on ongoing services.
+                   </span>
+                </div>
+                {/* --- CHANGED END --- */}
             </div>
         </div>
       )}

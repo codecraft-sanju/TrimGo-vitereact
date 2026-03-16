@@ -190,14 +190,12 @@ const LiveTicket = ({ ticket, onCancel }) => {
         
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="bg-white/5 rounded-2xl p-3 text-center border border-white/5">
-            {/* --- UX FIX START --- */}
             <div className={`text-2xl font-black ${ticket.status === 'serving' ? 'text-emerald-400' : (timeLeftStr === "00:00" ? 'text-amber-400' : 'text-white')}`}>
                 {ticket.status === 'serving' ? 'Now' : (timeLeftStr === "00:00" ? 'Soon' : timeLeftStr)}
             </div>
             <div className="text-[10px] text-zinc-400 uppercase font-bold tracking-wider">
                 {ticket.status === 'serving' ? 'In Progress' : (timeLeftStr === "00:00" ? 'Next in Line' : 'Est. Wait')}
             </div>
-            {/* --- UX FIX END --- */}
           </div>
           <div className="bg-white/5 rounded-2xl p-3 text-center border border-white/5">
             <div className="text-2xl font-black text-emerald-400">
@@ -209,10 +207,17 @@ const LiveTicket = ({ ticket, onCancel }) => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between text-xs text-zinc-500 bg-black/20 p-2 rounded-lg">
-          <span className="flex items-center gap-1"><Sparkles size={12} className="text-yellow-400" /> AI calculating speed</span>
-          <span>Updated live</span>
+        {/* --- CHANGED START: Global LiveTicket Disclaimer --- */}
+        <div className="flex flex-col gap-1 text-zinc-500 bg-black/20 p-2 rounded-lg">
+          <div className="flex items-center justify-between text-xs">
+            <span className="flex items-center gap-1"><Sparkles size={12} className="text-yellow-400" /> AI calculating speed</span>
+            <span>Updated live</span>
+          </div>
+          <span className="text-[9px] text-zinc-400 text-center border-t border-white/5 pt-1 mt-1">
+            *Wait times are estimated. Actual time may vary based on ongoing services.
+          </span>
         </div>
+        {/* --- CHANGED END --- */}
       </div>
     </div>
   );
@@ -237,7 +242,6 @@ const PublicRoute = ({ user, salon, authLoading, children }) => {
   return children;
 };
 
-// --- CHANGED START ---
 const ProtectedAdminRoute = ({ children }) => {
   const hasToken = !!localStorage.getItem("adminToken");
   if (!hasToken) {
@@ -253,7 +257,6 @@ const AdminPublicRoute = ({ children }) => {
   }
   return children;
 };
-// --- CHANGED END ---
 
 /* ---------------------------------
    MAIN APP CONTENT
@@ -389,7 +392,6 @@ const AppContent = () => {
     }
   };
 
-  // --- CHANGED START ---
   const handleAdminLogin = (token) => {
     localStorage.setItem("adminToken", token);
     toast.success("Welcome Founder!");
@@ -401,7 +403,6 @@ const AppContent = () => {
     toast.success("Admin Logged Out");
     navigate("/admin/login", { replace: true });
   };
-  // --- CHANGED END ---
 
   const handleJoinQueue = (ticketData) => {
     if (activeTicket) {
@@ -564,9 +565,9 @@ const AppContent = () => {
       </div>
     </>
   );
-};
+}
 
-export default function App() {
+export default function AppWrapper() {
   return (
     <BrowserRouter>
       <Toaster position="top-center" reverseOrder={false} />

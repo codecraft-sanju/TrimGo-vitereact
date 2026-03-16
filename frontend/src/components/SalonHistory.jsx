@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { 
   Calendar, DollarSign, Users, Clock, Scissors, 
-  Search, UserIcon // Changed from User to UserIcon to avoid variable conflict
+  Search, UserIcon, ChevronLeft, ChevronRight 
 } from "lucide-react";
 import api from "../utils/api";
 
@@ -10,19 +10,37 @@ const SalonHistory = () => {
   const [stats, setStats] = useState({ revenue: 0, customers: 0 });
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("today"); // 'today', 'week', 'month'
+  
+  // --- CHANGED START: Pagination States ---
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 20; // Ek page par kitni tickets dikhani hain
+  // --- CHANGED END ---
 
   useEffect(() => {
     fetchHistory();
-  }, [period]);
+  }, [period, page]); // --- CHANGED: added 'page' dependency ---
+
+  // --- CHANGED START: Handle Filter Change & Reset Page ---
+  const handlePeriodChange = (newPeriod) => {
+    setPeriod(newPeriod);
+    setPage(1); // Jab bhi filter change ho, page 1 pe wapas aao
+  };
+  // --- CHANGED END ---
 
   const fetchHistory = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get(`/queue/salon-history-data?period=${period}`);
+      // --- CHANGED START: API URL me page aur limit add kiya ---
+      const { data } = await api.get(`/queue/salon-history-data?period=${period}&page=${page}&limit=${limit}`);
       if (data.success) {
         setHistory(data.history);
         setStats(data.stats);
+        if (data.pagination) {
+            setTotalPages(data.pagination.totalPages);
+        }
       }
+      // --- CHANGED END ---
     } catch (error) {
       console.error("Error fetching history:", error);
     } finally {
@@ -60,7 +78,7 @@ const SalonHistory = () => {
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setPeriod(tab.id)}
+              onClick={() => handlePeriodChange(tab.id)} // --- CHANGED: Use new handler ---
               className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
                 period === tab.id 
                   ? "bg-zinc-800 text-white shadow-md" 
@@ -96,23 +114,23 @@ const SalonHistory = () => {
       </div>
 
       {/* History List */}
-      <div className="bg-zinc-900/50 border border-white/5 rounded-3xl overflow-hidden">
-        <div className="p-5 border-b border-white/5 flex items-center justify-between">
+      <div className="bg-zinc-900/50 border border-white/5 rounded-3xl overflow-hidden flex flex-col min-h-[400px]">
+        <div className="p-5 border-b border-white/5 flex items-center justify-between shrink-0">
           <h3 className="font-bold text-zinc-100 flex items-center gap-2">
             <Clock size={16} /> Service Log
           </h3>
           <div className="text-xs font-bold text-zinc-500 bg-zinc-950 px-3 py-1.5 rounded-lg border border-white/10">
-            {history.length} Records
+            {stats.customers} Records
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto flex-1">
           {loading ? (
-            <div className="p-10 flex justify-center">
+            <div className="p-10 flex justify-center items-center h-full">
               <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
             </div>
           ) : history.length === 0 ? (
-            <div className="p-10 text-center flex flex-col items-center">
+            <div className="p-10 text-center flex flex-col items-center justify-center h-full">
               <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mb-3">
                 <Search className="text-zinc-600" size={24} />
               </div>
@@ -171,6 +189,40 @@ const SalonHistory = () => {
             </table>
           )}
         </div>
+
+        {/* --- CHANGED START: Pagination Footer Controls --- */}
+        {!loading && history.length > 0 && totalPages > 1 && (
+          <div className="p-4 border-t border-white/5 bg-zinc-950/40 flex items-center justify-between">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className={`flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                page === 1 
+                  ? "bg-zinc-900 text-zinc-600 cursor-not-allowed border border-white/5" 
+                  : "bg-zinc-800 text-white hover:bg-zinc-700 border border-white/10 active:scale-95"
+              }`}
+            >
+              <ChevronLeft size={16} /> Previous
+            </button>
+
+            <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">
+              Page {page} of {totalPages}
+            </span>
+
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className={`flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                page === totalPages 
+                  ? "bg-zinc-900 text-zinc-600 cursor-not-allowed border border-white/5" 
+                  : "bg-zinc-800 text-white hover:bg-zinc-700 border border-white/10 active:scale-95"
+              }`}
+            >
+              Next <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
+        {/* --- CHANGED END --- */}
       </div>
     </div>
   );
