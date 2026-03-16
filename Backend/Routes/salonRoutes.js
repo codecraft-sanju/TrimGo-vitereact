@@ -29,11 +29,9 @@ router.post("/verify-otp", verifySalonRegistrationOtp);
 // Login Salon
 router.post("/login", loginSalon);
 
-// Logout Salon
 router.post("/logout", logoutSalon);
 
-// GET All Salons (For User Map & Search Filters)
-// User bina login kiye bhi salons dekh sakta hai, isliye public rakha hai
+
 router.get("/all", getAllSalons); 
 
 
