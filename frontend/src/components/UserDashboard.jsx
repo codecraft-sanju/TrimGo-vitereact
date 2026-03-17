@@ -1,34 +1,17 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
-  MapPin,
-  Clock,
-  Users,
-  Star,
-  Ticket,
-  X,
-  Filter,
-  Search,
-  Check,
-  Sparkles,
-  Navigation, 
-  Crosshair, 
-  Menu,
-  Gift,
-  BadgeCheck,
-  Loader2, 
-  AlertCircle,
-  Image as ImageIcon,
-  ChevronLeft, 
-  ChevronRight,
-  Scissors,
-  CheckCircle
+  MapPin, Clock, Users, Star, Ticket, X, Filter, Search, Check,
+  Sparkles, Navigation, Crosshair, Menu, Gift, BadgeCheck,
+  Loader2, AlertCircle, Image as ImageIcon, ChevronLeft,
+  ChevronRight, Scissors, CheckCircle
 } from "lucide-react";
 import { io } from "socket.io-client"; 
 import Lenis from 'lenis'; 
 import api from "../utils/api"; 
 import { motion, AnimatePresence } from "framer-motion"; 
+import toast from 'react-hot-toast'; // Added for sleek notifications
 
-// Imports
+import SalonReviewsModal from "./SalonReviewsModal";
 import MapSalon from "./MapSalon";
 import { BackgroundAurora, NoiseOverlay, Logo } from "./SharedUI";
 import AIConcierge from "./AIConcierge"; 
@@ -132,7 +115,7 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 };
 
 /* ---------------------------------
-   RE-DESIGNED: PREMIUM SERVICE DRAWER
+   PREMIUM SERVICE DRAWER
 ---------------------------------- */
 const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => { 
   const [selectedServices, setSelectedServices] = useState([]);
@@ -173,7 +156,6 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
-      {/* Backdrop */}
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -182,7 +164,6 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => {
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
       />
 
-      {/* Drawer Panel */}
       <motion.div 
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
@@ -190,12 +171,10 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => {
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
         className="relative bg-white w-full max-w-lg sm:rounded-3xl rounded-t-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10"
       >
-        {/* Mobile Drag Handle */}
         <div className="w-full flex justify-center pt-4 pb-1 sm:hidden">
           <div className="w-12 h-1.5 bg-zinc-200 rounded-full"></div>
         </div>
 
-        {/* Header */}
         <div className="px-8 py-5 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/50">
           <div>
             <h2 className="text-xl font-black text-zinc-900 tracking-tight">{salon.salonName}</h2>
@@ -210,7 +189,6 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => {
           </button>
         </div>
 
-        {/* Services List */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
           {servicesList.length === 0 ? (
              <div className="text-center text-zinc-400 py-12 text-sm font-medium">No services listed yet.</div>
@@ -245,9 +223,7 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => {
           )}
         </div>
 
-        {/* Sticky Action Footer */}
         <div className="p-6 bg-white border-t border-zinc-100 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)]">
-          {/* Reaching Time Selection */}
           <div className="mb-6">
             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] block mb-3 ml-1">Arrival Estimate</label>
             <div className="flex gap-2">
@@ -335,11 +311,16 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
   const [routeDestination, setRouteDestination] = useState(null); 
   const watchId = useRef(null); 
 
-  // --- NEW TIMER STATE ---
   const [timeLeftSeconds, setTimeLeftSeconds] = useState(0);
   const [timeLeftStr, setTimeLeftStr] = useState("");
-  
   const [showAcceptedAnim, setShowAcceptedAnim] = useState(false);
+
+  // --- NEW REVIEW STATES ---
+  const [reviewRating, setReviewRating] = useState(0);
+  const [hoverStar, setHoverStar] = useState(0);
+  const [reviewText, setReviewText] = useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [viewingReviewsSalon, setViewingReviewsSalon] = useState(null);
 
   // --- LENIS SMOOTH SCROLL ---
   useEffect(() => {
@@ -365,7 +346,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
   // --- LOCATION TRACKING ---
   const startLocationTracking = () => {
     if (!navigator.geolocation) {
-        alert("Geolocation is not supported by your browser.");
+        toast.error("Geolocation is not supported by your browser.");
         setSelectedCity("Location N/A");
         return;
     }
@@ -420,13 +401,13 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
  
   const handleRoute = (salon) => {
     if (!userLocation) {
-        alert("Please enable location first to get directions.");
+        toast.error("Please enable location first to get directions.");
         startLocationTracking();
         return;
     }
 
     if(!salon.latitude || !salon.longitude) {
-        alert("Salon location not found on map.");
+        toast.error("Salon location not found on map.");
         return;
     }
 
@@ -485,7 +466,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
 
     socket.on("request_rejected", () => {
         setActiveTicket(null);
-        alert("Your request was rejected by the salon.");
+        toast.error("Your request was rejected by the salon.");
     });
 
     socket.on("status_change", (data) => {
@@ -496,10 +477,15 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         setActiveTicket(updatedTicket); 
     });
 
-    socket.on("service_completed", () => {
-        setActiveTicket(null);
-        alert("Service completed! Please rate your experience.");
+    // --- CHANGED START: MORPH INTO REVIEW ---
+    socket.on("service_completed", (completedTicket) => {
+        // Ticket ka status 'completed' set karte hain taki review UI render ho
+        setActiveTicket(completedTicket);
+        // Clean review states
+        setReviewRating(0);
+        setReviewText("");
     });
+    // --- CHANGED END ---
 
     fetchSalons();
 
@@ -546,16 +532,16 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
     return () => clearTimeout(timer);
   }, [searchTerm, filterType]);
 
-  // --- ROBUST TIMER LOGIC ---
+  // --- TIMER LOGIC ---
   useEffect(() => {
-    if (activeTicket) {
+    if (activeTicket && activeTicket.status !== 'completed') {
       const seconds = activeTicket.myWaitTimeInSeconds ?? activeTicket.waitTimeInSeconds ?? (activeTicket.myWaitTime * 60) ?? ((activeTicket.totalTime || 0) * 60);
       setTimeLeftSeconds(seconds > 0 ? Math.floor(seconds) : 0);
     }
-  }, [activeTicket?.myWaitTimeInSeconds, activeTicket?.waitTimeInSeconds, activeTicket?.myWaitTime, activeTicket?._id]);
+  }, [activeTicket?.myWaitTimeInSeconds, activeTicket?.waitTimeInSeconds, activeTicket?.myWaitTime, activeTicket?._id, activeTicket?.status]);
 
   useEffect(() => {
-    if (!activeTicket || activeTicket.status === 'serving') return;
+    if (!activeTicket || activeTicket.status === 'serving' || activeTicket.status === 'completed') return;
     const intervalId = setInterval(() => {
       setTimeLeftSeconds(prev => (prev > 0 ? prev - 1 : 0));
     }, 1000);
@@ -607,11 +593,11 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
 
   const handleOpenBooking = (salon) => {
     if(activeTicket) {
-        alert("You already have an active request. Cancel it to join another queue.");
+        toast.error("You already have an active request. Cancel or review it first.");
         return;
     }
     if(!salon.isOnline) {
-        alert("This salon is currently offline.");
+        toast.error("This salon is currently offline.");
         return;
     }
     setActiveBookingSalon(salon);
@@ -642,9 +628,10 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         if(data.success) {
             setActiveTicket(data.ticket);
             setActiveBookingSalon(null);
+            toast.success(`Request sent to ${salon.salonName}`);
         }
     } catch (error) {
-        alert(error.response?.data?.message || "Failed to join queue");
+        toast.error(error.response?.data?.message || "Failed to join queue");
     } finally {
         setIsJoiningQueue(false); 
     }
@@ -659,10 +646,11 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
           const { data } = await api.post("/queue/cancel", { ticketId: activeTicket._id });
           if(data.success) {
               setActiveTicket(null); 
+              toast.success("Ticket cancelled successfully.");
           }
       } catch (error) {
           console.error(error);
-          alert("Failed to cancel ticket");
+          toast.error("Failed to cancel ticket");
       } finally {
           setCanceling(false);
       }
@@ -672,6 +660,27 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
       if(salon.gallery && salon.gallery.length > 0) {
           setGalleryModal({ isOpen: true, images: salon.gallery, name: salon.salonName });
       }
+  };
+
+  // --- NEW: SUBMIT REVIEW FUNCTION ---
+  const submitReview = async () => {
+    setIsSubmittingReview(true);
+    try {
+      const { data } = await api.post("/reviews/add", {
+        salonId: activeTicket.salonId._id || activeTicket.salonId,
+        ticketId: activeTicket._id,
+        rating: reviewRating,
+        reviewText: reviewText
+      });
+      if(data.success) {
+        toast.success("Review submitted! Thank you.");
+        setActiveTicket(null); // Dismiss the card
+      }
+    } catch(err) {
+      toast.error(err.response?.data?.message || "Failed to submit review.");
+    } finally {
+      setIsSubmittingReview(false);
+    }
   };
 
   return (
@@ -713,6 +722,15 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         images={galleryModal.images} 
         salonName={galleryModal.name} 
       />
+      
+      <AnimatePresence>
+        {viewingReviewsSalon && (
+          <SalonReviewsModal 
+            salon={viewingReviewsSalon} 
+            onClose={() => setViewingReviewsSalon(null)} 
+          />
+        )}
+      </AnimatePresence>
 
       {/* HEADER */}
       <header className="fixed top-0 left-0 w-full z-40 bg-white/80 backdrop-blur-xl border-b border-zinc-200/60 transition-all duration-300">
@@ -927,15 +945,32 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                       </div>
                       
                       <div className="flex flex-col items-end">
-                        <div className="flex items-center justify-end gap-1 text-sm font-bold text-zinc-900 bg-zinc-50 px-2 py-1 rounded-lg">
-                          <Star className="text-yellow-400 fill-yellow-400" size={14} />
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if(salon.reviewsCount > 0) {
+                              setViewingReviewsSalon(salon);
+                            } else {
+                              toast("No reviews yet!", { icon: "⭐" });
+                            }
+                          }}
+                          className="flex items-center justify-end gap-1 text-sm font-bold text-zinc-900 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-100 hover:bg-yellow-100 cursor-pointer active:scale-95 transition-all"
+                        >
+                          <Star className="text-yellow-500 fill-yellow-500" size={14} />
                           {salon.rating ? salon.rating.toFixed(1) : "New"}
                         </div>
-                        <p className="text-[10px] text-zinc-400 text-right mt-1">{salon.reviewsCount || 0} reviews</p>
+                        <p 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if(salon.reviewsCount > 0) setViewingReviewsSalon(salon);
+                          }}
+                          className="text-[10px] text-zinc-400 text-right mt-1.5 underline decoration-zinc-200 underline-offset-2 cursor-pointer hover:text-zinc-600"
+                        >
+                          {salon.reviewsCount || 0} reviews
+                        </p>
                       </div>
                     </div>
 
-                    {/* --- CHANGED START --- */}
                     <div className="grid grid-cols-3 gap-2 py-3 border-y border-zinc-50">
                       <div className="flex flex-col items-center sm:items-start">
                         <span className="text-[9px] uppercase text-zinc-400 font-bold tracking-tight">Waiting</span>
@@ -945,7 +980,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                         </div>
                       </div>
                       <div className="flex flex-col items-center sm:items-start border-x border-zinc-100 px-2">
-                        {/* Asterisk added to Est. Time */}
                         <span className="text-[9px] uppercase text-zinc-400 font-bold tracking-tight">Est. Time*</span>
                         <div className="flex items-center gap-1 mt-0.5">
                           <Clock size={12} className="text-zinc-400" />
@@ -962,7 +996,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                         </div>
                       </div>
                     </div>
-                    {/* --- CHANGED END --- */}
 
                     <div className="flex items-center justify-between gap-3 pt-1 mt-auto">
                       <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 font-bold bg-emerald-50/50 px-2 py-1 rounded-lg">
@@ -1010,9 +1043,82 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         />
       </main>
 
-      {/* ACTIVE TICKET FLOATING CARD */}
+      {/* --- ACTIVE TICKET / REVIEW FLOATING CARD --- */}
       {activeTicket && (
         <div className="fixed bottom-4 left-4 right-4 z-50 animate-in slide-in-from-bottom-20 duration-500">
+          
+          {activeTicket.status === 'completed' ? (
+            /* --- REVIEW MORPH STATE --- */
+            <div className="bg-emerald-950/95 backdrop-blur-lg rounded-3xl shadow-2xl p-6 border border-emerald-500/30 text-white flex flex-col max-w-lg mx-auto relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-teal-300 animate-[shimmer_2s_infinite]"></div>
+
+              <div className="flex justify-between items-start mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                    <CheckCircle className="text-emerald-400" size={28} />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-xl">Service Completed!</h3>
+                    <p className="text-emerald-200/80 text-xs font-medium">How was {activeTicket.salonId?.salonName || "your visit"}?</p>
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    const currentTicketId = activeTicket._id;
+                    setActiveTicket(null); // UI se turant hatao
+                    try {
+                      // Backend ko batao ki dismiss kar diya h
+                      await api.post("/queue/dismiss-review", { ticketId: currentTicketId });
+                    } catch(e) {
+                      console.error("Failed to dismiss review", e);
+                    }
+                  }}
+                  className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition active:scale-95"
+                  title="Close without reviewing"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="flex justify-center gap-2 mb-4">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => setReviewRating(star)}
+                    onMouseEnter={() => setHoverStar(star)}
+                    onMouseLeave={() => setHoverStar(0)}
+                    className="transform transition-transform hover:scale-110 active:scale-90"
+                  >
+                    <Star
+                      size={40}
+                      className={`transition-colors duration-200 ${
+                        star <= (hoverStar || reviewRating)
+                          ? "text-yellow-400 fill-yellow-400"
+                          : "text-white/20 fill-transparent"
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                rows="2"
+                placeholder="Write a quick review..."
+                value={reviewText}
+                onChange={(e) => setReviewText(e.target.value)}
+                className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-sm text-white placeholder:text-white/30 focus:border-emerald-500/50 outline-none resize-none mb-4"
+              />
+
+              <button
+                onClick={submitReview}
+                disabled={reviewRating === 0 || isSubmittingReview}
+                className="w-full py-3.5 bg-white text-emerald-950 font-black rounded-xl hover:bg-emerald-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:active:scale-100 active:scale-95"
+              >
+                {isSubmittingReview ? <Loader2 size={18} className="animate-spin" /> : "Submit Review"}
+              </button>
+            </div>
+          ) : (
+            /* --- NORMAL ACTIVE TICKET STATE --- */
             <div className="bg-zinc-900/95 backdrop-blur-lg rounded-2xl shadow-2xl p-4 border border-white/10 text-white flex flex-col max-w-lg mx-auto">
                 <div className="flex justify-between items-start">
                     <div>
@@ -1022,7 +1128,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                         </div>
                         
                         <div className="flex items-center justify-between">
-                            <h3 className="font-bold text-lg">{activeTicket.salonId?.salonName || "Salon"}</h3>
+                            <h3 className="font-bold text-lg">{activeTicket.salonId?.salonName || activeTicket.salonName || "Salon"}</h3>
                             
                             {activeTicket.status === 'pending' ? (
                               <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/20 text-yellow-400 rounded-lg ml-4 border border-yellow-500/30">
@@ -1037,7 +1143,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                             ) : null}
                         </div>
                         
-                     <p className="text-xs text-zinc-400 mt-2">Queue #{activeTicket.queueNumber || "-"} • {activeTicket.status.toUpperCase()}</p>
+                        <p className="text-xs text-zinc-400 mt-2">Queue #{activeTicket.queueNumber || "-"} • {activeTicket.status.toUpperCase()}</p>
                     </div>
                     <div className="text-right">
                         <div className="text-2xl font-black">₹{activeTicket.totalPrice}</div>
@@ -1073,14 +1179,13 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                     )}
                 </div>
 
-                {/* --- CHANGED START: Floating Card Disclaimer --- */}
                 <div className="mt-3 text-center bg-white/5 border border-white/10 p-1.5 rounded-lg">
                    <span className="text-[9px] text-zinc-400 leading-tight block">
                       *Wait time is estimated. Actual time may vary based on ongoing services.
                    </span>
                 </div>
-                {/* --- CHANGED END --- */}
             </div>
+          )}
         </div>
       )}
     </div>

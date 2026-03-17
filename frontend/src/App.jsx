@@ -294,6 +294,9 @@ const AppContent = () => {
             const { data } = await api.get("/queue/my-ticket");
             if (data.success && data.ticket) {
               setActiveTicket({
+                // CHANGED START
+                _id: data.ticket._id,
+                // CHANGED END
                 salonName: data.ticket.salonId.salonName,
                 number: data.ticket.queueNumber,
                 eta: data.ticket.totalTime,
@@ -411,6 +414,9 @@ const AppContent = () => {
     }
     toast.success(`Request sent to ${ticketData.salonName}`);
     setActiveTicket({
+      // CHANGED START
+      _id: ticketData._id,
+      // CHANGED END
       salonName: ticketData.salonName,
       number: ticketData.number,
       eta: ticketData.eta,
@@ -439,9 +445,21 @@ const AppContent = () => {
         {activeTicket && !isDashboard && !showPreloader && (
           <LiveTicket
             ticket={activeTicket}
-            onCancel={() => {
-              setActiveTicket(null);
+            // CHANGED START
+            onCancel={async () => {
+              if(!window.confirm("Are you sure you want to cancel your spot?")) return;
+              try {
+                const { data } = await api.post("/queue/cancel", { ticketId: activeTicket._id });
+                if(data.success) {
+                  setActiveTicket(null);
+                  toast.success("Ticket cancelled successfully.");
+                }
+              } catch (error) {
+                console.error(error);
+                toast.error("Failed to cancel ticket.");
+              }
             }}
+            // CHANGED END
           />
         )}
 

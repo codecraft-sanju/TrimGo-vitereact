@@ -11,6 +11,7 @@ import authRoutes from "./Routes/authRoutes.js";
 import salonRoutes from "./Routes/salonRoutes.js";
 import queueRoutes from "./Routes/queueRoutes.js"; // Queue System ke liye
 import adminRoutes from "./Routes/adminRoutes.js"; // Admin Dashboard ke liye
+import reviewRoutes from "./Routes/reviewRoutes.js";
 
 // Load Env
 dotenv.config();
@@ -75,6 +76,7 @@ app.use("/api/auth", authRoutes);   // User Auth
 app.use("/api/salon", salonRoutes); // Salon Auth & Profile
 app.use("/api/queue", queueRoutes); // Real-time Queue Logic
 app.use("/api/admin", adminRoutes); // Admin Stats
+app.use("/api/reviews", reviewRoutes);
 
 // Test Route
 app.get("/", (req, res) => {

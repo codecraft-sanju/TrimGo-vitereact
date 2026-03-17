@@ -459,7 +459,7 @@ export const completeService = async (req, res) => {
     }
 
     await Salon.findByIdAndUpdate(salonId, {
-        $inc: { revenue: ticket.totalPrice, reviewsCount: 1 } 
+        $inc: { revenue: ticket.totalPrice } 
     }, { session });
 
     await session.commitTransaction();
@@ -487,16 +487,20 @@ export const completeService = async (req, res) => {
 /* -------------------------------------------------------------------------- */
 export const getMyTicket = async (req, res) => {
   try {
+    // --- CHANGED START: Added logic to fetch completed but unreviewed tickets ---
     const ticket = await Ticket.findOne({
       userId: req.user._id,
-      status: { $in: ["pending", "waiting", "serving"] },
-    }).populate("salonId", "salonName address");
+      $or: [
+        { status: { $in: ["pending", "waiting", "serving"] } },
+        { status: "completed", isReviewed: false } // Catch missed reviews!
+      ]
+    }).sort({ updatedAt: -1 }).populate("salonId", "salonName address");
 
     if (!ticket) {
       return res.status(200).json({ success: true, ticket: null });
     }
 
-    if (ticket.status === 'pending' || ticket.status === 'waiting' || ticket.status === 'serving') {
+    if (['pending', 'waiting', 'serving'].includes(ticket.status)) {
       const stats = await getQueueStats(ticket.salonId._id, req.user._id);
       const ticketData = ticket.toObject();
       ticketData.myWaitTime = stats.waitTimeAhead;
@@ -506,7 +510,9 @@ export const getMyTicket = async (req, res) => {
       return res.status(200).json({ success: true, ticket: ticketData });
     }
 
+    // If status is completed (and isReviewed is false), just return the ticket
     res.status(200).json({ success: true, ticket });
+    // --- CHANGED END ---
   } catch (err) {
     res.status(500).json({ success: false, message: "Error fetching ticket" });
   }
@@ -785,5 +791,25 @@ export const getSalonHistory = async (req, res) => {
   } catch (err) {
     console.error("Salon History Error:", err);
     res.status(500).json({ success: false, message: "Error fetching salon history" });
+  }
+};
+
+/* -------------------------------------------------------------------------- */
+/* --- NEW: DISMISS REVIEW ACTION                                             */
+/* -------------------------------------------------------------------------- */
+export const dismissReviewPrompt = async (req, res) => {
+  try {
+    const { ticketId } = req.body;
+    
+    // Mark the ticket as reviewed so it doesn't pop up again
+    await Ticket.findOneAndUpdate(
+      { _id: ticketId, userId: req.user._id },
+      { isReviewed: true } 
+    );
+    
+    res.status(200).json({ success: true });
+  } catch (err) {
+    console.error("Dismiss Review Error:", err);
+    res.status(500).json({ success: false, message: "Error dismissing review" });
   }
 };

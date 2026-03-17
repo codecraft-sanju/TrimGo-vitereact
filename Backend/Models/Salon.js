@@ -162,16 +162,12 @@ salonSchema.pre("save", async function () {
   }
 });
 
-// -------------------------------------
-// Compare Password
-// -------------------------------------
+
 salonSchema.methods.comparePassword = async function (plainPassword) {
   return bcrypt.compare(plainPassword, this.password);
 };
 
-// -------------------------------------
-// Hide password in response
-// -------------------------------------
+
 salonSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;

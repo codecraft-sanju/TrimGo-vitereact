@@ -2,26 +2,24 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   Users, Settings, LogOut, Bell, DollarSign, Clock, CheckCircle, Scissors,
   Play, CheckSquare, X, UserPlus, Home, LayoutDashboard, Image as ImageIcon, Star, 
-  Loader2, UploadCloud, Minus, Plus, Trash2, Power, AlertTriangle, Zap, Armchair, UserCheck, Clock8, FileText
+  Loader2, UploadCloud, Minus, Plus, Trash2, Power, AlertTriangle, Zap, Armchair, UserCheck, Clock8, FileText, MessageSquare
 } from "lucide-react";
 import api from "../utils/api";
 import { io } from "socket.io-client";
 
-// --- CHANGED START: IMPORT EXTERNAL COMPONENTS ---
+// --- EXTERNAL COMPONENTS ---
 import SalonHistory from "./SalonHistory";
+import SalonReviews from "./SalonReviews"; // <-- NEW IMPORT
 import { 
   WalkInModal, 
   ProfileModal, 
   AssignmentModal, 
   ExtendTimeModal, 
   AddExtraServiceModal 
-} from "./SalonModals"; // Modal import kiye gaye hain
-// --- CHANGED END ---
+} from "./SalonModals";
 
 const CLOUDINARY_UPLOAD_URL = "https://api.cloudinary.com/v1_1/dvoenforj/image/upload";
 const UPLOAD_PRESET = "salon_preset";
-
-// 🔥 NEW: Notification Sound URL (Distinct Bell Sound)
 const NOTIFICATION_SOUND_URL = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"; 
 
 const uploadToCloudinary = async (file) => {
@@ -43,7 +41,6 @@ const uploadToCloudinary = async (file) => {
   }
 };
 
-// --- CONSTANTS: SUGGESTED SERVICES (Quick Add Menu) ---
 const SUGGESTED_SERVICES = [
   { name: "Haircut (Men)", price: 200, time: 30, category: "Hair" },
   { name: "Haircut (Women)", price: 400, time: 45, category: "Hair" },
@@ -58,8 +55,6 @@ const SUGGESTED_SERVICES = [
   { name: "Hair Color (Global)", price: 1500, time: 90, category: "Hair" },
   { name: "Bleach", price: 250, time: 20, category: "Face" },
 ];
-
-// --- MAIN COMPONENT ---
 
 const SalonDashboard = ({ salon, onLogout }) => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -101,7 +96,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
   const [profileImage, setProfileImage] = useState(null);
   const [assignmentModal, setAssignmentModal] = useState({ isOpen: false, customer: null });
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
-
   const [extendTimeModal, setExtendTimeModal] = useState({ isOpen: false, customer: null });
   const [extraServiceModal, setExtraServiceModal] = useState({ isOpen: false, customer: null });
 
@@ -110,10 +104,9 @@ const SalonDashboard = ({ salon, onLogout }) => {
       const audio = new Audio(NOTIFICATION_SOUND_URL);
       audio.volume = 1.0;
       const playPromise = audio.play();
-
       if (playPromise !== undefined) {
         playPromise.catch((error) => {
-          console.warn("Audio play blocked by browser (user needs to interact first).", error);
+          console.warn("Audio play blocked by browser.", error);
         });
       }
     } catch (err) {
@@ -450,7 +443,12 @@ const SalonDashboard = ({ salon, onLogout }) => {
           <span className="font-bold text-lg">TrimGo</span>
         </div>
         <nav className="flex-1 py-6 flex flex-col gap-2 px-3">
-          {[{ id: 'dashboard', icon: LayoutDashboard, label: "Dashboard" }, { id: 'history', icon: FileText, label: "History" }, { id: 'settings', icon: Settings, label: "Settings" }].map((item) => (
+          {[
+            { id: 'dashboard', icon: LayoutDashboard, label: "Dashboard" }, 
+            { id: 'history', icon: FileText, label: "History" }, 
+            { id: 'reviews', icon: Star, label: "Reviews" }, // <-- ADDED REVIEWS TAB
+            { id: 'settings', icon: Settings, label: "Settings" }
+          ].map((item) => (
             <button key={item.id} onClick={() => setActiveTab(item.id)} className={`flex items-center p-3 rounded-xl cursor-pointer transition-all w-full text-left ${activeTab === item.id ? 'bg-white/10 text-white shadow-lg shadow-white/5 border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
               <item.icon size={20} strokeWidth={2} />
               <span className="ml-3 font-medium">{item.label}</span>
@@ -461,10 +459,10 @@ const SalonDashboard = ({ salon, onLogout }) => {
       </aside >
 
       {/* MAIN CONTENT AREA */}
-      < main className="flex-1 flex flex-col relative z-10 h-full overflow-hidden" >
+      <main className="flex-1 flex flex-col relative z-10 h-full overflow-hidden">
 
         {/* HEADER */}
-        < header className="h-16 lg:h-20 border-b border-white/5 bg-zinc-900/60 backdrop-blur-md flex items-center justify-between px-4 lg:px-8 shrink-0 z-30" >
+        <header className="h-16 lg:h-20 border-b border-white/5 bg-zinc-900/60 backdrop-blur-md flex items-center justify-between px-4 lg:px-8 shrink-0 z-30">
           <div className="flex items-center gap-3">
             <div className="lg:hidden w-8 h-8 bg-white text-black rounded-lg flex items-center justify-center font-bold text-xs">TG</div>
             <div className="flex flex-col">
@@ -487,16 +485,14 @@ const SalonDashboard = ({ salon, onLogout }) => {
               {profileImage ? <img src={profileImage} alt="Profile" className="w-full h-full rounded-full object-cover" /> : <div className="w-full h-full rounded-full bg-zinc-900 flex items-center justify-center text-xs font-bold text-white">TG</div>}
             </div>
           </div>
-        </header >
+        </header>
 
         {/* SCROLLABLE CONTENT */}
-        < div className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6 pb-24 lg:pb-6 custom-scrollbar" >
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6 pb-24 lg:pb-6 custom-scrollbar">
 
           {/* === VIEW: DASHBOARD === */}
-          {
-            activeTab === 'dashboard' && (
+          {activeTab === 'dashboard' && (
               <div className="max-w-7xl mx-auto space-y-6">
-
                 {/* SETUP WARNING */}
                 {isServicesEmpty && (
                   <div className="bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 p-4 lg:p-6 rounded-2xl lg:rounded-3xl flex flex-col md:flex-row items-center justify-between gap-4 animate-pulse">
@@ -589,7 +585,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
 
                 {/* MAIN OPERATIONAL AREA */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-auto lg:h-[600px]">
-
                   {/* LEFT: QUEUE LIST */}
                   <div className="lg:col-span-4 bg-zinc-900/30 border border-white/5 rounded-3xl overflow-hidden flex flex-col h-[400px] lg:h-full">
                     
@@ -735,20 +730,24 @@ const SalonDashboard = ({ salon, onLogout }) => {
                   </div>
                 </div>
               </div>
-            )
-          }
+          )}
 
-          {/* --- CHANGED START: VIEW HISTORY & REPORTS --- */}
-          {
-            activeTab === 'history' && (
+          {/* === VIEW: HISTORY === */}
+          {activeTab === 'history' && (
               <SalonHistory />
-            )
-          }
-          {/* --- CHANGED END --- */}
+          )}
+
+          {/* === VIEW: REVIEWS === */}
+          {activeTab === 'reviews' && (
+              <SalonReviews 
+                 salonId={salon._id} 
+                 salonRating={salon.rating} 
+                 totalReviews={salon.reviewsCount} 
+              />
+          )}
 
           {/* === VIEW: SETTINGS === */}
-          {
-            activeTab === 'settings' && (
+          {activeTab === 'settings' && (
               <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 pb-20">
 
                 {/* 1. Services Manager */}
@@ -854,16 +853,16 @@ const SalonDashboard = ({ salon, onLogout }) => {
                   </div>
                 </div>
               </div>
-            )
-          }
-        </div >
+          )}
 
-        {/* --- MOBILE: BOTTOM NAVIGATION BAR (App-Like) --- */}
-        < div className="lg:hidden fixed bottom-0 left-0 w-full bg-zinc-900/80 backdrop-blur-xl border-t border-white/10 z-50 pb-safe" >
+        </div>
+
+        {/* --- MOBILE: BOTTOM NAVIGATION BAR --- */}
+        <div className="lg:hidden fixed bottom-0 left-0 w-full bg-zinc-900/80 backdrop-blur-xl border-t border-white/10 z-50 pb-safe">
           <div className="flex items-center justify-around h-16 px-2">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`flex flex-col items-center justify-center w-16 h-full space-y-1 ${activeTab === 'dashboard' ? 'text-white' : 'text-zinc-500'}`}
+              className={`flex flex-col items-center justify-center w-14 h-full space-y-1 ${activeTab === 'dashboard' ? 'text-white' : 'text-zinc-500'}`}
             >
               <Home size={22} strokeWidth={activeTab === 'dashboard' ? 3 : 2} />
               <span className="text-[10px] font-medium">Home</span>
@@ -871,7 +870,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
 
             <button
               onClick={() => setActiveTab('history')}
-              className={`flex flex-col items-center justify-center w-16 h-full space-y-1 ${activeTab === 'history' ? 'text-white' : 'text-zinc-500'}`}
+              className={`flex flex-col items-center justify-center w-14 h-full space-y-1 ${activeTab === 'history' ? 'text-white' : 'text-zinc-500'}`}
             >
               <FileText size={22} strokeWidth={activeTab === 'history' ? 3 : 2} />
               <span className="text-[10px] font-medium">History</span>
@@ -885,18 +884,27 @@ const SalonDashboard = ({ salon, onLogout }) => {
               <UserPlus size={24} />
             </button>
 
+            {/* NEW: MOBILE REVIEWS TAB */}
+            <button
+              onClick={() => setActiveTab('reviews')}
+              className={`flex flex-col items-center justify-center w-14 h-full space-y-1 ${activeTab === 'reviews' ? 'text-white' : 'text-zinc-500'}`}
+            >
+              <Star size={22} strokeWidth={activeTab === 'reviews' ? 3 : 2} />
+              <span className="text-[10px] font-medium">Reviews</span>
+            </button>
+
             <button
               onClick={() => setActiveTab('settings')}
-              className={`flex flex-col items-center justify-center w-16 h-full space-y-1 ${activeTab === 'settings' ? 'text-white' : 'text-zinc-500'}`}
+              className={`flex flex-col items-center justify-center w-14 h-full space-y-1 ${activeTab === 'settings' ? 'text-white' : 'text-zinc-500'}`}
             >
               <Settings size={22} strokeWidth={activeTab === 'settings' ? 3 : 2} />
               <span className="text-[10px] font-medium">Setup</span>
             </button>
           </div>
-        </div >
+        </div>
 
-      </main >
-    </div >
+      </main>
+    </div>
   );
 };
 

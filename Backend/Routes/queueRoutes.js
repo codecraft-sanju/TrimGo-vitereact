@@ -14,7 +14,8 @@ import {
     addServicesToTicket,
     extendServiceTime,
     // --- CHANGED START ---
-    getSalonHistory 
+    getSalonHistory ,
+    dismissReviewPrompt
     // --- CHANGED END ---
 } from "../Controllers/queueController.js";
 
@@ -63,5 +64,6 @@ router.post("/add-services", protectSalon, addServicesToTicket);
 
 // 10. Extend Service Time for delays (Salon Dashboard se)
 router.post("/extend-time", protectSalon, extendServiceTime);
+router.post("/dismiss-review", protect, dismissReviewPrompt);
 
 export default router;
