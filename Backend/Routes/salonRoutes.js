@@ -6,17 +6,13 @@ import {
   // CHANGED END
   loginSalon,
   logoutSalon,
-  getAllSalons,       // <-- New Import
-  updateSalonProfile  ,
-  updateActiveChairs// <-- New Import
+  getAllSalons,       
+  updateSalonProfile  , updateActiveChairs,
+  editStaff, deleteStaff
 } from "../Controllers/salonController.js";
 import { protectSalon } from "../Middleware/salonMiddleware.js";
 
 const router = express.Router();
-
-/* =========================================
-   PUBLIC ROUTES
-   ========================================= */
 
 // Register New Salon
 router.post("/register", registerSalon);
@@ -33,6 +29,8 @@ router.post("/logout", logoutSalon);
 
 
 router.get("/all", getAllSalons); 
+router.put("/staff/edit", protectSalon, editStaff); 
+router.delete("/staff/:staffId", protectSalon, deleteStaff);
 
 
 // Get Current Salon Profile

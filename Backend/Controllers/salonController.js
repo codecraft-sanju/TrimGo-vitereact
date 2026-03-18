@@ -419,3 +419,90 @@ export const updateActiveChairs = async (req, res) => {
     res.status(500).json({ success: false, message: "Server Error updating chairs" });
   }
 };
+
+
+/* -------------------------------------------------------------------------- */
+/* SALON ACTION: STAFF MANAGEMENT (EDIT & SOFT DELETE)                        */
+/* -------------------------------------------------------------------------- */
+
+// Edit Staff Details
+export const editStaff = async (req, res) => {
+  try {
+    const salonId = req.salon._id;
+    const { staffId, name, status, isActive } = req.body;
+
+    if (!staffId || !name) {
+      return res.status(400).json({ success: false, message: "Staff ID and Name are required" });
+    }
+
+    // Mongoose positional operator ($) ka use karke specific staff ko update kar rahe hain
+    const updatedSalon = await Salon.findOneAndUpdate(
+      { _id: salonId, "staff._id": staffId },
+      {
+        $set: {
+          "staff.$.name": name,
+          "staff.$.status": status || "available",
+          "staff.$.isActive": isActive !== undefined ? isActive : true
+        }
+      },
+      { new: true }
+    );
+
+    if (!updatedSalon) {
+      return res.status(404).json({ success: false, message: "Salon or Staff member not found" });
+    }
+
+    // Frontend par real-time list update karne ke liye (Optional but recommended)
+    req.io.to(`salon_${salonId}`).emit("queue_updated");
+
+    res.status(200).json({
+      success: true,
+      message: "Staff details updated successfully",
+      staff: updatedSalon.staff
+    });
+
+  } catch (err) {
+    console.error("Edit Staff Error:", err);
+    res.status(500).json({ success: false, message: "Server Error while updating staff" });
+  }
+};
+
+// Delete Staff (Soft Delete)
+export const deleteStaff = async (req, res) => {
+  try {
+    const salonId = req.salon._id;
+    const { staffId } = req.params; // ID hum URL params se lenge
+
+    if (!staffId) {
+      return res.status(400).json({ success: false, message: "Staff ID is required" });
+    }
+
+    // Soft delete: isActive ko false aur status ko unavailable kar rahe hain
+    const updatedSalon = await Salon.findOneAndUpdate(
+      { _id: salonId, "staff._id": staffId },
+      {
+        $set: {
+          "staff.$.isActive": false,
+          "staff.$.status": "unavailable"
+        }
+      },
+      { new: true }
+    );
+
+    if (!updatedSalon) {
+      return res.status(404).json({ success: false, message: "Salon or Staff member not found" });
+    }
+
+    req.io.to(`salon_${salonId}`).emit("queue_updated");
+
+    res.status(200).json({
+      success: true,
+      message: "Staff member removed successfully",
+      staff: updatedSalon.staff
+    });
+
+  } catch (err) {
+    console.error("Delete Staff Error:", err);
+    res.status(500).json({ success: false, message: "Server Error while removing staff" });
+  }
+};

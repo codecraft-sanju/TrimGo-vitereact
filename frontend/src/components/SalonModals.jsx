@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -430,6 +430,79 @@ export const AddExtraServiceModal = ({ isOpen, onClose, services, customer, onCo
             className="w-full py-3.5 bg-purple-500 text-white font-bold rounded-xl hover:bg-purple-400 transition-colors mt-2 active:scale-95"
           >
             Add to Current Ticket
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 7. EDIT STAFF MODAL
+export const EditStaffModal = ({ isOpen, onClose, staffData, onConfirm }) => {
+  const [name, setName] = useState("");
+  const [isActive, setIsActive] = useState(true);
+
+  // Jab bhi modal khulega, purani details auto-fill ho jayengi
+  useEffect(() => {
+    if (staffData) {
+      setName(staffData.name || "");
+      setIsActive(staffData.isActive !== false); // Default to true if undefined
+    }
+  }, [staffData]);
+
+  if (!isOpen || !staffData) return null;
+
+  const handleSubmit = () => {
+    if (!name.trim()) {
+      alert("Staff Name is required");
+      return;
+    }
+    // Updated details wapas dashboard ko bhej rahe hain
+    onConfirm(staffData._id, name, isActive, staffData.status);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="relative w-full max-w-sm bg-zinc-900 border-t sm:border border-white/10 rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl animate-in slide-in-from-bottom-10 fade-in">
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h3 className="text-lg font-bold text-white mb-1">Edit Staff Profile</h3>
+            <p className="text-zinc-400 text-sm">Update details or change status</p>
+          </div>
+          <button onClick={onClose}><X size={20} className="text-zinc-500 hover:text-white" /></button>
+        </div>
+
+        <div className="space-y-5">
+          <div>
+            <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Staff Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full bg-zinc-950 border border-white/10 rounded-xl p-3 text-white focus:border-blue-500 outline-none placeholder:text-zinc-700"
+              placeholder="e.g. Amit"
+            />
+          </div>
+
+          <div className="flex items-center justify-between bg-zinc-950 p-4 rounded-xl border border-white/10">
+            <div>
+              <p className="text-sm font-bold text-white">Active Status</p>
+              <p className="text-[10px] text-zinc-500">Allow assigning new services</p>
+            </div>
+            <button
+              onClick={() => setIsActive(!isActive)}
+              className={`w-12 h-6 rounded-full transition-colors relative flex items-center ${isActive ? 'bg-emerald-500' : 'bg-zinc-700'}`}
+            >
+              <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${isActive ? 'translate-x-7' : 'translate-x-1'}`}></div>
+            </button>
+          </div>
+
+          <button
+            onClick={handleSubmit}
+            className="w-full py-3.5 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-400 transition-colors active:scale-95 mt-2"
+          >
+            Save Changes
           </button>
         </div>
       </div>

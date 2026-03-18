@@ -38,7 +38,6 @@ const userSchema = new mongoose.Schema(
       select: false,
     },
 
-    // CHANGED START
     isVerified: {
       type: Boolean,
       default: false,
@@ -51,15 +50,10 @@ const userSchema = new mongoose.Schema(
       type: Date,
       select: false,
     },
-    // CHANGED END
-
-    // --- NEW: Referral System Fields ---
     referralCode: {
       type: String,
       unique: true,
     },
-
-    // Yahan hum save karenge ki is user ne kin salons ko refer kiya
     referredSalons: [
       {
         type: mongoose.Schema.Types.ObjectId,

@@ -110,13 +110,15 @@ const salonSchema = new mongoose.Schema(
       }
     ],
 
-    // 5. Staff Members (For Assignment)
-    staff: [
-      {
-        name: String,
-        status: { type: String, default: 'available' }
-      }
-    ],
+   
+staff: [
+  {
+    name: String,
+    status: { type: String, default: 'available' },
+    // SOFT DELETE KE LIYE YAH NAYI FIELD ADD KAREIN
+    isActive: { type: Boolean, default: true } 
+  }
+],
 
     // --- CHANGED START: Dynamic Active Chairs ---
     // Owner can manually change this from dashboard (+ / -)

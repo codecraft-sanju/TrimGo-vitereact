@@ -9,13 +9,14 @@ import { io } from "socket.io-client";
 
 // --- EXTERNAL COMPONENTS ---
 import SalonHistory from "./SalonHistory";
-import SalonReviews from "./SalonReviews"; // <-- NEW IMPORT
+import SalonReviews from "./SalonReviews"; 
 import { 
   WalkInModal, 
   ProfileModal, 
   AssignmentModal, 
   ExtendTimeModal, 
-  AddExtraServiceModal 
+  AddExtraServiceModal,
+  EditStaffModal // <--- ADDED NEW MODAL
 } from "./SalonModals";
 
 const CLOUDINARY_UPLOAD_URL = "https://api.cloudinary.com/v1_1/dvoenforj/image/upload";
@@ -98,6 +99,9 @@ const SalonDashboard = ({ salon, onLogout }) => {
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [extendTimeModal, setExtendTimeModal] = useState({ isOpen: false, customer: null });
   const [extraServiceModal, setExtraServiceModal] = useState({ isOpen: false, customer: null });
+  
+  // NEW STAFF MODAL STATE
+  const [editStaffModal, setEditStaffModal] = useState({ isOpen: false, staffData: null });
 
   const playNotificationSound = () => {
     try {
@@ -359,6 +363,37 @@ const SalonDashboard = ({ salon, onLogout }) => {
     } catch (error) { alert("Failed to add staff"); }
   };
 
+  // NEW: Update Staff details
+  const handleUpdateStaff = async (staffId, name, isActive, status) => {
+    try {
+      const payload = { staffId, name, isActive, status };
+      const { data } = await api.put("/salon/staff/edit", payload);
+      if (data.success) {
+        setStaff(data.staff);
+        setEditStaffModal({ isOpen: false, staffData: null });
+        fetchDashboardData();
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Failed to update staff");
+    }
+  };
+
+  // NEW: Soft Delete Staff
+  const handleDeleteStaff = async (staffId) => {
+    if (!window.confirm("Are you sure you want to remove this staff member? (Their past history will remain safe)")) return;
+    try {
+      const { data } = await api.delete(`/salon/staff/${staffId}`);
+      if (data.success) {
+        setStaff(data.staff);
+        fetchDashboardData();
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Failed to delete staff");
+    }
+  };
+
   const toggleOnlineStatus = async () => {
     try {
       const newStatus = !isOnline;
@@ -431,10 +466,24 @@ const SalonDashboard = ({ salon, onLogout }) => {
       {/* --- MODALS --- */}
       <WalkInModal isOpen={isWalkInOpen} onClose={() => setIsWalkInOpen(false)} services={services} onConfirm={handleAddWalkIn} />
       <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} salon={salon} profileImage={profileImage} onImageUpload={setProfileImage} onLogout={onLogout} />
-      <AssignmentModal isOpen={assignmentModal.isOpen} onClose={() => setAssignmentModal({ ...assignmentModal, isOpen: false })} customer={assignmentModal.customer} availableChairs={assignmentModal.availableChairs} staffList={staff} onConfirm={handleStartService} />
-      
+      <AssignmentModal 
+        isOpen={assignmentModal.isOpen} 
+        onClose={() => setAssignmentModal({ ...assignmentModal, isOpen: false })} 
+        customer={assignmentModal.customer} 
+        availableChairs={assignmentModal.availableChairs} 
+        staffList={staff.filter(s => s.isActive !== false)} // Pass only active staff
+        onConfirm={handleStartService} 
+      />
       <ExtendTimeModal isOpen={extendTimeModal.isOpen} onClose={() => setExtendTimeModal({ isOpen: false, customer: null })} customer={extendTimeModal.customer} onConfirm={handleExtendTimeSubmit} />
       <AddExtraServiceModal isOpen={extraServiceModal.isOpen} onClose={() => setExtraServiceModal({ isOpen: false, customer: null })} services={services} customer={extraServiceModal.customer} onConfirm={handleAddExtraServiceSubmit} />
+      
+      {/* NEW: Edit Staff Modal */}
+      <EditStaffModal
+        isOpen={editStaffModal.isOpen}
+        onClose={() => setEditStaffModal({ isOpen: false, staffData: null })}
+        staffData={editStaffModal.staffData}
+        onConfirm={handleUpdateStaff}
+      />
 
       {/* DESKTOP SIDEBAR */}
       <aside className="hidden lg:flex w-64 border-r border-white/5 bg-zinc-900/40 backdrop-blur-xl flex-col z-20">
@@ -446,7 +495,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
           {[
             { id: 'dashboard', icon: LayoutDashboard, label: "Dashboard" }, 
             { id: 'history', icon: FileText, label: "History" }, 
-            { id: 'reviews', icon: Star, label: "Reviews" }, // <-- ADDED REVIEWS TAB
+            { id: 'reviews', icon: Star, label: "Reviews" },
             { id: 'settings', icon: Settings, label: "Settings" }
           ].map((item) => (
             <button key={item.id} onClick={() => setActiveTab(item.id)} className={`flex items-center p-3 rounded-xl cursor-pointer transition-all w-full text-left ${activeTab === item.id ? 'bg-white/10 text-white shadow-lg shadow-white/5 border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
@@ -836,20 +885,40 @@ const SalonDashboard = ({ salon, onLogout }) => {
                     <p className="text-[10px] text-zinc-500">*The first photo will be your Main Cover.</p>
                   </div>
 
-                  {/* Staff Manager */}
+                  {/* STAFF MANAGER UPDATE */}
                   <div className="bg-zinc-900/50 border border-white/5 rounded-3xl p-5 lg:p-6">
                     <h3 className="font-bold text-lg text-white mb-4 flex items-center gap-2"><UserCheck className="text-blue-400" size={20} /> Staff</h3>
                     <div className="flex gap-2 mb-4">
                       <input type="text" placeholder="Staff Name" className="flex-1 bg-zinc-900 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-blue-500 outline-none" value={newStaffName} onChange={(e) => setNewStaffName(e.target.value)} />
                       <button onClick={handleAddStaff} className="px-4 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-400 active:scale-95 transition-all">Add</button>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {staff.map((s, i) => (
-                        <div key={i} className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-white border border-white/5 flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div> {s.name}
+                    
+                    {/* NEW STAFF LIST WITH EDIT & DELETE */}
+                    <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto custom-scrollbar">
+                      {staff.filter(s => s.isActive !== false).map((s, i) => (
+                        <div key={i} className="p-3 bg-zinc-800/50 hover:bg-zinc-800 rounded-xl border border-white/5 flex items-center justify-between transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs">{(s.name || "S").charAt(0)}</div>
+                            <span className="font-medium text-sm text-white">{s.name}</span>
+                          </div>
+                          <div className="flex gap-1">
+                            <button 
+                              onClick={() => setEditStaffModal({ isOpen: true, staffData: s })} 
+                              className="px-3 py-1.5 text-xs font-bold text-zinc-400 hover:text-blue-400 transition-colors bg-zinc-950 rounded-lg border border-white/5"
+                            >
+                              Edit
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteStaff(s._id)} 
+                              className="p-1.5 text-zinc-400 hover:text-red-400 transition-colors bg-zinc-950 rounded-lg border border-white/5"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
+
                   </div>
                 </div>
               </div>

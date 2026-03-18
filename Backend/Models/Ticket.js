@@ -8,7 +8,7 @@ const ticketSchema = new mongoose.Schema(
       required: true,
     },
     
-    // --- CHANGE 1: User ID ko Optional banaya ---
+    // --- CHANGE 1: User ID ko Optional banaya --
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
