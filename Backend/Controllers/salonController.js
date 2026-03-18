@@ -261,19 +261,12 @@ export const logoutSalon = (req, res) => {
   return res.status(200).json({ success: true, message: "Logged out successfully" });
 };
 
-/* -------------------------------------------------------------------------- */
-/* PUBLIC API: GET ALL SALONS (WITH REAL-TIME ESTIMATE CALCULATION)           */
-/* -------------------------------------------------------------------------- */
 export const getAllSalons = async (req, res) => {
   try {
     const { type, search } = req.query;
-    
     let query = { isPhoneVerified: true }; 
 
-    if (type && type !== "All") {
-        query.salonType = type;
-    }
-
+    if (type && type !== "All") query.salonType = type;
     if (search) {
       query.$or = [
         { salonName: { $regex: search, $options: "i" } },
@@ -281,57 +274,53 @@ export const getAllSalons = async (req, res) => {
       ];
     }
     
-    const salons = await Salon.find(query)
-      .select("-password") 
-      .sort({ isOnline: -1, rating: -1 })
-      .lean(); 
-
+    const salons = await Salon.find(query).select("-password").sort({ isOnline: -1, rating: -1 }).lean(); 
     const salonIds = salons.map(salon => salon._id);
 
     const allActiveTickets = await Ticket.find({
         salonId: { $in: salonIds },
         status: { $in: ["pending", "waiting", "serving"] } 
-    }).select("salonId totalTime updatedAt serviceStartTime status");
+    }).select("salonId totalTime updatedAt serviceStartTime status preferredStaff"); // <-- added preferredStaff
 
     const ticketsBySalon = {};
     allActiveTickets.forEach(ticket => {
         const sId = ticket.salonId.toString();
-        if (!ticketsBySalon[sId]) {
-            ticketsBySalon[sId] = [];
-        }
+        if (!ticketsBySalon[sId]) ticketsBySalon[sId] = [];
         ticketsBySalon[sId].push(ticket);
     });
 
     const salonsWithData = salons.map((salon) => {
         const activeTickets = ticketsBySalon[salon._id.toString()] || [];
-
         const waitingCount = activeTickets.length;
         
-        // --- CHANGED START ---
-        // Yahan par list view me bhi activeChairsCount ka use kiya estimate ke liye
         const numChairs = Math.max(1, salon.activeChairsCount || 1);
         let chairEndMins = Array(numChairs).fill(0);
-        // --- CHANGED END ---
+        let specificStaffEndMins = {}; // <-- NEW TRACKER
         
         const now = new Date();
         for(const t of activeTickets){
-           // --- CHANGED START ---
-           chairEndMins.sort((a, b) => a - b);
-           if(t.status === 'serving'){
-              const startTime = t.serviceStartTime ? new Date(t.serviceStartTime) : new Date(t.updatedAt);
-              const elapsedMins = (now - startTime) / (1000 * 60);
-              const remaining = Math.max(0, (t.totalTime || 0) - elapsedMins);
-              chairEndMins[0] = Math.max(chairEndMins[0], remaining);
-           } else {
-              chairEndMins[0] += (t.totalTime || 0);
-           }
-           // --- CHANGED END ---
+            const startTime = t.serviceStartTime ? new Date(t.serviceStartTime) : new Date(t.updatedAt);
+            const elapsedMins = (now - startTime) / (1000 * 60);
+            const remaining = Math.max(0, (t.totalTime || 0) - elapsedMins);
+            const timeToAdd = t.status === 'serving' ? remaining : (t.totalTime || 0);
+
+            // --- CHANGED START ---
+            if (t.preferredStaff) {
+                const sId = t.preferredStaff.toString();
+                if (!specificStaffEndMins[sId]) specificStaffEndMins[sId] = 0;
+                specificStaffEndMins[sId] += timeToAdd;
+            } else {
+                chairEndMins.sort((a, b) => a - b);
+                chairEndMins[0] += timeToAdd;
+            }
+            // --- CHANGED END ---
         }
 
-        // --- CHANGED START ---
-        const totalEstTimeMins = activeTickets.length > 0 ? Math.max(...chairEndMins) : 0;
-        // --- CHANGED END ---
-
+        const maxAnyStaffWait = Math.max(...chairEndMins, 0);
+        const specificWaitsArray = Object.values(specificStaffEndMins);
+        const maxSpecificStaffWait = specificWaitsArray.length > 0 ? Math.max(...specificWaitsArray) : 0;
+        
+        const totalEstTimeMins = activeTickets.length > 0 ? Math.max(maxAnyStaffWait, maxSpecificStaffWait) : 0;
         const waitTimeInSeconds = Math.round(totalEstTimeMins * 60);
         const expectedStartTime = new Date(now.getTime() + (waitTimeInSeconds * 1000));
 
@@ -344,11 +333,7 @@ export const getAllSalons = async (req, res) => {
         };
     });
 
-    res.status(200).json({ 
-        success: true, 
-        count: salonsWithData.length, 
-        salons: salonsWithData 
-    });
+    res.status(200).json({ success: true, count: salonsWithData.length, salons: salonsWithData });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: "Error fetching salons" });

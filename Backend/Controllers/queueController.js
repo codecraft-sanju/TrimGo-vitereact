@@ -22,6 +22,7 @@ const walkInSchema = z.object({
   services: z.array(serviceSchema).min(1, "At least one service is required"),
   totalPrice: z.number().min(0, "Total price cannot be negative"),
   totalTime: z.number().min(1, "Total time must be at least 1 minute"),
+  preferredStaff: z.string().nullable().optional(), // <-- NEW
 });
 
 const joinQueueSchema = z.object({
@@ -30,6 +31,7 @@ const joinQueueSchema = z.object({
   totalPrice: z.number().min(0, "Total price cannot be negative"),
   totalTime: z.number().min(1, "Total time must be at least 1 minute"),
   reachingTime: z.number().min(0, "Reaching time cannot be negative").optional(),
+  preferredStaff: z.string().nullable().optional(), // <-- NEW
 });
 // --- CHANGED END ---
 
@@ -65,41 +67,56 @@ const getSortedActiveTickets = async (salonId) => {
 // --- NEW HELPER END ---
 
 /* -------------------------------------------------------------------------- */
-/* CORE QUEUE CALCULATION LOGIC (WITH REAL-TIME SECONDS & TIMESTAMP)          */
+/* CORE QUEUE CALCULATION LOGIC (DUAL QUEUE SYSTEM WITH TIMESTAMP)            */
 /* -------------------------------------------------------------------------- */
 const getQueueStats = async (salonId, currentUserId) => {
   const activeTickets = await getSortedActiveTickets(salonId);
   const salon = await Salon.findById(salonId).select("activeChairsCount");
   
   const numChairs = Math.max(1, salon?.activeChairsCount || 1);
-  let chairEndMins = Array(numChairs).fill(0);
+  let chairEndMins = Array(numChairs).fill(0); // For "Any Staff"
   
   let peopleAhead = 0;
   let waitTimeAheadMins = 0;
   const now = new Date();
 
+  // Find current user's preference
+  const userTicket = activeTickets.find(t => t.userId && t.userId.toString() === currentUserId.toString());
+  const preferredStaffId = userTicket?.preferredStaff ? userTicket.preferredStaff.toString() : null;
+
   for (let i = 0; i < activeTickets.length; i++) {
     const t = activeTickets[i];
     
     if (t.userId && t.userId.toString() === currentUserId.toString()) {
-      chairEndMins.sort((a, b) => a - b);
-      waitTimeAheadMins = chairEndMins[0];
+      if (!preferredStaffId) {
+        chairEndMins.sort((a, b) => a - b);
+        waitTimeAheadMins = chairEndMins[0];
+      }
       break;
     }
-    
-    peopleAhead++;
 
-    chairEndMins.sort((a, b) => a - b);
+    const startTime = t.serviceStartTime ? new Date(t.serviceStartTime) : new Date(t.updatedAt);
+    const elapsedMins = (now - startTime) / (1000 * 60);
+    const totalAllocatedTime = (t.totalTime || 0) + (t.extraTime || 0);
+    const remaining = t.status === 'serving' ? Math.max(0, totalAllocatedTime - elapsedMins) : totalAllocatedTime;
 
-    if (t.status === 'serving') {
-      const startTime = t.serviceStartTime ? new Date(t.serviceStartTime) : new Date(t.updatedAt);
-      const elapsedMins = (now - startTime) / (1000 * 60);
-      const totalAllocatedTime = (t.totalTime || 0) + (t.extraTime || 0);
-      const remaining = Math.max(0, totalAllocatedTime - elapsedMins);
-      chairEndMins[0] = Math.max(chairEndMins[0], remaining);
+    // --- CHANGED START: DUAL LOGIC ---
+    if (preferredStaffId) {
+      // Specific Staff Logic
+      const tStaffId = t.preferredStaff ? t.preferredStaff.toString() : null;
+      if (tStaffId === preferredStaffId) {
+        peopleAhead++;
+        waitTimeAheadMins += remaining;
+      }
     } else {
-      chairEndMins[0] += ((t.totalTime || 0) + (t.extraTime || 0));
+      // Any Staff Logic
+      if (!t.preferredStaff) { 
+        peopleAhead++;
+        chairEndMins.sort((a, b) => a - b);
+        chairEndMins[0] += remaining;
+      }
     }
+    // --- CHANGED END ---
   }
 
   const waitTimeInSeconds = Math.round(waitTimeAheadMins * 60);
@@ -118,14 +135,42 @@ export const broadcastQueueUpdates = async (salonId, io) => {
   const salon = await Salon.findById(salonId).select("activeChairsCount");
   
   const numChairs = Math.max(1, salon?.activeChairsCount || 1);
-  let chairEndMins = Array(numChairs).fill(0);
+  let chairEndMins = Array(numChairs).fill(0); 
+  let specificStaffEndMins = {}; 
   
   const now = new Date();
-  let runningPeopleAhead = 0;
+  let runningPeopleAheadAny = 0;
+  let specificStaffPeopleAhead = {};
 
   for (const ticket of activeTickets) {
-    chairEndMins.sort((a, b) => a - b);
-    const currentWaitTimeMins = chairEndMins[0];
+    let currentWaitTimeMins = 0;
+    let currentPeopleAhead = 0;
+
+    const startTime = ticket.serviceStartTime ? new Date(ticket.serviceStartTime) : new Date(ticket.updatedAt);
+    const elapsedMins = (now - startTime) / (1000 * 60);
+    const totalAllocatedTime = (ticket.totalTime || 0) + (ticket.extraTime || 0);
+    const remaining = ticket.status === 'serving' ? Math.max(0, totalAllocatedTime - elapsedMins) : totalAllocatedTime;
+
+    // --- CHANGED START: DUAL LOGIC FOR BROADCAST ---
+    if (ticket.preferredStaff) {
+      const sId = ticket.preferredStaff.toString();
+      if (!specificStaffEndMins[sId]) specificStaffEndMins[sId] = 0;
+      if (!specificStaffPeopleAhead[sId]) specificStaffPeopleAhead[sId] = 0;
+
+      currentWaitTimeMins = specificStaffEndMins[sId];
+      currentPeopleAhead = specificStaffPeopleAhead[sId];
+
+      specificStaffEndMins[sId] += remaining;
+      specificStaffPeopleAhead[sId]++;
+    } else {
+      chairEndMins.sort((a, b) => a - b);
+      currentWaitTimeMins = chairEndMins[0];
+      currentPeopleAhead = runningPeopleAheadAny;
+
+      chairEndMins[0] += remaining;
+      runningPeopleAheadAny++;
+    }
+    // --- CHANGED END ---
 
     if (ticket.userId) {
       const waitTimeInSeconds = Math.round(currentWaitTimeMins * 60);
@@ -135,24 +180,16 @@ export const broadcastQueueUpdates = async (salonId, io) => {
         myWaitTime: Math.round(currentWaitTimeMins),
         myWaitTimeInSeconds: waitTimeInSeconds,
         expectedStartTime: expectedStartTime,
-        myPeopleAhead: runningPeopleAhead
+        myPeopleAhead: currentPeopleAhead
       });
-    }
-
-    runningPeopleAhead++;
-    
-    if (ticket.status === 'serving') {
-      const startTime = ticket.serviceStartTime ? new Date(ticket.serviceStartTime) : new Date(ticket.updatedAt);
-      const elapsedMins = (now - startTime) / (1000 * 60);
-      const totalAllocatedTime = (ticket.totalTime || 0) + (ticket.extraTime || 0);
-      const remaining = Math.max(0, totalAllocatedTime - elapsedMins);
-      chairEndMins[0] = Math.max(chairEndMins[0], remaining);
-    } else {
-      chairEndMins[0] += ((ticket.totalTime || 0) + (ticket.extraTime || 0));
     }
   }
 
-  const globalEstTimeMins = activeTickets.length > 0 ? Math.max(...chairEndMins) : 0;
+  // Global Estimate Calculation
+  const maxAnyStaffWait = Math.max(...chairEndMins, 0);
+  const specificWaitsArray = Object.values(specificStaffEndMins);
+  const maxSpecificStaffWait = specificWaitsArray.length > 0 ? Math.max(...specificWaitsArray) : 0;
+  const globalEstTimeMins = activeTickets.length > 0 ? Math.max(maxAnyStaffWait, maxSpecificStaffWait) : 0;
 
   io.emit("queue_update_broadcast", {
     salonId,
@@ -212,7 +249,7 @@ export const addWalkInClient = async (req, res) => {
       });
     }
 
-    const { name, mobile, services, totalPrice, totalTime } = validationResult.data;
+    const { name, mobile, services, totalPrice, totalTime, preferredStaff } = validationResult.data;
     // --- CHANGED END ---
     
     const salonId = req.salon._id;
@@ -239,7 +276,8 @@ export const addWalkInClient = async (req, res) => {
       totalPrice,
       totalTime,
       queueNumber,
-      status: "waiting"
+      status: "waiting",
+      preferredStaff: preferredStaff || null // <-- NEW
     }], { session });
 
     const newTicket = newTicketArray[0];
@@ -279,7 +317,7 @@ export const joinQueue = async (req, res) => {
       });
     }
 
-    const { salonId, services, totalPrice, totalTime, reachingTime } = validationResult.data;
+    const { salonId, services, totalPrice, totalTime, reachingTime, preferredStaff } = validationResult.data;
     // --- CHANGED END ---
     
     const userId = req.user._id; 
@@ -304,6 +342,7 @@ export const joinQueue = async (req, res) => {
       totalTime,
       reachingTime: reachingTime || 0,
       status: "pending", 
+      preferredStaff: preferredStaff || null // <-- NEW
     });
 
     const fullTicket = await Ticket.findById(ticket._id)
@@ -407,12 +446,19 @@ export const startService = async (req, res) => {
     const { ticketId, chairId, staffName } = req.body;
     const salonId = req.salon._id;
 
+    // --- NEW LOGIC: Find actual staff ID to fix real-time wait times ---
+    const salon = await Salon.findById(salonId).select("staff");
+    const actualStaff = salon.staff.find(s => s.name === staffName);
+    const actualStaffId = actualStaff ? actualStaff._id : null;
+    // -------------------------------------------------------------------
+
     const ticket = await Ticket.findOneAndUpdate(
       { _id: ticketId, salonId, status: { $in: ["pending", "waiting"] } },
       {
         status: "serving",
         chairId,
         assignedStaff: staffName,
+        preferredStaff: actualStaffId, // <-- FIX APPLIED HERE
         serviceStartTime: new Date(),
       },
       { new: true }
@@ -436,10 +482,6 @@ export const startService = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
-
-/* -------------------------------------------------------------------------- */
-/* SALON ACTION: COMPLETE SERVICE                                             */
-/* -------------------------------------------------------------------------- */
 export const completeService = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -481,18 +523,13 @@ export const completeService = async (req, res) => {
     session.endSession();
   }
 };
-
-/* -------------------------------------------------------------------------- */
-/* USER HELPER: GET MY ACTIVE TICKET                                          */
-/* -------------------------------------------------------------------------- */
 export const getMyTicket = async (req, res) => {
   try {
-    // --- CHANGED START: Added logic to fetch completed but unreviewed tickets ---
     const ticket = await Ticket.findOne({
       userId: req.user._id,
       $or: [
         { status: { $in: ["pending", "waiting", "serving"] } },
-        { status: "completed", isReviewed: false } // Catch missed reviews!
+        { status: "completed", isReviewed: false } 
       ]
     }).sort({ updatedAt: -1 }).populate("salonId", "salonName address");
 
@@ -509,18 +546,11 @@ export const getMyTicket = async (req, res) => {
       ticketData.myPeopleAhead = stats.peopleAhead;
       return res.status(200).json({ success: true, ticket: ticketData });
     }
-
-    // If status is completed (and isReviewed is false), just return the ticket
     res.status(200).json({ success: true, ticket });
-    // --- CHANGED END ---
   } catch (err) {
     res.status(500).json({ success: false, message: "Error fetching ticket" });
   }
 };
-
-/* -------------------------------------------------------------------------- */
-/* USER ACTION: GET BOOKING HISTORY                                           */
-/* -------------------------------------------------------------------------- */
 export const getUserHistory = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -559,10 +589,6 @@ export const getUserHistory = async (req, res) => {
     });
   }
 };
-
-/* -------------------------------------------------------------------------- */
-/* SALON ACTION - REJECT REQUEST                                              */
-/* -------------------------------------------------------------------------- */
 export const rejectRequest = async (req, res) => {
   try {
     const { ticketId } = req.body;
@@ -596,10 +622,6 @@ export const rejectRequest = async (req, res) => {
     res.status(500).json({ success: false, message: "Server Error while rejecting" });
   }
 };
-
-/* -------------------------------------------------------------------------- */
-/* SALON ACTION: CANCEL ONGOING SERVICE BY SALON                              */
-/* -------------------------------------------------------------------------- */
 export const cancelServiceBySalon = async (req, res) => {
   try {
     const { ticketId } = req.body;
@@ -632,10 +654,6 @@ export const cancelServiceBySalon = async (req, res) => {
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
-
-/* -------------------------------------------------------------------------- */
-/* SALON HELPER: GET DASHBOARD DATA                                           */
-/* -------------------------------------------------------------------------- */
 export const getSalonData = async (req, res) => {
     try {
         const salonId = req.salon._id;
@@ -794,14 +812,9 @@ export const getSalonHistory = async (req, res) => {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/* --- NEW: DISMISS REVIEW ACTION                                             */
-/* -------------------------------------------------------------------------- */
 export const dismissReviewPrompt = async (req, res) => {
   try {
     const { ticketId } = req.body;
-    
-    // Mark the ticket as reviewed so it doesn't pop up again
     await Ticket.findOneAndUpdate(
       { _id: ticketId, userId: req.user._id },
       { isReviewed: true } 

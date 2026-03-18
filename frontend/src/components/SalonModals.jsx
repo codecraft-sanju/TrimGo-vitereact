@@ -59,11 +59,12 @@ export const CustomDropdown = ({ icon: Icon, label, name, value, options, onChan
   );
 };
 
-// 2. WALK-IN MODAL
-export const WalkInModal = ({ isOpen, onClose, services, onConfirm }) => {
+// 2. WALK-IN MODAL (UPDATED WITH STAFF SELECTION)
+export const WalkInModal = ({ isOpen, onClose, services, staffList, onConfirm }) => {
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [selectedServices, setSelectedServices] = useState([]);
+  const [selectedStaffId, setSelectedStaffId] = useState(null); // null = Any Staff
 
   if (!isOpen) return null;
 
@@ -80,18 +81,20 @@ export const WalkInModal = ({ isOpen, onClose, services, onConfirm }) => {
     if (!name.trim()) return alert("Customer Name is required");
     if (selectedServices.length === 0) return alert("Select at least one service");
 
-    onConfirm({ name, mobile, services: selectedServices });
+    // Pass the selected preferredStaff to the dashboard
+    onConfirm({ name, mobile, services: selectedServices, preferredStaff: selectedStaffId });
 
     setName("");
     setMobile("");
     setSelectedServices([]);
+    setSelectedStaffId(null);
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
-      <div className="relative w-full max-w-md bg-zinc-900 border-t sm:border border-white/10 rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl animate-in slide-in-from-bottom-10 fade-in duration-300">
+      <div className="relative w-full max-w-md bg-zinc-900 border-t sm:border border-white/10 rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl animate-in slide-in-from-bottom-10 fade-in duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-xl font-bold text-white flex items-center gap-2">
             <UserPlus className="text-emerald-400" /> Add Walk-in Client
@@ -121,6 +124,37 @@ export const WalkInModal = ({ isOpen, onClose, services, onConfirm }) => {
               onChange={(e) => setMobile(e.target.value)}
             />
           </div>
+
+          {/* --- NEW: STAFF SELECTION --- */}
+          <div>
+            <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Preferred Staff (Optional)</label>
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              <button
+                onClick={() => setSelectedStaffId(null)}
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all whitespace-nowrap ${
+                  selectedStaffId === null 
+                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' 
+                    : 'bg-zinc-950 border-white/10 text-zinc-500 hover:border-white/20'
+                }`}
+              >
+                Any Staff
+              </button>
+              {staffList?.map(staff => (
+                <button
+                  key={staff._id}
+                  onClick={() => setSelectedStaffId(staff._id)}
+                  className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all whitespace-nowrap ${
+                    selectedStaffId === staff._id 
+                      ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' 
+                      : 'bg-zinc-950 border-white/10 text-zinc-500 hover:border-white/20'
+                  }`}
+                >
+                  {staff.name}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* --- END NEW: STAFF SELECTION --- */}
 
           <div>
             <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Select Services</label>
@@ -442,7 +476,6 @@ export const EditStaffModal = ({ isOpen, onClose, staffData, onConfirm }) => {
   const [name, setName] = useState("");
   const [isActive, setIsActive] = useState(true);
 
-  // Jab bhi modal khulega, purani details auto-fill ho jayengi
   useEffect(() => {
     if (staffData) {
       setName(staffData.name || "");
@@ -457,7 +490,6 @@ export const EditStaffModal = ({ isOpen, onClose, staffData, onConfirm }) => {
       alert("Staff Name is required");
       return;
     }
-    // Updated details wapas dashboard ko bhej rahe hain
     onConfirm(staffData._id, name, isActive, staffData.status);
   };
 

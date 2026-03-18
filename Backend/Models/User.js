@@ -105,10 +105,8 @@ userSchema.methods.comparePassword = async function (plainPassword) {
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;
-  // CHANGED START
   delete obj.otp;
   delete obj.otpExpiry;
-  // CHANGED END
   return obj;
 };
 

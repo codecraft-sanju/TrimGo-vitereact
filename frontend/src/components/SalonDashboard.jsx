@@ -16,7 +16,7 @@ import {
   AssignmentModal, 
   ExtendTimeModal, 
   AddExtraServiceModal,
-  EditStaffModal // <--- ADDED NEW MODAL
+  EditStaffModal 
 } from "./SalonModals";
 
 const CLOUDINARY_UPLOAD_URL = "https://api.cloudinary.com/v1_1/dvoenforj/image/upload";
@@ -318,7 +318,8 @@ const SalonDashboard = ({ salon, onLogout }) => {
         mobile: customerData.mobile,
         services: customerData.services,
         totalPrice,
-        totalTime
+        totalTime,
+        preferredStaff: customerData.preferredStaff // <-- ADDED PREFERRED STAFF HERE
       };
 
       const { data } = await api.post("/queue/add-walkin", payload);
@@ -363,7 +364,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
     } catch (error) { alert("Failed to add staff"); }
   };
 
-  // NEW: Update Staff details
   const handleUpdateStaff = async (staffId, name, isActive, status) => {
     try {
       const payload = { staffId, name, isActive, status };
@@ -379,7 +379,6 @@ const SalonDashboard = ({ salon, onLogout }) => {
     }
   };
 
-  // NEW: Soft Delete Staff
   const handleDeleteStaff = async (staffId) => {
     if (!window.confirm("Are you sure you want to remove this staff member? (Their past history will remain safe)")) return;
     try {
@@ -464,20 +463,25 @@ const SalonDashboard = ({ salon, onLogout }) => {
     <div className="flex h-screen w-full bg-zinc-950 font-sans text-white overflow-hidden selection:bg-emerald-500 selection:text-white">
 
       {/* --- MODALS --- */}
-      <WalkInModal isOpen={isWalkInOpen} onClose={() => setIsWalkInOpen(false)} services={services} onConfirm={handleAddWalkIn} />
+      <WalkInModal 
+        isOpen={isWalkInOpen} 
+        onClose={() => setIsWalkInOpen(false)} 
+        services={services} 
+        staffList={staff.filter(s => s.isActive !== false)} // PASS ACTIVE STAFF LIST HERE
+        onConfirm={handleAddWalkIn} 
+      />
       <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} salon={salon} profileImage={profileImage} onImageUpload={setProfileImage} onLogout={onLogout} />
       <AssignmentModal 
         isOpen={assignmentModal.isOpen} 
         onClose={() => setAssignmentModal({ ...assignmentModal, isOpen: false })} 
         customer={assignmentModal.customer} 
         availableChairs={assignmentModal.availableChairs} 
-        staffList={staff.filter(s => s.isActive !== false)} // Pass only active staff
+        staffList={staff.filter(s => s.isActive !== false)}
         onConfirm={handleStartService} 
       />
       <ExtendTimeModal isOpen={extendTimeModal.isOpen} onClose={() => setExtendTimeModal({ isOpen: false, customer: null })} customer={extendTimeModal.customer} onConfirm={handleExtendTimeSubmit} />
       <AddExtraServiceModal isOpen={extraServiceModal.isOpen} onClose={() => setExtraServiceModal({ isOpen: false, customer: null })} services={services} customer={extraServiceModal.customer} onConfirm={handleAddExtraServiceSubmit} />
       
-      {/* NEW: Edit Staff Modal */}
       <EditStaffModal
         isOpen={editStaffModal.isOpen}
         onClose={() => setEditStaffModal({ isOpen: false, staffData: null })}
@@ -604,6 +608,13 @@ const SalonDashboard = ({ salon, onLogout }) => {
                             <div>
                               <h4 className="font-bold text-sm text-white">{req.userId?.name}</h4>
                               <p className="text-xs text-zinc-400">{req.services[0]?.name} {req.services.length > 1 && `+${req.services.length - 1}`}</p>
+                              {/* --- NEW: PREFERRED STAFF DISPLAY --- */}
+                              {req.preferredStaff && (
+                                <p className="text-[10px] text-emerald-400 mt-0.5 font-bold uppercase tracking-wider">
+                                  Prefers: {staff.find(s => s._id === req.preferredStaff)?.name || "Specific Staff"}
+                                </p>
+                              )}
+                              {/* --- END NEW --- */}
                             </div>
                           </div>
                           
@@ -667,6 +678,13 @@ const SalonDashboard = ({ salon, onLogout }) => {
                               <div>
                                 <h4 className="font-bold text-sm text-white">{cust.userId?.name || cust.guestName}</h4>
                                 <p className="text-xs text-zinc-400">{cust.services[0]?.name}</p>
+                                {/* --- NEW: PREFERRED STAFF DISPLAY --- */}
+                                {cust.preferredStaff && (
+                                  <p className="text-[10px] text-emerald-400 mt-0.5 font-bold uppercase tracking-wider">
+                                    Prefers: {staff.find(s => s._id === cust.preferredStaff)?.name || "Specific Staff"}
+                                  </p>
+                                )}
+                                {/* --- END NEW --- */}
                               </div>
                             </div>
                             

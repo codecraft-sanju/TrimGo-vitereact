@@ -3,13 +3,13 @@ import {
   MapPin, Clock, Users, Star, Ticket, X, Filter, Search, Check,
   Sparkles, Navigation, Crosshair, Menu, Gift, BadgeCheck,
   Loader2, AlertCircle, Image as ImageIcon, ChevronLeft,
-  ChevronRight, Scissors, CheckCircle
+  ChevronRight, Scissors, CheckCircle, User as UserIcon
 } from "lucide-react";
 import { io } from "socket.io-client"; 
 import Lenis from 'lenis'; 
 import api from "../utils/api"; 
 import { motion, AnimatePresence } from "framer-motion"; 
-import toast from 'react-hot-toast'; // Added for sleek notifications
+import toast from 'react-hot-toast'; 
 
 import SalonReviewsModal from "./SalonReviewsModal";
 import MapSalon from "./MapSalon";
@@ -120,8 +120,13 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => { 
   const [selectedServices, setSelectedServices] = useState([]);
   const [reachingTime, setReachingTime] = useState(15);
+  // --- CHANGED START: ADDED STATE FOR PREFERRED STAFF ---
+  const [selectedStaffId, setSelectedStaffId] = useState(null); // null means "Any Staff"
+  // --- CHANGED END ---
   
   const servicesList = salon.services || [];
+  // Only show active staff
+  const staffList = (salon.staff || []).filter(s => s.isActive !== false);
 
   const toggleService = (serviceId) => {
     if (isJoining) return; 
@@ -151,7 +156,9 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => {
     const finalServices = servicesList.filter((s) =>
       selectedServices.includes(s._id)
     );
-    onConfirm(salon, finalServices, totalDetails, reachingTime);
+    // --- CHANGED START: PASS PREFERRED STAFF TO CONFIRM FUNCTION ---
+    onConfirm(salon, finalServices, totalDetails, reachingTime, selectedStaffId);
+    // --- CHANGED END ---
   };
 
   return (
@@ -189,41 +196,80 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-          {servicesList.length === 0 ? (
-             <div className="text-center text-zinc-400 py-12 text-sm font-medium">No services listed yet.</div>
-          ) : (
-            servicesList.map((service) => {
-                const isSelected = selectedServices.includes(service._id);
-                return (
-                <div
-                    key={service._id}
-                    onClick={() => toggleService(service._id)}
-                    className={`flex items-center justify-between p-5 rounded-[1.5rem] border-2 transition-all duration-300 ${
-                      isSelected 
-                        ? "border-zinc-900 bg-zinc-900 text-white shadow-xl shadow-zinc-900/10 scale-[1.02]" 
-                        : "border-zinc-100 hover:border-zinc-200 bg-white text-zinc-900"
-                    } ${isJoining ? "opacity-50 cursor-not-allowed" : "cursor-pointer active:scale-95"}`}
-                >
-                    <div className="flex items-start gap-4">
-                      <div className={`mt-1 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? "bg-emerald-500 border-emerald-500" : "border-zinc-200 bg-white"}`}>
-                          {isSelected && <Check size={14} className="text-white font-bold" strokeWidth={3} />}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+          
+          {/* --- CHANGED START: STAFF SELECTION UI --- */}
+          <div>
+              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] block mb-3 ml-1">Choose Your Stylist</label>
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                  <button
+                      onClick={() => !isJoining && setSelectedStaffId(null)}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold border-2 transition-all whitespace-nowrap ${
+                          selectedStaffId === null 
+                          ? 'bg-zinc-900 border-zinc-900 text-white shadow-md shadow-zinc-900/20' 
+                          : 'bg-white border-zinc-100 text-zinc-500 hover:border-zinc-200'
+                      }`}
+                  >
+                      <Sparkles size={14} className={selectedStaffId === null ? "text-emerald-400" : "text-zinc-400"} />
+                      Any Staff (Fastest)
+                  </button>
+                  {staffList.map((staff) => (
+                      <button
+                          key={staff._id}
+                          onClick={() => !isJoining && setSelectedStaffId(staff._id)}
+                          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold border-2 transition-all whitespace-nowrap ${
+                              selectedStaffId === staff._id 
+                              ? 'bg-zinc-900 border-zinc-900 text-white shadow-md shadow-zinc-900/20' 
+                              : 'bg-white border-zinc-100 text-zinc-500 hover:border-zinc-200'
+                          }`}
+                      >
+                          <UserIcon size={14} className={selectedStaffId === staff._id ? "text-white" : "text-zinc-400"} />
+                          {staff.name}
+                      </button>
+                  ))}
+              </div>
+          </div>
+          {/* --- CHANGED END --- */}
+
+          <div>
+            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] block mb-3 ml-1">Select Services</label>
+            <div className="space-y-3">
+            {servicesList.length === 0 ? (
+                <div className="text-center text-zinc-400 py-8 text-sm font-medium">No services listed yet.</div>
+            ) : (
+              servicesList.map((service) => {
+                  const isSelected = selectedServices.includes(service._id);
+                  return (
+                  <div
+                      key={service._id}
+                      onClick={() => toggleService(service._id)}
+                      className={`flex items-center justify-between p-4 rounded-[1.2rem] border-2 transition-all duration-300 ${
+                        isSelected 
+                          ? "border-zinc-900 bg-zinc-900 text-white shadow-lg shadow-zinc-900/10 scale-[1.02]" 
+                          : "border-zinc-100 hover:border-zinc-200 bg-white text-zinc-900"
+                      } ${isJoining ? "opacity-50 cursor-not-allowed" : "cursor-pointer active:scale-95"}`}
+                  >
+                      <div className="flex items-start gap-4">
+                        <div className={`mt-0.5 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? "bg-emerald-500 border-emerald-500" : "border-zinc-200 bg-white"}`}>
+                            {isSelected && <Check size={14} className="text-white font-bold" strokeWidth={3} />}
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-bold leading-tight">{service.name}</h4>
+                            <p className={`text-xs font-medium mt-1 ${isSelected ? "text-zinc-400" : "text-zinc-500"}`}>{service.time} mins • {service.category}</p>
+                        </div>
                       </div>
-                      <div>
-                          <h4 className="text-base font-bold leading-tight">{service.name}</h4>
-                          <p className={`text-xs font-medium mt-1 ${isSelected ? "text-zinc-400" : "text-zinc-500"}`}>{service.time} mins • {service.category}</p>
+                      <div className="text-right">
+                        <span className={`text-base font-black ${isSelected ? "text-white" : "text-zinc-900"}`}>₹{service.price}</span>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <span className={`text-lg font-black ${isSelected ? "text-white" : "text-zinc-900"}`}>₹{service.price}</span>
-                    </div>
-                </div>
-                );
-            })
-          )}
+                  </div>
+                  );
+              })
+            )}
+            </div>
+          </div>
         </div>
 
-        <div className="p-6 bg-white border-t border-zinc-100 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)]">
+        <div className="p-6 bg-white border-t border-zinc-100 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)] z-20">
           <div className="mb-6">
             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] block mb-3 ml-1">Arrival Estimate</label>
             <div className="flex gap-2">
@@ -260,7 +306,7 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => {
             onClick={handleConfirm} 
             disabled={selectedServices.length === 0 || isJoining} 
             className={`
-                w-full py-4.5 rounded-[1.4rem] font-black text-base flex items-center justify-center gap-3 transition-all duration-300 active:scale-[0.98] py-4
+                w-full py-4 rounded-[1.4rem] font-black text-base flex items-center justify-center gap-3 transition-all duration-300 active:scale-[0.98]
                 ${selectedServices.length > 0 && !isJoining 
                     ? "bg-zinc-900 text-white shadow-2xl shadow-zinc-900/30 hover:bg-black" 
                     : "bg-zinc-100 text-zinc-400 cursor-not-allowed"}
@@ -477,15 +523,11 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         setActiveTicket(updatedTicket); 
     });
 
-    // --- CHANGED START: MORPH INTO REVIEW ---
     socket.on("service_completed", (completedTicket) => {
-        // Ticket ka status 'completed' set karte hain taki review UI render ho
         setActiveTicket(completedTicket);
-        // Clean review states
         setReviewRating(0);
         setReviewText("");
     });
-    // --- CHANGED END ---
 
     fetchSalons();
 
@@ -607,7 +649,8 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
       if(!isJoiningQueue) setActiveBookingSalon(null); 
   };
 
-  const handleConfirmBooking = async (salon, services, totals, reachingTime) => {
+  // --- CHANGED START: handleConfirmBooking now receives preferredStaff ---
+  const handleConfirmBooking = async (salon, services, totals, reachingTime, preferredStaff) => {
     setIsJoiningQueue(true); 
     try {
         const payload = {
@@ -620,7 +663,8 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
              })),
             totalPrice: totals.price,
             totalTime: totals.time,
-            reachingTime: reachingTime 
+            reachingTime: reachingTime,
+            preferredStaff: preferredStaff // ADDED THIS
         };
 
         const { data } = await api.post("/queue/join", payload);
@@ -636,6 +680,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
         setIsJoiningQueue(false); 
     }
   };
+  // --- CHANGED END ---
 
   const handleCancelTicket = async () => {
       if(!activeTicket) return;
@@ -662,7 +707,6 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
       }
   };
 
-  // --- NEW: SUBMIT REVIEW FUNCTION ---
   const submitReview = async () => {
     setIsSubmittingReview(true);
     try {
@@ -674,7 +718,7 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
       });
       if(data.success) {
         toast.success("Review submitted! Thank you.");
-        setActiveTicket(null); // Dismiss the card
+        setActiveTicket(null); 
       }
     } catch(err) {
       toast.error(err.response?.data?.message || "Failed to submit review.");
@@ -1065,9 +1109,8 @@ const UserDashboard = ({ user, onLogout, onProfileClick, onReferralClick }) => {
                 <button
                   onClick={async () => {
                     const currentTicketId = activeTicket._id;
-                    setActiveTicket(null); // UI se turant hatao
+                    setActiveTicket(null); 
                     try {
-                      // Backend ko batao ki dismiss kar diya h
                       await api.post("/queue/dismiss-review", { ticketId: currentTicketId });
                     } catch(e) {
                       console.error("Failed to dismiss review", e);

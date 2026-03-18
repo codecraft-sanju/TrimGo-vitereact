@@ -74,6 +74,14 @@ const ticketSchema = new mongoose.Schema(
       enum: ["pending", "waiting", "serving", "completed", "cancelled", "rejected"],
       default: "pending", // Walk-in ke liye direct 'waiting' bhi set kar sakte ho controller se
     },
+    
+   
+    preferredStaff: {
+      type: mongoose.Schema.Types.ObjectId, 
+      default: null, // null matlab "Any Staff", agar id aayi matlab "Specific Staff"
+    },
+    // ==========================================
+
     assignedStaff: {
       type: String,
       default: null, 
