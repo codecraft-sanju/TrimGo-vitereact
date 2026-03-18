@@ -7,7 +7,9 @@ import {
   User,
   LogOut,
   Armchair,
-  ChevronRight
+  ChevronRight,
+  Image as ImageIcon,
+  Loader2
 } from "lucide-react";
 
 // 1. CUSTOM DROPDOWN COMPONENT (Used inside Assignment Modal)
@@ -475,22 +477,39 @@ export const AddExtraServiceModal = ({ isOpen, onClose, services, customer, onCo
 export const EditStaffModal = ({ isOpen, onClose, staffData, onConfirm }) => {
   const [name, setName] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [newPhoto, setNewPhoto] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (staffData) {
       setName(staffData.name || "");
-      setIsActive(staffData.isActive !== false); // Default to true if undefined
+      setIsActive(staffData.isActive !== false); 
+      setPhotoPreview(staffData.photo || null);
+      setNewPhoto(null);
     }
   }, [staffData]);
 
   if (!isOpen || !staffData) return null;
 
-  const handleSubmit = () => {
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setNewPhoto(file);
+      setPhotoPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSubmit = async () => {
     if (!name.trim()) {
       alert("Staff Name is required");
       return;
     }
-    onConfirm(staffData._id, name, isActive, staffData.status);
+    
+    setIsUploading(true);
+    await onConfirm(staffData._id, name, isActive, staffData.status, newPhoto);
+    setIsUploading(false);
   };
 
   return (
@@ -506,6 +525,26 @@ export const EditStaffModal = ({ isOpen, onClose, staffData, onConfirm }) => {
         </div>
 
         <div className="space-y-5">
+          {/* CHANGED START: Photo Edit Section */}
+          <div className="flex flex-col items-center gap-3">
+             <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="w-20 h-20 rounded-full bg-zinc-800 border-2 border-dashed border-zinc-600 flex items-center justify-center cursor-pointer overflow-hidden relative group"
+             >
+                {photoPreview ? (
+                   <img src={photoPreview} alt="preview" className="w-full h-full object-cover" />
+                ) : (
+                   <ImageIcon className="text-zinc-500 group-hover:text-white transition-colors" />
+                )}
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                   <Camera size={16} className="text-white" />
+                </div>
+             </div>
+             <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handlePhotoChange} />
+             <p className="text-[10px] text-zinc-500">Tap to change photo</p>
+          </div>
+          {/* CHANGED END */}
+
           <div>
             <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Staff Name</label>
             <input
@@ -532,9 +571,10 @@ export const EditStaffModal = ({ isOpen, onClose, staffData, onConfirm }) => {
 
           <button
             onClick={handleSubmit}
-            className="w-full py-3.5 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-400 transition-colors active:scale-95 mt-2"
+            disabled={isUploading}
+            className="w-full py-3.5 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-400 transition-colors active:scale-95 mt-2 flex justify-center items-center"
           >
-            Save Changes
+            {isUploading ? <Loader2 size={16} className="animate-spin" /> : "Save Changes"}
           </button>
         </div>
       </div>

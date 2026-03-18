@@ -115,28 +115,21 @@ staff: [
   {
     name: String,
     status: { type: String, default: 'available' },
-    // SOFT DELETE KE LIYE YAH NAYI FIELD ADD KAREIN
+    photo:{type:String,default:""},
     isActive: { type: Boolean, default: true } 
   }
 ],
-
-    // --- CHANGED START: Dynamic Active Chairs ---
-    // Owner can manually change this from dashboard (+ / -)
     activeChairsCount: {
       type: Number,
       default: 1,
     },
-    // --- CHANGED END ---
-
-    // 🔥 NEW: GALLERY FIELD ADDED HERE 🔥
+    
     gallery: {
-        type: [String], // Array of image URLs strings
+        type: [String], 
         default: [],
         validate: [arrayLimit, '{PATH} exceeds the limit of 4 photos'] // Validation to allow max 4
     },
 
-    // --- NEW REFERRAL FIELD ---
-    // Kis user ne is Salon ko refer kiya hai?
     referredBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -147,8 +140,6 @@ staff: [
     timestamps: true,
   }
 );
-
-// Helper function to limit array size to 4
 function arrayLimit(val) {
   return val.length <= 4;
 }
@@ -173,10 +164,9 @@ salonSchema.methods.comparePassword = async function (plainPassword) {
 salonSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;
-  // CHANGED START
   delete obj.otp;
   delete obj.otpExpiry;
-  // CHANGED END
+ 
   return obj;
 };
 

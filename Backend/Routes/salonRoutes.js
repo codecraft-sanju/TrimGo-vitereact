@@ -8,7 +8,10 @@ import {
   logoutSalon,
   getAllSalons,       
   updateSalonProfile  , updateActiveChairs,
-  editStaff, deleteStaff
+  editStaff, deleteStaff,
+  // CHANGED START
+  addStaff 
+  // CHANGED END
 } from "../Controllers/salonController.js";
 import { protectSalon } from "../Middleware/salonMiddleware.js";
 
@@ -29,11 +32,11 @@ router.post("/logout", logoutSalon);
 
 
 router.get("/all", getAllSalons); 
+
+
+router.post("/staff/add", protectSalon, addStaff);
 router.put("/staff/edit", protectSalon, editStaff); 
 router.delete("/staff/:staffId", protectSalon, deleteStaff);
-
-
-// Get Current Salon Profile
 router.get("/me", protectSalon, (req, res) => {
     return res.status(200).json({
         success: true,
@@ -41,9 +44,7 @@ router.get("/me", protectSalon, (req, res) => {
     });
 });
 
-// Update Profile (Add Services, Toggle Online/Offline, etc.)
 router.put("/update", protectSalon, updateSalonProfile);
-// Route to update active chairs count from dashboard
 router.put("/update-chairs", protectSalon, updateActiveChairs);
 
 export default router;

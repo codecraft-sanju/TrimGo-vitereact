@@ -6,8 +6,6 @@ import {
 } from "lucide-react";
 import api from "../utils/api";
 import { io } from "socket.io-client";
-
-// --- EXTERNAL COMPONENTS ---
 import SalonHistory from "./SalonHistory";
 import SalonReviews from "./SalonReviews"; 
 import { 
@@ -76,31 +74,30 @@ const SalonDashboard = ({ salon, onLogout }) => {
   const [chairs, setChairs] = useState(Array.from({ length: activeChairsCount }, (_, i) => ({
     id: i + 1, name: `Chair ${i + 1}`, status: 'empty', currentCustomer: null, assignedStaff: null
   })));
-
-  // Settings Data
   const [services, setServices] = useState([]);
   const [staff, setStaff] = useState([]);
   const [newService, setNewService] = useState({ name: "", price: "", time: "", category: "Hair" });
+  
+  // CHANGED START: Naye state variables for staff add
   const [newStaffName, setNewStaffName] = useState("");
+  const [newStaffPhoto, setNewStaffPhoto] = useState(null);
+  const staffFileInputRef = useRef(null);
+  // CHANGED END
 
-  // Gallery Data
   const [gallery, setGallery] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [staffUploading, setStaffUploading] = useState(false); // CHANGED: New loading state
   const galleryInputRef = useRef(null);
 
   const [isOnline, setIsOnline] = useState(true);
   const [stats, setStats] = useState({ revenue: 0, customers: 0 });
   const [currentTime, setCurrentTime] = useState(new Date());
-
-  // UI States
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   const [assignmentModal, setAssignmentModal] = useState({ isOpen: false, customer: null });
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [extendTimeModal, setExtendTimeModal] = useState({ isOpen: false, customer: null });
   const [extraServiceModal, setExtraServiceModal] = useState({ isOpen: false, customer: null });
-  
-  // NEW STAFF MODAL STATE
   const [editStaffModal, setEditStaffModal] = useState({ isOpen: false, staffData: null });
 
   const playNotificationSound = () => {
@@ -319,7 +316,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
         services: customerData.services,
         totalPrice,
         totalTime,
-        preferredStaff: customerData.preferredStaff // <-- ADDED PREFERRED STAFF HERE
+        preferredStaff: customerData.preferredStaff 
       };
 
       const { data } = await api.post("/queue/add-walkin", payload);
@@ -354,19 +351,52 @@ const SalonDashboard = ({ salon, onLogout }) => {
     } catch (error) { alert("Failed to delete service"); }
   };
 
+  // CHANGED START: Upload photo and save
   const handleAddStaff = async () => {
     if (!newStaffName.trim()) return;
-    const updatedStaff = [...staff, { name: newStaffName, status: 'available' }];
-    try {
-      await api.put("/salon/update", { staff: updatedStaff });
-      setStaff(updatedStaff);
-      setNewStaffName("");
-    } catch (error) { alert("Failed to add staff"); }
-  };
 
-  const handleUpdateStaff = async (staffId, name, isActive, status) => {
+    setStaffUploading(true);
+    let photoUrl = "";
     try {
+      if (newStaffPhoto) {
+         photoUrl = await uploadToCloudinary(newStaffPhoto);
+      }
+
+      const payload = {
+         name: newStaffName,
+         status: 'available',
+         isActive: true,
+         photo: photoUrl
+      };
+
+      const { data } = await api.post("/salon/staff/add", payload);
+      
+      if(data.success){
+          setStaff(data.staff);
+          setNewStaffName("");
+          setNewStaffPhoto(null);
+      }
+
+    } catch (error) { 
+      console.error(error);
+      alert("Failed to add staff"); 
+    } finally {
+      setStaffUploading(false);
+    }
+  };
+  // CHANGED END
+
+  // CHANGED START: Update handleUpdateStaff to handle image
+  const handleUpdateStaff = async (staffId, name, isActive, status, photoFile) => {
+    try {
+      let photoUrl;
+      if (photoFile) {
+        photoUrl = await uploadToCloudinary(photoFile);
+      }
+
       const payload = { staffId, name, isActive, status };
+      if (photoUrl) payload.photo = photoUrl;
+
       const { data } = await api.put("/salon/staff/edit", payload);
       if (data.success) {
         setStaff(data.staff);
@@ -378,6 +408,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
       alert("Failed to update staff");
     }
   };
+  // CHANGED END
 
   const handleDeleteStaff = async (staffId) => {
     if (!window.confirm("Are you sure you want to remove this staff member? (Their past history will remain safe)")) return;
@@ -467,7 +498,7 @@ const SalonDashboard = ({ salon, onLogout }) => {
         isOpen={isWalkInOpen} 
         onClose={() => setIsWalkInOpen(false)} 
         services={services} 
-        staffList={staff.filter(s => s.isActive !== false)} // PASS ACTIVE STAFF LIST HERE
+        staffList={staff.filter(s => s.isActive !== false)} 
         onConfirm={handleAddWalkIn} 
       />
       <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} salon={salon} profileImage={profileImage} onImageUpload={setProfileImage} onLogout={onLogout} />
@@ -608,13 +639,11 @@ const SalonDashboard = ({ salon, onLogout }) => {
                             <div>
                               <h4 className="font-bold text-sm text-white">{req.userId?.name}</h4>
                               <p className="text-xs text-zinc-400">{req.services[0]?.name} {req.services.length > 1 && `+${req.services.length - 1}`}</p>
-                              {/* --- NEW: PREFERRED STAFF DISPLAY --- */}
                               {req.preferredStaff && (
                                 <p className="text-[10px] text-emerald-400 mt-0.5 font-bold uppercase tracking-wider">
                                   Prefers: {staff.find(s => s._id === req.preferredStaff)?.name || "Specific Staff"}
                                 </p>
                               )}
-                              {/* --- END NEW --- */}
                             </div>
                           </div>
                           
@@ -678,13 +707,11 @@ const SalonDashboard = ({ salon, onLogout }) => {
                               <div>
                                 <h4 className="font-bold text-sm text-white">{cust.userId?.name || cust.guestName}</h4>
                                 <p className="text-xs text-zinc-400">{cust.services[0]?.name}</p>
-                                {/* --- NEW: PREFERRED STAFF DISPLAY --- */}
                                 {cust.preferredStaff && (
                                   <p className="text-[10px] text-emerald-400 mt-0.5 font-bold uppercase tracking-wider">
                                     Prefers: {staff.find(s => s._id === cust.preferredStaff)?.name || "Specific Staff"}
                                   </p>
                                 )}
-                                {/* --- END NEW --- */}
                               </div>
                             </div>
                             
@@ -906,17 +933,57 @@ const SalonDashboard = ({ salon, onLogout }) => {
                   {/* STAFF MANAGER UPDATE */}
                   <div className="bg-zinc-900/50 border border-white/5 rounded-3xl p-5 lg:p-6">
                     <h3 className="font-bold text-lg text-white mb-4 flex items-center gap-2"><UserCheck className="text-blue-400" size={20} /> Staff</h3>
-                    <div className="flex gap-2 mb-4">
-                      <input type="text" placeholder="Staff Name" className="flex-1 bg-zinc-900 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-blue-500 outline-none" value={newStaffName} onChange={(e) => setNewStaffName(e.target.value)} />
-                      <button onClick={handleAddStaff} className="px-4 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-400 active:scale-95 transition-all">Add</button>
+                    
+                    {/* CHANGED START: Add Staff Input with Photo */}
+                    <div className="flex flex-col gap-2 mb-4 p-3 bg-zinc-900/80 rounded-2xl border border-white/5">
+                      <div className="flex gap-2 items-center">
+                        <div 
+                          className="w-10 h-10 shrink-0 rounded-full border border-dashed border-zinc-600 flex items-center justify-center bg-zinc-950 cursor-pointer overflow-hidden relative group"
+                          onClick={() => staffFileInputRef.current?.click()}
+                        >
+                          {newStaffPhoto ? (
+                            <img src={URL.createObjectURL(newStaffPhoto)} alt="preview" className="w-full h-full object-cover" />
+                          ) : (
+                            <ImageIcon size={14} className="text-zinc-500 group-hover:text-white transition-colors" />
+                          )}
+                           <input 
+                              type="file" 
+                              ref={staffFileInputRef} 
+                              className="hidden" 
+                              accept="image/*" 
+                              onChange={(e) => setNewStaffPhoto(e.target.files[0])} 
+                            />
+                        </div>
+                        <input 
+                          type="text" 
+                          placeholder="Staff Name" 
+                          className="flex-1 bg-zinc-950 border border-white/10 rounded-xl p-2.5 text-sm text-white focus:border-blue-500 outline-none" 
+                          value={newStaffName} 
+                          onChange={(e) => setNewStaffName(e.target.value)} 
+                        />
+                      </div>
+                      <button 
+                        onClick={handleAddStaff} 
+                        disabled={staffUploading}
+                        className="w-full mt-1 bg-blue-500 text-white rounded-xl py-2 text-sm font-bold hover:bg-blue-400 active:scale-95 transition-all flex justify-center items-center"
+                      >
+                         {staffUploading ? <Loader2 size={16} className="animate-spin" /> : "Add Staff"}
+                      </button>
                     </div>
+                    {/* CHANGED END */}
                     
                     {/* NEW STAFF LIST WITH EDIT & DELETE */}
                     <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto custom-scrollbar">
                       {staff.filter(s => s.isActive !== false).map((s, i) => (
                         <div key={i} className="p-3 bg-zinc-800/50 hover:bg-zinc-800 rounded-xl border border-white/5 flex items-center justify-between transition-colors">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs">{(s.name || "S").charAt(0)}</div>
+                            {/* CHANGED START: Show staff photo or initial */}
+                            {s.photo ? (
+                              <img src={s.photo} alt={s.name} className="w-8 h-8 rounded-full object-cover border border-white/10" />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs">{(s.name || "S").charAt(0)}</div>
+                            )}
+                            {/* CHANGED END */}
                             <span className="font-medium text-sm text-white">{s.name}</span>
                           </div>
                           <div className="flex gap-1">

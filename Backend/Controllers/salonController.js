@@ -3,11 +3,7 @@ import Salon from "../Models/Salon.js";
 import Ticket from "../Models/Ticket.js"; 
 import User from "../Models/User.js"; 
 import { sendWhatsappMessage } from "../utils/sendWhatsapp.js";
-
-// --- CHANGED START ---
-// Imported this to broadcast updates when chairs change
 import { broadcastQueueUpdates } from "./queueController.js";
-// --- CHANGED END ---
 
 const createToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -22,10 +18,6 @@ const cookieOptions = {
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 
-/* -------------------------------------------------------------------------- */
-/* AUTHENTICATION CONTROLLERS (Register/Login/Logout)                         */
-/* -------------------------------------------------------------------------- */
-
 export const registerSalon = async (req, res) => {
   try {
     const { 
@@ -37,7 +29,6 @@ export const registerSalon = async (req, res) => {
     if (!salonName || !ownerName || !email || !phone || !address || !zipCode || !password || !latitude || !longitude) {
       return res.status(400).json({ success: false, message: "Please fill all fields and Pin your location." });
     }
-
     let salon = await Salon.findOne({ $or: [{ email: email.toLowerCase() }, { phone }] });
     
     if (salon && salon.isPhoneVerified) {
@@ -280,7 +271,7 @@ export const getAllSalons = async (req, res) => {
     const allActiveTickets = await Ticket.find({
         salonId: { $in: salonIds },
         status: { $in: ["pending", "waiting", "serving"] } 
-    }).select("salonId totalTime updatedAt serviceStartTime status preferredStaff"); // <-- added preferredStaff
+    }).select("salonId totalTime updatedAt serviceStartTime status preferredStaff");
 
     const ticketsBySalon = {};
     allActiveTickets.forEach(ticket => {
@@ -295,7 +286,7 @@ export const getAllSalons = async (req, res) => {
         
         const numChairs = Math.max(1, salon.activeChairsCount || 1);
         let chairEndMins = Array(numChairs).fill(0);
-        let specificStaffEndMins = {}; // <-- NEW TRACKER
+        let specificStaffEndMins = {};
         
         const now = new Date();
         for(const t of activeTickets){
@@ -304,7 +295,6 @@ export const getAllSalons = async (req, res) => {
             const remaining = Math.max(0, (t.totalTime || 0) - elapsedMins);
             const timeToAdd = t.status === 'serving' ? remaining : (t.totalTime || 0);
 
-            // --- CHANGED START ---
             if (t.preferredStaff) {
                 const sId = t.preferredStaff.toString();
                 if (!specificStaffEndMins[sId]) specificStaffEndMins[sId] = 0;
@@ -313,7 +303,6 @@ export const getAllSalons = async (req, res) => {
                 chairEndMins.sort((a, b) => a - b);
                 chairEndMins[0] += timeToAdd;
             }
-            // --- CHANGED END ---
         }
 
         const maxAnyStaffWait = Math.max(...chairEndMins, 0);
@@ -410,25 +399,66 @@ export const updateActiveChairs = async (req, res) => {
 /* SALON ACTION: STAFF MANAGEMENT (EDIT & SOFT DELETE)                        */
 /* -------------------------------------------------------------------------- */
 
-// Edit Staff Details
+export const addStaff = async (req, res) => {
+  try {
+    const salonId = req.salon._id;
+    const { name, status, isActive, photo } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ success: false, message: "Staff Name is required" });
+    }
+
+    const newStaff = {
+      name,
+      status: status || "available",
+      isActive: isActive !== undefined ? isActive : true,
+      photo: photo || ""
+    };
+
+    const updatedSalon = await Salon.findByIdAndUpdate(
+      salonId,
+      { $push: { staff: newStaff } },
+      { new: true }
+    );
+
+    req.io.to(`salon_${salonId}`).emit("queue_updated");
+
+    res.status(201).json({
+      success: true,
+      message: "Staff added successfully",
+      staff: updatedSalon.staff
+    });
+
+  } catch (err) {
+    console.error("Add Staff Error:", err);
+    res.status(500).json({ success: false, message: "Server Error while adding staff" });
+  }
+};
+
 export const editStaff = async (req, res) => {
   try {
     const salonId = req.salon._id;
-    const { staffId, name, status, isActive } = req.body;
+    const { staffId, name, status, isActive, photo } = req.body;
 
     if (!staffId || !name) {
       return res.status(400).json({ success: false, message: "Staff ID and Name are required" });
+    }
+
+    const updateFields = {
+      "staff.$.name": name,
+      "staff.$.status": status || "available",
+      "staff.$.isActive": isActive !== undefined ? isActive : true
+    };
+
+    if (photo !== undefined) {
+      updateFields["staff.$.photo"] = photo;
     }
 
     // Mongoose positional operator ($) ka use karke specific staff ko update kar rahe hain
     const updatedSalon = await Salon.findOneAndUpdate(
       { _id: salonId, "staff._id": staffId },
       {
-        $set: {
-          "staff.$.name": name,
-          "staff.$.status": status || "available",
-          "staff.$.isActive": isActive !== undefined ? isActive : true
-        }
+        $set: updateFields
       },
       { new: true }
     );
@@ -452,7 +482,6 @@ export const editStaff = async (req, res) => {
   }
 };
 
-// Delete Staff (Soft Delete)
 export const deleteStaff = async (req, res) => {
   try {
     const salonId = req.salon._id;

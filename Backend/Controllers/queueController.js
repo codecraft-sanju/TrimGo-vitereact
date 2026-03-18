@@ -198,9 +198,6 @@ export const broadcastQueueUpdates = async (salonId, io) => {
   });
 };
 
-/* -------------------------------------------------------------------------- */
-/* USER ACTION: CANCEL TICKET                                                 */
-/* -------------------------------------------------------------------------- */
 export const cancelTicket = async (req, res) => {
   try {
     const { ticketId } = req.body;
@@ -230,9 +227,6 @@ export const cancelTicket = async (req, res) => {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/* SALON ACTION - ADD WALK-IN CLIENT (OFFLINE USER)                           */
-/* -------------------------------------------------------------------------- */
 export const addWalkInClient = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -250,8 +244,6 @@ export const addWalkInClient = async (req, res) => {
     }
 
     const { name, mobile, services, totalPrice, totalTime, preferredStaff } = validationResult.data;
-    // --- CHANGED END ---
-    
     const salonId = req.salon._id;
 
     const startOfDay = getISTStartOfDay();
@@ -277,7 +269,7 @@ export const addWalkInClient = async (req, res) => {
       totalTime,
       queueNumber,
       status: "waiting",
-      preferredStaff: preferredStaff || null // <-- NEW
+      preferredStaff: preferredStaff || null 
     }], { session });
 
     const newTicket = newTicketArray[0];
@@ -302,12 +294,8 @@ export const addWalkInClient = async (req, res) => {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/* USER ACTION: JOIN QUEUE                                                    */
-/* -------------------------------------------------------------------------- */
 export const joinQueue = async (req, res) => {
   try {
-    // --- CHANGED START: Validate Input using Zod ---
     const validationResult = joinQueueSchema.safeParse(req.body);
     if (!validationResult.success) {
       return res.status(400).json({ 
@@ -318,7 +306,6 @@ export const joinQueue = async (req, res) => {
     }
 
     const { salonId, services, totalPrice, totalTime, reachingTime, preferredStaff } = validationResult.data;
-    // --- CHANGED END ---
     
     const userId = req.user._id; 
 
@@ -342,7 +329,7 @@ export const joinQueue = async (req, res) => {
       totalTime,
       reachingTime: reachingTime || 0,
       status: "pending", 
-      preferredStaff: preferredStaff || null // <-- NEW
+      preferredStaff: preferredStaff || null 
     });
 
     const fullTicket = await Ticket.findById(ticket._id)

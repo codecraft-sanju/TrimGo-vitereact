@@ -198,33 +198,44 @@ const ServiceSelectionModal = ({ salon, onClose, onConfirm, isJoining }) => {
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
           
-          {/* --- CHANGED START: STAFF SELECTION UI --- */}
+          {/* --- CHANGED START: STAFF SELECTION UI WITH PHOTOS --- */}
           <div>
               <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] block mb-3 ml-1">Choose Your Stylist</label>
               <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                  {/* Any Staff Button */}
                   <button
                       onClick={() => !isJoining && setSelectedStaffId(null)}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold border-2 transition-all whitespace-nowrap ${
+                      className={`flex items-center gap-2.5 pr-4 pl-1.5 py-1.5 rounded-2xl text-xs font-bold border-2 transition-all whitespace-nowrap ${
                           selectedStaffId === null 
                           ? 'bg-zinc-900 border-zinc-900 text-white shadow-md shadow-zinc-900/20' 
                           : 'bg-white border-zinc-100 text-zinc-500 hover:border-zinc-200'
                       }`}
                   >
-                      <Sparkles size={14} className={selectedStaffId === null ? "text-emerald-400" : "text-zinc-400"} />
-                      Any Staff (Fastest)
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${selectedStaffId === null ? 'bg-emerald-500/20' : 'bg-zinc-100'}`}>
+                          <Sparkles size={14} className={selectedStaffId === null ? "text-emerald-400" : "text-zinc-400"} />
+                      </div>
+                      <span>Any Staff (Fastest)</span>
                   </button>
+
+                  {/* Individual Staff Buttons */}
                   {staffList.map((staff) => (
                       <button
                           key={staff._id}
                           onClick={() => !isJoining && setSelectedStaffId(staff._id)}
-                          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold border-2 transition-all whitespace-nowrap ${
+                          className={`flex items-center gap-2.5 pr-4 pl-1.5 py-1.5 rounded-2xl text-xs font-bold border-2 transition-all whitespace-nowrap ${
                               selectedStaffId === staff._id 
                               ? 'bg-zinc-900 border-zinc-900 text-white shadow-md shadow-zinc-900/20' 
                               : 'bg-white border-zinc-100 text-zinc-500 hover:border-zinc-200'
                           }`}
                       >
-                          <UserIcon size={14} className={selectedStaffId === staff._id ? "text-white" : "text-zinc-400"} />
-                          {staff.name}
+                          {staff.photo ? (
+                              <img src={staff.photo} alt={staff.name} className="w-7 h-7 rounded-full object-cover border border-white/20 shadow-sm" />
+                          ) : (
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${selectedStaffId === staff._id ? 'bg-white/20' : 'bg-zinc-100'}`}>
+                                  <UserIcon size={14} className={selectedStaffId === staff._id ? "text-white" : "text-zinc-400"} />
+                              </div>
+                          )}
+                          <span>{staff.name}</span>
                       </button>
                   ))}
               </div>
